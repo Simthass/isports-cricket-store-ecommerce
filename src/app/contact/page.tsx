@@ -36,10 +36,17 @@ const contactInfo = [
 ];
 
 export default function ContactPage() {
-  const [form, setForm] = useState({ name: "", email: "", subject: "", message: "" });
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    subject: "",
+    message: "",
+  });
   const [submitted, setSubmitted] = useState(false);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+  ) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
@@ -51,11 +58,14 @@ export default function ContactPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-
       {/* ── Hero Banner ── */}
       <section className="bg-[#004b9c] relative overflow-hidden">
-        <div className="absolute inset-0 opacity-10"
-          style={{ backgroundImage: "radial-gradient(circle at 70% 50%, #81bf42 0%, transparent 60%)" }}
+        <div
+          className="absolute inset-0 opacity-10"
+          style={{
+            backgroundImage:
+              "radial-gradient(circle at 70% 50%, #81bf42 0%, transparent 60%)",
+          }}
         />
         <div className="max-w-[1400px] mx-auto px-6 lg:px-10 py-14 lg:py-20 relative z-10">
           <motion.div
@@ -70,7 +80,8 @@ export default function ContactPage() {
               Get In Touch
             </h1>
             <p className="text-blue-200 text-[15px] max-w-md">
-              Have a question about cricket gear or your order? Our team is ready to help.
+              Have a question about cricket gear or your order? Our team is
+              ready to help.
             </p>
           </motion.div>
         </div>
@@ -81,7 +92,6 @@ export default function ContactPage() {
       {/* ── Main Content ── */}
       <section className="max-w-[1400px] mx-auto px-6 lg:px-10 py-14 lg:py-20">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-
           {/* ── Left: Contact Info Cards ── */}
           <div className="flex flex-col gap-5">
             <h2 className="text-[#004b9c] text-[12px] font-bold tracking-[0.18em] uppercase mb-1">
@@ -98,7 +108,11 @@ export default function ContactPage() {
                   className="flex items-start gap-4 bg-white rounded-2xl p-5 border border-gray-100 shadow-sm hover:shadow-md hover:border-[#004b9c]/20 transition-all duration-200"
                 >
                   <div className="w-11 h-11 rounded-xl bg-[#004b9c]/8 flex items-center justify-center flex-shrink-0">
-                    <Icon size={20} className="text-[#004b9c]" strokeWidth={1.8} />
+                    <Icon
+                      size={20}
+                      className="text-[#004b9c]"
+                      strokeWidth={1.8}
+                    />
                   </div>
                   <div>
                     <p className="text-[11px] font-bold text-[#81bf42] tracking-widest uppercase mb-0.5">
@@ -140,13 +154,23 @@ export default function ContactPage() {
           >
             {submitted ? (
               <div className="flex flex-col items-center justify-center h-full py-16 text-center gap-4">
-                <CheckCircle2 size={56} className="text-[#81bf42]" strokeWidth={1.5} />
-                <h3 className="text-2xl font-bold text-gray-800">Message Sent!</h3>
+                <CheckCircle2
+                  size={56}
+                  className="text-[#81bf42]"
+                  strokeWidth={1.5}
+                />
+                <h3 className="text-2xl font-bold text-gray-800">
+                  Message Sent!
+                </h3>
                 <p className="text-gray-500 text-[15px] max-w-sm">
-                  Thanks for reaching out. Our team will get back to you within 24 hours.
+                  Thanks for reaching out. Our team will get back to you within
+                  24 hours.
                 </p>
                 <button
-                  onClick={() => { setSubmitted(false); setForm({ name: "", email: "", subject: "", message: "" }); }}
+                  onClick={() => {
+                    setSubmitted(false);
+                    setForm({ name: "", email: "", subject: "", message: "" });
+                  }}
                   className="mt-4 px-7 py-2.5 rounded-xl border border-[#004b9c] text-[#004b9c] text-[13px] font-semibold hover:bg-[#004b9c] hover:text-white transition-all duration-200"
                 >
                   Send Another Message
@@ -155,10 +179,18 @@ export default function ContactPage() {
             ) : (
               <>
                 <div className="flex items-center gap-3 mb-8">
-                  <MessageSquareText size={22} className="text-[#004b9c]" strokeWidth={1.8} />
+                  <MessageSquareText
+                    size={22}
+                    className="text-[#004b9c]"
+                    strokeWidth={1.8}
+                  />
                   <div>
-                    <h2 className="text-[20px] font-bold text-gray-800">Send Us a Message</h2>
-                    <p className="text-gray-400 text-[13px]">We typically reply within 1 business day</p>
+                    <h2 className="text-[20px] font-bold text-gray-800">
+                      Send Us a Message
+                    </h2>
+                    <p className="text-gray-400 text-[13px]">
+                      We typically reply within 1 business day
+                    </p>
                   </div>
                 </div>
 
