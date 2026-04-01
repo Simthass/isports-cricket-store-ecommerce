@@ -34,11 +34,10 @@ const Footer = () => {
       style={{ backgroundColor: footerBg }}
     >
       {/* 1. Top Border & Overlapping Logo */}
-      <div className="absolute top-0 left-0 w-full border-t border-gray-600 z-0"></div>
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 bg-[#131b2b] px-4">
-        <div className="relative w-[80px] h-[90px]">
+      <div className="flex justify-center pt-10 pb-6">
+        <div className="relative w-[100px] h-[100px]">
           <Image
-            src="/ISportsCricket-Logo.png   "
+            src="/ISportsCricket-Logo.png"
             alt="iSPORTS Logo"
             fill
             className="object-contain"
@@ -47,7 +46,7 @@ const Footer = () => {
       </div>
 
       {/* Main Footer Container */}
-      <div className="max-w-[1440px] mx-auto px-6 md:px-12 pt-24 pb-12 z-10 relative text-gray-200">
+      <div className="max-w-[1440px] mx-auto px-6 md:px-12 pt-4 pb-12 z-10 relative text-gray-200">
         {/* 2. Top Links Grid (4 Columns) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
           {/* Column 1: CATEGORY */}
@@ -198,16 +197,43 @@ const Footer = () => {
 
             {/* Social Icons */}
             <div className="flex items-center gap-4">
+              {/* Facebook */}
               <Link
                 href="#"
                 className="w-9 h-9 rounded-full flex items-center justify-center text-white hover:scale-110 transition-transform"
                 style={{ backgroundColor: primaryBlue }}
-              ></Link>
+              >
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                >
+                  <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
+                </svg>
+              </Link>
+
+              {/* Instagram */}
               <Link
                 href="#"
                 className="w-9 h-9 rounded-full flex items-center justify-center text-white hover:scale-110 transition-transform"
                 style={{ backgroundColor: primaryBlue }}
-              ></Link>
+              >
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
+                  <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+                  <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
+                </svg>
+              </Link>
               <Link
                 href="#"
                 className="w-9 h-9 rounded-full flex items-center justify-center text-white hover:scale-110 transition-transform"
