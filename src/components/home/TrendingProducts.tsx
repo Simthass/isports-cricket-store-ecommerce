@@ -358,7 +358,7 @@ export default function TrendingProducts() {
   return (
     <section
       ref={sectionRef}
-      className="relative w-full bg-white py-20 lg:py-32 font-['Poppins',_sans-serif]"
+      className="relative w-full bg-white py-10 lg:py-16 font-['Poppins',_sans-serif]"
     >
       {/* Background blobs for depth */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
@@ -436,36 +436,6 @@ export default function TrendingProducts() {
             ))}
           </div>
         </div>
-
-        {/* Trust Strip */}
-        <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="mt-24 grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 p-8 md:p-12 rounded-[40px] bg-gray-50 border border-gray-100"
-        >
-          {[
-            { icon: "🚚", title: "Free Delivery", desc: "Orders over AED 500" },
-            { icon: "⚡", title: "Fast Dispatch", desc: "Sharjah & Ajman" },
-            { icon: "💳", title: "Secure Pay", desc: "COD & Card Options" },
-            {
-              icon: "🛡️",
-              title: "100% Genuine",
-              desc: "Official Brand Partner",
-            },
-          ].map((item, i) => (
-            <div
-              key={i}
-              className="flex flex-col items-center text-center space-y-2"
-            >
-              <span className="text-3xl mb-2">{item.icon}</span>
-              <h4 className="text-sm font-bold text-gray-900">{item.title}</h4>
-              <p className="text-[11px] text-gray-500 font-medium">
-                {item.desc}
-              </p>
-            </div>
-          ))}
-        </motion.div>
       </div>
     </section>
   );
