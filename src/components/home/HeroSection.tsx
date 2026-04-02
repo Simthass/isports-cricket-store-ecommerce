@@ -225,7 +225,7 @@ export default function HeroSection() {
 
   return (
     <section
-      className="relative w-full overflow-hidden bg-white font-['Poppins'] selection:bg-blue-100"
+      className="relative w-full overflow-hidden bg-white font-['Poppins'] selection:bg-blue-100 mt-6"
       style={{ minHeight: "calc(100vh - 173px)" }}
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
