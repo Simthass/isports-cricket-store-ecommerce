@@ -86,7 +86,7 @@ export default function Header() {
             </Link>
             <Link
               href="/login"
-              className="text-white  hover:text-[#81bf42] transition-colors duration-150"
+              className="text-white hover:text-[#81bf42] transition-colors duration-150"
             >
               Sign In
             </Link>
@@ -94,12 +94,10 @@ export default function Header() {
         </div>
       </div>
 
-      {/* ── Main Header ── */}
+      {/* ── Main Header Container ── */}
       <header
         className={`fixed left-0 w-full z-40 bg-white transition-all duration-300 lg:top-9 top-0 ${
-          scrolled
-            ? "shadow-[0_4px_30px_rgba(0,75,156,0.13)] border-b-0"
-            : "border-b border-gray-100"
+          scrolled ? "shadow-[0_4px_30px_rgba(0,75,156,0.13)]" : "shadow-sm"
         }`}
       >
         <div className="max-w-[1400px] mx-auto px-5 lg:px-10">
@@ -130,7 +128,7 @@ export default function Header() {
                 >
                   <Link
                     href={link.href}
-                    className="group flex items-center gap-1 px-4 py-2 rounded-lg text-[14px] font-medium  text-gray-800 hover:text-[#004b9c] hover:bg-blue-50/70 transition-all duration-150"
+                    className="group flex items-center gap-1 px-4 py-2 rounded-lg text-[14px] font-medium text-gray-800 hover:text-[#004b9c] hover:bg-blue-50/70 transition-all duration-150"
                   >
                     {link.name}
                     {link.hasDropdown && (
@@ -391,7 +389,9 @@ export default function Header() {
       </AnimatePresence>
 
       {/* ── Page Spacer ── */}
-      <div className="h-[168px] lg:h-[173px]" />
+      {/* Mobile: top bar (0) + header (76px) + accent line (3px) + marquee (8px + 16px padding) = ~103px */}
+      {/* Desktop: top bar (36px) + header (76px) + accent line (3px) + marquee (8px + 16px padding) = ~139px */}
+      <div className="h-[103px] lg:h-[139px]" />
     </>
   );
 }
