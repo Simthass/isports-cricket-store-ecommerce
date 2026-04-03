@@ -17,6 +17,7 @@ import {
   Phone,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import AuthModal from "@/components/auth/AuthModal";
 
 const navLinks = [
   { name: "Home", href: "/" },
@@ -53,6 +54,8 @@ export default function Header() {
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [cartCount] = useState(2);
   const [searchValue, setSearchValue] = useState("");
+  const [authOpen, setAuthOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<"login" | "register">("login");
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
@@ -73,7 +76,7 @@ export default function Header() {
           </div>
           <div className="flex items-center gap-6 text-[11px] font-medium tracking-wide">
             <Link
-              href="/track-order"
+              href="/product"
               className="text-white hover:text-[#81bf42] transition-colors duration-150"
             >
               Track Order
@@ -84,12 +87,15 @@ export default function Header() {
             >
               Store Locator
             </Link>
-            <Link
-              href="/login"
+            <button
+              onClick={() => {
+                setAuthMode("login");
+                setAuthOpen(true);
+              }}
               className="text-white hover:text-[#81bf42] transition-colors duration-150"
             >
               Sign In
-            </Link>
+            </button>
           </div>
         </div>
       </div>
@@ -233,12 +239,15 @@ export default function Header() {
               <div className="hidden md:block w-px h-8 bg-gray-200 mx-1" />
 
               {/* Register CTA */}
-              <Link
-                href="/register"
+              <button
+                onClick={() => {
+                  setAuthMode("register");
+                  setAuthOpen(true);
+                }}
                 className="hidden md:inline-flex items-center gap-2 px-5 py-[9px] rounded-xl text-white text-[12px] font-bold tracking-[0.08em] bg-[#004b9c] hover:bg-[#003d82] active:scale-[0.97] transition-all duration-150 shadow-[0_2px_12px_rgba(0,75,156,0.3)] hover:shadow-[0_4px_20px_rgba(0,75,156,0.4)] whitespace-nowrap"
               >
                 REGISTER NOW
-              </Link>
+              </button>
 
               {/* Mobile Menu Toggle */}
               <button
@@ -368,20 +377,26 @@ export default function Header() {
 
               {/* Mobile Footer */}
               <div className="px-4 py-4 border-t border-gray-100 flex flex-col gap-2.5">
-                <Link
-                  href="/register"
-                  onClick={() => setMobileOpen(false)}
+                <button
+                  onClick={() => {
+                    setAuthMode("register");
+                    setAuthOpen(true);
+                    setMobileOpen(false);
+                  }}
                   className="flex items-center justify-center w-full py-3 bg-[#004b9c] hover:bg-[#003d82] text-white text-[12px] font-bold tracking-wider rounded-xl transition-colors duration-150"
                 >
                   REGISTER NOW
-                </Link>
-                <Link
-                  href="/login"
-                  onClick={() => setMobileOpen(false)}
+                </button>
+                <button
+                  onClick={() => {
+                    setAuthMode("login");
+                    setAuthOpen(true);
+                    setMobileOpen(false);
+                  }}
                   className="flex items-center justify-center w-full py-2.5 border border-gray-200 text-gray-700 hover:border-[#004b9c] hover:text-[#004b9c] text-[12px] font-bold tracking-wider rounded-xl transition-colors duration-150"
                 >
                   SIGN IN
-                </Link>
+                </button>
               </div>
             </motion.div>
           </>
@@ -392,6 +407,11 @@ export default function Header() {
       {/* Mobile: top bar (0) + header (76px) + accent line (3px) + marquee (8px + 16px padding) = ~103px */}
       {/* Desktop: top bar (36px) + header (76px) + accent line (3px) + marquee (8px + 16px padding) = ~139px */}
       <div className="h-[103px] lg:h-[139px]" />
+      <AuthModal
+        isOpen={authOpen}
+        onClose={() => setAuthOpen(false)}
+        defaultMode={authMode}
+      />
     </>
   );
 }
