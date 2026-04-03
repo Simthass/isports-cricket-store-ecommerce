@@ -1,9 +1,6 @@
-// app/layout.tsx
 import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
 import "./globals.css";
-import Navbar from "@/components/Header";
-import Footer from "@/components/Footer";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -25,9 +22,8 @@ export default function RootLayout({
   return (
     <html lang="en" className={poppins.variable}>
       <body className="font-poppins antialiased bg-white">
-        <Navbar />
-        <main>{children}</main>
-        <Footer />
+        {/* No Navbar or Footer here anymore! */}
+        {children}
       </body>
     </html>
   );
