@@ -109,10 +109,6 @@ function ValueCard({
 export default function AboutPage() {
   return (
     <>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,700;0,800;0,900;1,700;1,800;1,900&family=Poppins:wght@400;500;600;700;800;900&display=swap');
-      `}</style>
-
       <main
         className="w-full bg-white overflow-x-hidden"
         style={{ fontFamily: "'Poppins', sans-serif" }}
@@ -140,7 +136,6 @@ export default function AboutPage() {
                   <h1
                     className="uppercase font-black italic leading-[0.87] tracking-tight text-gray-900 mb-7"
                     style={{
-                      fontFamily: "'Barlow Condensed', sans-serif",
                       fontSize: "clamp(3.2rem, 7vw, 6.4rem)",
                     }}
                   >
@@ -211,7 +206,7 @@ export default function AboutPage() {
                 {/* Main tall image */}
                 <div className="relative rounded-t-3xl overflow-hidden h-[460px] shadow-[0_20px_60px_rgba(0,75,156,0.18)]">
                   <Image
-                    src="/about/about-hero.jpg" // ← your image
+                    src="/about.jpg" // ← your image
                     alt="iSPORTS Cricket Dubai"
                     fill
                     className="object-cover object-center"
@@ -249,7 +244,6 @@ export default function AboutPage() {
                         <span
                           className="font-black leading-none text-[1.55rem]"
                           style={{
-                            fontFamily: "'Barlow Condensed', sans-serif",
                             fontStyle: "italic",
                             color: s.color,
                           }}
@@ -283,7 +277,7 @@ export default function AboutPage() {
                   {/* Tall left image */}
                   <div className="relative col-span-1 row-span-2 rounded-3xl overflow-hidden h-[380px] shadow-xl group">
                     <Image
-                      src="/about/store-interior.jpg" // ← your image
+                      src="/interior.jpg"
                       alt="iSPORTS Store Interior"
                       fill
                       className="object-cover group-hover:scale-105 transition-transform duration-600"
@@ -297,7 +291,7 @@ export default function AboutPage() {
                   {/* Top-right */}
                   <div className="relative rounded-2xl overflow-hidden h-[182px] shadow-lg group">
                     <Image
-                      src="/about/cricket-equipment.jpg" // ← your image
+                      src="/helmet.jpg" // ← your image
                       alt="Cricket Equipment"
                       fill
                       className="object-cover group-hover:scale-105 transition-transform duration-600"
@@ -328,7 +322,6 @@ export default function AboutPage() {
                   <h2
                     className="uppercase font-black italic leading-[0.88] tracking-tight text-gray-900"
                     style={{
-                      fontFamily: "'Barlow Condensed', sans-serif",
                       fontSize: "clamp(2.2rem, 4vw, 3.6rem)",
                     }}
                   >
@@ -451,7 +444,6 @@ export default function AboutPage() {
                     <span
                       className="font-black leading-none"
                       style={{
-                        fontFamily: "'Barlow Condensed', sans-serif",
                         fontStyle: "italic",
                         fontSize: "2.8rem",
                         color: s.color,
@@ -482,7 +474,6 @@ export default function AboutPage() {
               <h2
                 className="uppercase font-black italic leading-[0.9] tracking-tight text-gray-900"
                 style={{
-                  fontFamily: "'Barlow Condensed', sans-serif",
                   fontSize: "clamp(2.4rem, 4.5vw, 3.8rem)",
                 }}
               >
@@ -563,7 +554,7 @@ export default function AboutPage() {
               <FadeUp delay={0}>
                 <div className="relative rounded-3xl overflow-hidden h-[380px] shadow-2xl group">
                   <Image
-                    src="/about/cricket-bat-display.jpg" // ← your image
+                    src="/Bats 2.jpg" // ← your image
                     alt="Cricket Bat Collection UAE"
                     fill
                     className="object-cover group-hover:scale-105 transition-transform duration-700"
@@ -583,7 +574,6 @@ export default function AboutPage() {
                   <h2
                     className="uppercase font-black italic leading-[0.88] tracking-tight text-gray-900"
                     style={{
-                      fontFamily: "'Barlow Condensed', sans-serif",
                       fontSize: "clamp(2rem, 3.8vw, 3.2rem)",
                     }}
                   >
@@ -636,7 +626,6 @@ export default function AboutPage() {
                   <h2
                     className="uppercase font-black italic leading-[0.88] tracking-tight text-gray-900"
                     style={{
-                      fontFamily: "'Barlow Condensed', sans-serif",
                       fontSize: "clamp(2rem, 3.8vw, 3.2rem)",
                     }}
                   >
@@ -733,7 +722,6 @@ export default function AboutPage() {
               <h2
                 className="uppercase font-black italic leading-[0.9] tracking-tight text-gray-900"
                 style={{
-                  fontFamily: "'Barlow Condensed', sans-serif",
                   fontSize: "clamp(2.2rem, 4.5vw, 3.8rem)",
                 }}
               >
@@ -753,7 +741,7 @@ export default function AboutPage() {
                   address: "13 B Street, Karama, Dubai, UAE",
                   phone: "+971 4 353 3323",
                   hours: "10:00 AM – 7:00 PM  ·  Mon – Sat",
-                  image: "/about/store-dubai.jpg", // ← your image
+                  image: "/Map 1.jpg",
                   badge: "Main Branch",
                   badgeColor: BLUE,
                   delay: 0,
@@ -764,7 +752,7 @@ export default function AboutPage() {
                   address: "Al Wahda Street, Sharjah, UAE",
                   phone: "+971 52 651 4666",
                   hours: "10:00 AM – 8:00 PM  ·  Mon – Sun",
-                  image: "/about/store-sharjah.jpg", // ← your image
+                  image: "/Map 2.jpg", // ← your image
                   badge: "Same-Day Delivery",
                   badgeColor: GREEN,
                   delay: 0.1,
@@ -794,7 +782,6 @@ export default function AboutPage() {
                         <span
                           className="text-white font-black italic uppercase leading-none"
                           style={{
-                            fontFamily: "'Barlow Condensed', sans-serif",
                             fontSize: "1.65rem",
                           }}
                         >
@@ -866,7 +853,6 @@ export default function AboutPage() {
             <span
               className="font-black uppercase text-white/[0.025] leading-none tracking-widest"
               style={{
-                fontFamily: "'Barlow Condensed', sans-serif",
                 fontSize: "clamp(6rem, 18vw, 16rem)",
               }}
             >
@@ -887,7 +873,6 @@ export default function AboutPage() {
               <h2
                 className="text-white uppercase font-black italic leading-[0.87] tracking-tight mb-7"
                 style={{
-                  fontFamily: "'Barlow Condensed', sans-serif",
                   fontSize: "clamp(2.6rem, 5.5vw, 5rem)",
                 }}
               >
