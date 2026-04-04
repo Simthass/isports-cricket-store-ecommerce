@@ -1,9 +1,9 @@
+// src/components/products/FilterSidebar.tsx
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, X, SlidersHorizontal } from "lucide-react";
-import { BRANDS, CATEGORIES, PRICE_RANGES } from "@/constants/products";
 
 interface Filters {
   categories: string[];
@@ -17,6 +17,14 @@ interface Props {
   onChange: (filters: Filters) => void;
   totalResults: number;
 }
+
+const PRICE_RANGES = [
+  { label: "Under AED 250", min: 0, max: 250 },
+  { label: "AED 250 – AED 500", min: 250, max: 500 },
+  { label: "AED 500 – AED 1000", min: 500, max: 1000 },
+  { label: "AED 1000 – AED 2000", min: 1000, max: 2000 },
+  { label: "AED 2000+", min: 2000, max: 10000 },
+];
 
 function Section({
   title,
@@ -67,6 +75,30 @@ export default function FilterSidebar({
   onChange,
   totalResults,
 }: Props) {
+  const [categories, setCategories] = useState<
+    { value: string; label: string }[]
+  >([]);
+  const [brands, setBrands] = useState<{ value: string; label: string }[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchFilters = async () => {
+      try {
+        const res = await fetch("/api/shop/filters");
+        const json = await res.json();
+        if (json.success) {
+          setCategories(json.data.categories);
+          setBrands(json.data.brands);
+        }
+      } catch (error) {
+        console.error("Error fetching filters:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchFilters();
+  }, []);
+
   const toggle = (key: "categories" | "brands", value: string) => {
     const arr = filters[key];
     onChange({
@@ -90,6 +122,19 @@ export default function FilterSidebar({
       priceRange: null,
       inStockOnly: false,
     });
+
+  if (loading) {
+    return (
+      <div className="animate-pulse">
+        <div className="h-8 bg-gray-100 rounded-lg mb-4" />
+        <div className="space-y-3">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="h-10 bg-gray-100 rounded-lg" />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <aside className="w-full">
@@ -126,7 +171,7 @@ export default function FilterSidebar({
         </p>
       </div>
 
-      {/* ── In Stock Toggle ── */}
+      {/* In Stock Toggle */}
       <div className="border-b border-gray-100 pb-5 mb-5">
         <label className="flex items-center justify-between cursor-pointer group">
           <span className="text-[13px] font-bold text-gray-800 tracking-wide uppercase">
@@ -149,10 +194,10 @@ export default function FilterSidebar({
         </label>
       </div>
 
-      {/* ── Category ── */}
+      {/* Category */}
       <Section title="Category">
         <div className="flex flex-col gap-1">
-          {CATEGORIES.filter((c) => c.value !== "all").map((cat) => {
+          {categories.map((cat) => {
             const active = filters.categories.includes(cat.value);
             return (
               <button
@@ -191,15 +236,15 @@ export default function FilterSidebar({
         </div>
       </Section>
 
-      {/* ── Brands ── */}
+      {/* Brands */}
       <Section title="Brand">
         <div className="flex flex-col gap-1 max-h-52 overflow-y-auto pr-1">
-          {BRANDS.map((brand) => {
-            const active = filters.brands.includes(brand);
+          {brands.map((brand) => {
+            const active = filters.brands.includes(brand.value);
             return (
               <button
-                key={brand}
-                onClick={() => toggle("brands", brand)}
+                key={brand.value}
+                onClick={() => toggle("brands", brand.value)}
                 className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-150 text-left ${
                   active
                     ? "bg-[#004b9c]/8 text-[#004b9c] font-semibold"
@@ -222,14 +267,14 @@ export default function FilterSidebar({
                     </svg>
                   )}
                 </span>
-                {brand}
+                {brand.label}
               </button>
             );
           })}
         </div>
       </Section>
 
-      {/* ── Price Range ── */}
+      {/* Price Range */}
       <Section title="Price Range">
         <div className="flex flex-col gap-1">
           {PRICE_RANGES.map((range) => {

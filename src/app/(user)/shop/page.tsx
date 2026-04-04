@@ -1,13 +1,31 @@
+// src/app/(shop)/shop/page.tsx
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { SlidersHorizontal, X, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import ProductCard from "@/components/products/ProductCard";
 import FilterSidebar from "@/components/products/FilterSidebar";
 import ShopHeader from "@/components/products/ShopHeader";
-import { PRODUCTS, SORT_OPTIONS, type Product } from "@/constants/products";
+
+interface Product {
+  _id: string;
+  name: string;
+  slug: string;
+  price: number;
+  originalPrice?: number;
+  images: string[];
+  inStock: boolean;
+  stockQty: number;
+  isNew: boolean;
+  isBestSeller: boolean;
+  isFeatured: boolean;
+  rating: number;
+  reviewCount: number;
+  categoryId: { name: string; slug: string };
+  brandId: { name: string; slug: string; logo?: string };
+}
 
 interface Filters {
   categories: string[];
@@ -24,37 +42,53 @@ const DEFAULT_FILTERS: Filters = {
 };
 
 export default function ShopPage() {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
   const [sort, setSort] = useState("featured");
   const [view, setView] = useState<"grid" | "list">("grid");
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
+  const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 });
 
-  const filtered = useMemo(() => {
-    let results = [...PRODUCTS];
+  const fetchProducts = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      params.set("page", pagination.page.toString());
+      params.set("limit", "12");
+      params.set("sort", sort);
 
-    if (filters.categories.length > 0)
-      results = results.filter((p) => filters.categories.includes(p.category));
-    if (filters.brands.length > 0)
-      results = results.filter((p) => filters.brands.includes(p.brand));
-    if (filters.priceRange)
-      results = results.filter(
-        (p) =>
-          p.price >= filters.priceRange!.min &&
-          p.price <= filters.priceRange!.max,
-      );
-    if (filters.inStockOnly) results = results.filter((p) => p.inStock);
+      if (filters.categories.length > 0) {
+        params.set("category", filters.categories[0]);
+      }
+      if (filters.brands.length > 0) {
+        params.set("brand", filters.brands[0]);
+      }
+      if (filters.priceRange) {
+        params.set("minPrice", filters.priceRange.min.toString());
+        params.set("maxPrice", filters.priceRange.max.toString());
+      }
+      if (filters.inStockOnly) {
+        params.set("inStock", "true");
+      }
 
-    if (sort === "price_asc") results.sort((a, b) => a.price - b.price);
-    else if (sort === "price_desc") results.sort((a, b) => b.price - a.price);
-    else if (sort === "newest")
-      results.sort((a, b) => (b.isNew ? 1 : 0) - (a.isNew ? 1 : 0));
-    else if (sort === "best_sellers")
-      results.sort(
-        (a, b) => (b.isBestSeller ? 1 : 0) - (a.isBestSeller ? 1 : 0),
-      );
+      const res = await fetch(`/api/shop/products?${params}`);
+      const json = await res.json();
 
-    return results;
-  }, [filters, sort]);
+      if (json.success) {
+        setProducts(json.data);
+        setPagination(json.pagination);
+      }
+    } catch (error) {
+      console.error("Error fetching products:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [pagination.page, sort, filters]);
+
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
 
   const activeFilterCount =
     filters.categories.length +
@@ -64,7 +98,7 @@ export default function ShopPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* ── Page Header / Breadcrumb ── */}
+      {/* Page Header / Breadcrumb */}
       <div className="bg-[#f8f9fc] border-b border-gray-100">
         <div className="max-w-[1400px] mx-auto px-5 lg:px-10 py-8">
           <div className="flex items-center gap-2 text-[12px] text-gray-400 mb-3">
@@ -143,25 +177,24 @@ export default function ShopPage() {
         </div>
       </div>
 
-      {/* ── Main Layout ── */}
+      {/* Main Layout */}
       <div className="max-w-[1400px] mx-auto px-5 lg:px-10 py-8">
         <div className="flex gap-8">
-          {/* ── Desktop Sidebar ── */}
+          {/* Desktop Sidebar */}
           <aside className="hidden lg:block w-[240px] xl:w-[260px] flex-shrink-0">
             <div className="sticky top-[120px]">
               <FilterSidebar
                 filters={filters}
                 onChange={setFilters}
-                totalResults={filtered.length}
+                totalResults={pagination.total}
               />
             </div>
           </aside>
 
-          {/* ── Products Area ── */}
+          {/* Products Area */}
           <div className="flex-1 min-w-0">
             {/* Shop header bar */}
             <div className="flex items-center gap-3 mb-0">
-              {/* Mobile filter button */}
               <button
                 onClick={() => setMobileFilterOpen(true)}
                 className="lg:hidden flex items-center gap-2 px-4 py-2.5 border border-gray-200 rounded-xl text-[13px] font-semibold text-gray-700 hover:border-[#004b9c] hover:text-[#004b9c] transition-all bg-white"
@@ -176,7 +209,7 @@ export default function ShopPage() {
               </button>
               <div className="flex-1">
                 <ShopHeader
-                  total={filtered.length}
+                  total={pagination.total}
                   sort={sort}
                   onSort={setSort}
                   view={view}
@@ -185,53 +218,86 @@ export default function ShopPage() {
               </div>
             </div>
 
-            {/* Product Grid */}
-            <AnimatePresence mode="wait">
-              {filtered.length === 0 ? (
-                <motion.div
-                  key="empty"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="flex flex-col items-center justify-center py-24 text-center"
+            {/* Product Grid/List */}
+            {loading ? (
+              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-5">
+                {[...Array(8)].map((_, i) => (
+                  <div key={i} className="animate-pulse">
+                    <div className="bg-gray-100 rounded-2xl aspect-square mb-3" />
+                    <div className="h-4 bg-gray-100 rounded w-3/4 mb-2" />
+                    <div className="h-3 bg-gray-100 rounded w-1/2" />
+                  </div>
+                ))}
+              </div>
+            ) : products.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-24 text-center">
+                <div className="text-6xl mb-4">🏏</div>
+                <h3 className="text-[18px] font-bold text-gray-700 mb-2">
+                  No products found
+                </h3>
+                <p className="text-gray-400 text-[14px] mb-6">
+                  Try adjusting your filters
+                </p>
+                <button
+                  onClick={() => setFilters(DEFAULT_FILTERS)}
+                  className="px-6 py-3 bg-[#004b9c] text-white text-[13px] font-bold rounded-xl hover:bg-[#003d82] transition-colors"
                 >
-                  <div className="text-6xl mb-4">🏏</div>
-                  <h3 className="text-[18px] font-bold text-gray-700 mb-2">
-                    No products found
-                  </h3>
-                  <p className="text-gray-400 text-[14px] mb-6">
-                    Try adjusting your filters
-                  </p>
+                  Clear Filters
+                </button>
+              </div>
+            ) : (
+              <div
+                className={
+                  view === "grid"
+                    ? "grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-5"
+                    : "flex flex-col gap-4"
+                }
+              >
+                {products.map((product, i) => (
+                  <ProductCard key={product._id} product={product} index={i} />
+                ))}
+              </div>
+            )}
+
+            {/* Pagination */}
+            {pagination.pages > 1 && (
+              <div className="flex items-center justify-between mt-8 pt-4 border-t border-gray-100">
+                <p className="text-[12px] text-gray-400">
+                  Page {pagination.page} of {pagination.pages}
+                </p>
+                <div className="flex gap-2">
                   <button
-                    onClick={() => setFilters(DEFAULT_FILTERS)}
-                    className="px-6 py-3 bg-[#004b9c] text-white text-[13px] font-bold rounded-xl hover:bg-[#003d82] transition-colors"
+                    onClick={() =>
+                      setPagination({
+                        ...pagination,
+                        page: pagination.page - 1,
+                      })
+                    }
+                    disabled={pagination.page === 1}
+                    className="px-4 py-2 rounded-xl border border-gray-200 text-[12px] font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
                   >
-                    Clear Filters
+                    Previous
                   </button>
-                </motion.div>
-              ) : (
-                <motion.div
-                  key="grid"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className={
-                    view === "grid"
-                      ? "grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-5"
-                      : "flex flex-col gap-4"
-                  }
-                >
-                  {filtered.map((product, i) => (
-                    <ProductCard key={product.id} product={product} index={i} />
-                  ))}
-                </motion.div>
-              )}
-            </AnimatePresence>
+                  <button
+                    onClick={() =>
+                      setPagination({
+                        ...pagination,
+                        page: pagination.page + 1,
+                      })
+                    }
+                    disabled={pagination.page === pagination.pages}
+                    className="px-4 py-2 rounded-xl border border-gray-200 text-[12px] font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      {/* ── Mobile Filter Drawer ── */}
+      {/* Mobile Filter Drawer */}
       <AnimatePresence>
         {mobileFilterOpen && (
           <>
@@ -263,10 +329,8 @@ export default function ShopPage() {
               <div className="p-5">
                 <FilterSidebar
                   filters={filters}
-                  onChange={(f) => {
-                    setFilters(f);
-                  }}
-                  totalResults={filtered.length}
+                  onChange={setFilters}
+                  totalResults={pagination.total}
                 />
               </div>
               <div className="sticky bottom-0 p-4 bg-white border-t border-gray-100">
@@ -274,7 +338,7 @@ export default function ShopPage() {
                   onClick={() => setMobileFilterOpen(false)}
                   className="w-full py-3 bg-[#004b9c] text-white text-[13px] font-bold rounded-xl hover:bg-[#003d82] transition-colors"
                 >
-                  Show {filtered.length} Products
+                  Show {pagination.total} Products
                 </button>
               </div>
             </motion.div>

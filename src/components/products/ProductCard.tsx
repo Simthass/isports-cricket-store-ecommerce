@@ -1,3 +1,4 @@
+// src/components/products/ProductCard.tsx
 "use client";
 
 import React, { useState, useRef } from "react";
@@ -13,7 +14,22 @@ import {
   Flame,
   Zap,
 } from "lucide-react";
-import { type Product } from "@/constants/products";
+
+interface Product {
+  _id: string;
+  name: string;
+  slug: string;
+  price: number;
+  originalPrice?: number;
+  images: string[];
+  inStock: boolean;
+  isNew: boolean;
+  isBestSeller: boolean;
+  rating: number;
+  reviewCount: number;
+  categoryId: { name: string; slug: string };
+  brandId: { name: string; slug: string; logo?: string };
+}
 
 interface Props {
   product: Product;
@@ -39,27 +55,26 @@ export default function ProductCard({ product, index = 0 }: Props) {
     setTimeout(() => setAdded(false), 2000);
   };
 
-  const priceDisplay = product.hasRange
-    ? `AED ${product.priceMin} – ${product.priceMax}`
-    : `AED ${product.price.toLocaleString()}`;
-
-  // Determine badge icon and color
   const getBadgeIcon = () => {
-    if (product.badge === "Hot")
-      return <Flame size={12} className="text-red-500" />;
-    if (product.badge === "New")
-      return <Sparkles size={12} className="text-blue-500" />;
-    if (product.badge === "Best Seller")
+    if (product.isBestSeller)
       return <Zap size={12} className="text-green-500" />;
+    if (product.isNew) return <Sparkles size={12} className="text-blue-500" />;
+    return null;
+  };
+
+  const getBadgeText = () => {
+    if (product.isBestSeller) return "Best Seller";
+    if (product.isNew) return "New";
     return null;
   };
 
   const getBadgeColor = () => {
-    if (product.badge === "Hot") return "text-red-500";
-    if (product.badge === "New") return "text-blue-500";
-    if (product.badge === "Best Seller") return "text-green-500";
+    if (product.isBestSeller) return "text-green-500";
+    if (product.isNew) return "text-blue-500";
     return "text-gray-700";
   };
+
+  const productImage = product.images?.[0] || "/placeholder-product.jpg";
 
   return (
     <motion.div
@@ -69,7 +84,11 @@ export default function ProductCard({ product, index = 0 }: Props) {
       transition={{ duration: 0.5, delay: (index % 5) * 0.1 }}
       className="h-full"
     >
-      <Link href={`/product/${product.id}`} className="group block h-full">
+      <Link
+        href={`/shop/product/${product.slug}`}
+        className="group block h-full"
+      >
+        {" "}
         <div
           onMouseEnter={() => setHovered(true)}
           onMouseLeave={() => setHovered(false)}
@@ -81,23 +100,24 @@ export default function ProductCard({ product, index = 0 }: Props) {
         >
           {/* Image Area */}
           <div className="relative aspect-square w-full bg-white p-6 overflow-hidden">
-            {/* Badges */}
-            <div className="absolute top-4 left-4 z-10 flex flex-col gap-2">
-              {discount && discount > 0 && (
+            {/* Discount Badge */}
+            {discount && discount > 0 && (
+              <div className="absolute top-4 left-4 z-10">
                 <div className="bg-red-500 text-white text-[10px] font-bold px-2 py-1 rounded-lg shadow-sm">
                   -{discount}%
                 </div>
-              )}
-            </div>
+              </div>
+            )}
 
-            {product.badge && (
+            {/* Product Badge */}
+            {getBadgeText() && (
               <div className="absolute top-4 right-4 z-10">
                 <div className="flex items-center gap-1.5 bg-white/90 backdrop-blur-md border border-gray-100 rounded-full px-3 py-1 shadow-sm">
                   {getBadgeIcon()}
                   <span
                     className={`text-[9px] font-bold uppercase tracking-wider ${getBadgeColor()}`}
                   >
-                    {product.badge}
+                    {getBadgeText()}
                   </span>
                 </div>
               </div>
@@ -120,7 +140,7 @@ export default function ProductCard({ product, index = 0 }: Props) {
                 className="relative w-full h-full"
               >
                 <Image
-                  src={product.image}
+                  src={productImage}
                   alt={product.name}
                   fill
                   className="object-contain"
@@ -163,13 +183,8 @@ export default function ProductCard({ product, index = 0 }: Props) {
           <div className="flex flex-col flex-grow p-5 pt-0">
             <div className="flex items-center justify-between mb-2">
               <span className="text-[10px] font-bold tracking-[0.15em] uppercase text-[#81bf42]">
-                {product.brand}
+                {product.brandId?.name || "Brand"}
               </span>
-              {product.isNew && (
-                <span className="text-[9px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">
-                  NEW
-                </span>
-              )}
             </div>
 
             <h3 className="text-gray-800 font-semibold text-sm leading-snug line-clamp-2 min-h-[40px] mb-3 group-hover:text-[#004b9c] transition-colors">
@@ -184,26 +199,28 @@ export default function ProductCard({ product, index = 0 }: Props) {
                     size={12}
                     strokeWidth={0}
                     fill={
-                      s <= Math.floor(product.rating) ? "#ffd700" : "#e2e8f0"
+                      s <= Math.floor(product.rating || 0)
+                        ? "#ffd700"
+                        : "#e2e8f0"
                     }
                     className="transition-colors duration-200"
                   />
                 ))}
               </div>
               <span className="text-[11px] font-medium text-gray-400">
-                ({product.reviews})
+                ({product.reviewCount || 0})
               </span>
             </div>
 
             <div className="mt-auto pt-4 border-t border-gray-50 flex items-center justify-between">
               <div className="flex flex-col">
                 <span className="text-lg font-bold text-[#004b9c] leading-none">
-                  {priceDisplay}
+                  AED {product.price.toLocaleString()}
                 </span>
                 {product.originalPrice &&
                   product.originalPrice > product.price && (
                     <span className="text-[11px] text-gray-400 line-through mt-1">
-                      AED {product.originalPrice}
+                      AED {product.originalPrice.toLocaleString()}
                     </span>
                   )}
               </div>
