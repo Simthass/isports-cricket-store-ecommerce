@@ -1,3 +1,4 @@
+// src/components/admin/AdminSidebar.tsx
 "use client";
 
 import React, { useState } from "react";
@@ -19,19 +20,19 @@ import {
   LogOut,
   MessageCircle,
   BarChart3,
-  Store,
+  ExternalLink,
 } from "lucide-react";
 
 const navGroups = [
   {
-    label: "Main",
+    label: "Overview",
     items: [
       { label: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
       { label: "Analytics", href: "/admin/analytics", icon: BarChart3 },
     ],
   },
   {
-    label: "Store",
+    label: "Management",
     items: [
       { label: "Products", href: "/admin/products", icon: ShoppingBag },
       {
@@ -44,7 +45,7 @@ const navGroups = [
     ],
   },
   {
-    label: "Catalog",
+    label: "Inventory",
     items: [
       { label: "Categories", href: "/admin/categories", icon: Layers },
       { label: "Brands", href: "/admin/brands", icon: Tag },
@@ -71,78 +72,79 @@ export default function AdminSidebar() {
 
   return (
     <motion.aside
-      animate={{ width: collapsed ? 68 : 232 }}
-      transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
-      className="relative flex flex-col h-full flex-shrink-0 z-20 overflow-hidden"
-      style={{
-        background:
-          "linear-gradient(180deg, #0a1120 0%, #0d1628 60%, #0a1120 100%)",
-      }}
+      initial={false}
+      animate={{ width: collapsed ? 80 : 260 }}
+      transition={{ type: "spring", stiffness: 300, damping: 30 }}
+      className="relative flex flex-col h-screen flex-shrink-0 z-40 bg-[#09090b] border-r border-white/[0.08] select-none"
     >
-      {/* Top accent line */}
-      <div className="h-[2px] bg-gradient-to-r from-transparent via-[#004b9c] to-[#81bf42] flex-shrink-0" />
-
-      {/* Logo area */}
-      <div className="flex items-center h-[60px] px-3.5 border-b border-white/[0.05] flex-shrink-0">
+      {/* Brand Header */}
+      <div className="h-[64px] flex items-center px-5 border-b border-white/[0.05]">
         <AnimatePresence mode="wait">
           {!collapsed ? (
             <motion.div
-              key="full"
-              initial={{ opacity: 0, x: -8 }}
+              key="full-logo"
+              initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -8 }}
-              transition={{ duration: 0.2 }}
-              className="flex items-center gap-2.5 overflow-hidden"
+              exit={{ opacity: 0, x: -10 }}
+              className="flex items-center gap-3 w-full"
             >
-              <div className="relative w-[118px] h-[38px] flex-shrink-0">
+              {/* Image Container for Expanded State */}
+              <div className="relative w-8 h-8 flex-shrink-0">
                 <Image
                   src="/ISportsCricket-Logo.png"
-                  alt="iSports"
+                  alt="iSports Logo"
                   fill
-                  sizes="118px"
-                  className="object-contain object-left brightness-0 invert opacity-90"
+                  className="object-contain" // Remove "brightness-0 invert" if logo is already light
+                  priority
                 />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[13px] font-bold text-white tracking-tight leading-none">
+                  iSports
+                </span>
+                <span className="text-[11px] font-medium text-blue-500 tracking-wide mt-0.5">
+                  Cricket Admin Panel
+                </span>
               </div>
             </motion.div>
           ) : (
             <motion.div
-              key="icon"
+              key="mini-logo"
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.8 }}
-              transition={{ duration: 0.2 }}
-              className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-              style={{
-                background: "linear-gradient(135deg, #004b9c, #0062cc)",
-              }}
+              className="w-full flex justify-center"
             >
-              <span className="text-[#81bf42] text-[11px] font-black tracking-tight">
-                iS
-              </span>
+              {/* Image Container for Collapsed State */}
+              <div className="relative w-9 h-9">
+                <Image
+                  src="/ISportsCricket-Logo.png"
+                  alt="iSports Logo"
+                  fill
+                  className="object-contain"
+                  priority
+                />
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
       </div>
 
-      {/* Nav */}
-      <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-4 scrollbar-none">
+      {/* Navigation Groups */}
+      <nav className="flex-1 overflow-y-auto py-6 px-4 space-y-8 scrollbar-hide">
         {navGroups.map((group) => (
-          <div key={group.label}>
-            {/* Group label */}
-            <AnimatePresence>
-              {!collapsed && (
-                <motion.p
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="text-[9.5px] font-bold text-white/20 tracking-[0.2em] uppercase px-3 mb-1.5"
-                >
-                  {group.label}
-                </motion.p>
-              )}
-            </AnimatePresence>
+          <div key={group.label} className="space-y-2">
+            {!collapsed && (
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.15em] px-2"
+              >
+                {group.label}
+              </motion.p>
+            )}
 
-            <div className="space-y-0.5">
+            <div className="space-y-1">
               {group.items.map((item) => {
                 const isActive =
                   pathname === item.href ||
@@ -151,69 +153,56 @@ export default function AdminSidebar() {
                 const Icon = item.icon;
 
                 return (
-                  <Link key={item.href} href={item.href}>
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className="block relative group"
+                  >
                     <div
-                      className={`relative flex items-center gap-2.5 px-3 py-2.5 rounded-xl cursor-pointer transition-all duration-150 group ${
+                      className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 ${
                         isActive
-                          ? "text-white"
-                          : "text-white/40 hover:text-white/80 hover:bg-white/[0.04]"
+                          ? "bg-white/[0.08] text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]"
+                          : "text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.04]"
                       }`}
-                      style={
-                        isActive
-                          ? {
-                              background: "rgba(0,75,156,0.5)",
-                              boxShadow: "inset 0 0 0 1px rgba(0,75,156,0.4)",
-                            }
-                          : {}
-                      }
                     >
-                      {/* Active left bar */}
+                      <Icon
+                        size={19}
+                        strokeWidth={isActive ? 2 : 1.5}
+                        className={`flex-shrink-0 transition-colors ${isActive ? "text-blue-400" : "group-hover:text-zinc-100"}`}
+                      />
+
+                      {!collapsed && (
+                        <motion.span
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          className="text-[13.5px] font-medium whitespace-nowrap flex-1"
+                        >
+                          {item.label}
+                        </motion.span>
+                      )}
+
+                      {/* Active Pill Indicator */}
                       {isActive && (
                         <motion.div
-                          layoutId="sidebarActive"
-                          className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-[#81bf42]"
-                          transition={{
-                            type: "spring",
-                            stiffness: 380,
-                            damping: 30,
-                          }}
+                          layoutId="active-pill"
+                          className="absolute left-[-16px] w-[3px] h-5 bg-blue-500 rounded-r-full shadow-[0_0_12px_rgba(59,130,246,0.5)]"
                         />
                       )}
 
-                      <Icon
-                        size={16}
-                        strokeWidth={isActive ? 2.2 : 1.8}
-                        className="flex-shrink-0"
-                      />
-
-                      <AnimatePresence>
-                        {!collapsed && (
-                          <motion.div
-                            initial={{ opacity: 0, width: 0 }}
-                            animate={{ opacity: 1, width: "auto" }}
-                            exit={{ opacity: 0, width: 0 }}
-                            className="flex items-center justify-between flex-1 overflow-hidden"
-                          >
-                            <span className="text-[12.5px] font-medium whitespace-nowrap">
-                              {item.label}
-                            </span>
-                            {"badge" in item && item.badge && (
-                              <span className="bg-red-500/90 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full ml-auto">
-                                {item.badge}
-                              </span>
-                            )}
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-
-                      {/* Collapsed tooltip */}
-                      {collapsed && (
-                        <div className="absolute left-full ml-3 px-3 py-1.5 bg-[#1a2540] text-white text-[12px] font-medium rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 shadow-2xl border border-white/10 transition-opacity duration-150">
-                          {item.label}
-                          <div className="absolute left-0 top-1/2 -translate-x-1 -translate-y-1/2 w-2 h-2 bg-[#1a2540] border-l border-b border-white/10 rotate-45" />
-                        </div>
+                      {/* Badge */}
+                      {!collapsed && item.badge && (
+                        <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md min-w-[18px] text-center">
+                          {item.badge}
+                        </span>
                       )}
                     </div>
+
+                    {/* Tooltip for Collapsed State */}
+                    {collapsed && (
+                      <div className="absolute left-full ml-4 px-3 py-2 bg-zinc-800 text-white text-xs font-semibold rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-all translate-x-[-8px] group-hover:translate-x-0 whitespace-nowrap z-50 border border-white/10 shadow-2xl">
+                        {item.label}
+                      </div>
+                    )}
                   </Link>
                 );
               })}
@@ -222,45 +211,42 @@ export default function AdminSidebar() {
         ))}
       </nav>
 
-      {/* Divider */}
-      <div className="mx-3 h-px bg-white/[0.05] flex-shrink-0" />
-
-      {/* View Store link */}
-      <div className="px-2 py-2 flex-shrink-0">
+      {/* Footer Actions */}
+      <div className="p-4 border-t border-white/[0.05] space-y-1">
         <Link href="/" target="_blank">
-          <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-white/30 hover:text-white/70 hover:bg-white/[0.04] transition-all cursor-pointer group">
-            <Store size={16} strokeWidth={1.8} className="flex-shrink-0" />
+          <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-zinc-500 hover:text-zinc-200 hover:bg-white/[0.03] transition-all cursor-pointer">
+            <ExternalLink
+              size={18}
+              strokeWidth={1.5}
+              className="flex-shrink-0"
+            />
             {!collapsed && (
-              <span className="text-[12.5px] font-medium whitespace-nowrap">
-                View Store
+              <span className="text-[13px] font-medium whitespace-nowrap">
+                View Storefront
               </span>
             )}
           </div>
         </Link>
-      </div>
 
-      {/* Logout */}
-      <div className="px-2 pb-4 flex-shrink-0">
         <button
           onClick={handleLogout}
-          className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-white/30 hover:text-red-400 hover:bg-red-500/10 transition-all group"
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-all group"
         >
-          <LogOut size={16} strokeWidth={1.8} className="flex-shrink-0" />
+          <LogOut size={18} strokeWidth={1.5} className="flex-shrink-0" />
           {!collapsed && (
-            <span className="text-[12.5px] font-medium whitespace-nowrap">
+            <span className="text-[13px] font-medium whitespace-nowrap">
               Sign Out
             </span>
           )}
         </button>
       </div>
 
-      {/* Collapse toggle */}
+      {/* Toggle Button */}
       <button
         onClick={() => setCollapsed(!collapsed)}
-        className="absolute -right-3 top-[72px] w-6 h-6 rounded-full flex items-center justify-center text-white/50 hover:text-white transition-all z-30 shadow-lg border border-white/10"
-        style={{ background: "#1a2540" }}
+        className="absolute -right-3.5 top-16 w-7 h-7 rounded-full bg-[#09090b] border border-white/10 flex items-center justify-center text-zinc-400 hover:text-white transition-all z-50 shadow-xl"
       >
-        {collapsed ? <ChevronRight size={11} /> : <ChevronLeft size={11} />}
+        {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
       </button>
     </motion.aside>
   );
