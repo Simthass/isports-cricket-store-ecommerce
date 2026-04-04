@@ -2,10 +2,10 @@ import mongoose, { Schema, Document, Model } from "mongoose";
 
 export interface IUser extends Document {
   _id: mongoose.Types.ObjectId;
-  name?: string;
+  name: string;
   email: string;
   phone?: string;
-  password?: string;
+  password: string;
   role: "CUSTOMER" | "ADMIN";
   emailVerified?: Date;
   image?: string;
@@ -15,21 +15,40 @@ export interface IUser extends Document {
 
 const UserSchema = new Schema<IUser>(
   {
-    name: { type: String },
+    name: {
+      type: String,
+      required: [true, "Name is required"],
+      trim: true,
+    },
     email: {
       type: String,
-      required: true,
+      required: [true, "Email is required"],
       unique: true,
       lowercase: true,
       trim: true,
     },
-    phone: { type: String },
-    password: { type: String },
-    role: { type: String, enum: ["CUSTOMER", "ADMIN"], default: "CUSTOMER" },
-    emailVerified: { type: Date },
-    image: { type: String },
+    password: {
+      type: String,
+      required: [true, "Password is required"],
+      minlength: 6,
+    },
+    phone: {
+      type: String,
+      trim: true,
+    },
+    role: {
+      type: String,
+      enum: ["CUSTOMER", "ADMIN"],
+      default: "CUSTOMER",
+    },
+    emailVerified: {
+      type: Date,
+    },
+    image: {
+      type: String,
+    },
   },
-  { timestamps: true },
+  { timestamps: true }
 );
 
 const User: Model<IUser> =
