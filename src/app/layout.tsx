@@ -20,8 +20,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={poppins.variable}>
-      <body className="font-poppins antialiased bg-white">
+    <html lang="en" className={poppins.variable} suppressHydrationWarning>
+      <body className="font-poppins antialiased bg-white" suppressHydrationWarning>
         {/* No Navbar or Footer here anymore! */}
         {children}
       </body>

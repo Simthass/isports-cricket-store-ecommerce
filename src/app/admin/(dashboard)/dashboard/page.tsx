@@ -17,10 +17,12 @@ import {
   Eye,
   MoreHorizontal,
   Plus,
+  Settings,
+  ArrowRight,
 } from "lucide-react";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 
-// ── Stat Cards Data ──────────────────────────────────────────
 const stats = [
   {
     label: "Total Revenue",
@@ -29,7 +31,7 @@ const stats = [
     up: true,
     icon: TrendingUp,
     color: "#004b9c",
-    lightColor: "#e8f0fb",
+    light: "#e8f0fb",
     sub: "vs last month",
   },
   {
@@ -39,32 +41,31 @@ const stats = [
     up: true,
     icon: ClipboardList,
     color: "#81bf42",
-    lightColor: "#eef7e0",
+    light: "#eef7e0",
     sub: "vs last month",
   },
   {
-    label: "Total Products",
+    label: "Products",
     value: "186",
-    change: "+4",
+    change: "+4 new",
     up: true,
     icon: ShoppingBag,
     color: "#f59e0b",
-    lightColor: "#fef3c7",
-    sub: "new this week",
+    light: "#fef3c7",
+    sub: "this week",
   },
   {
-    label: "Total Customers",
+    label: "Customers",
     value: "1,248",
     change: "+22",
     up: true,
     icon: Users,
     color: "#8b5cf6",
-    lightColor: "#ede9fe",
-    sub: "new this month",
+    light: "#ede9fe",
+    sub: "this month",
   },
 ];
 
-// ── Recent Orders ────────────────────────────────────────────
 const recentOrders = [
   {
     id: "#ORD-1041",
@@ -113,7 +114,6 @@ const recentOrders = [
   },
 ];
 
-// ── Low Stock Products ───────────────────────────────────────
 const lowStock = [
   { name: "SS Ton Ranger Bat", brand: "SS", stock: 2, category: "Bats" },
   {
@@ -126,7 +126,6 @@ const lowStock = [
   { name: "SG Test Cricket Ball", brand: "SG", stock: 5, category: "Balls" },
 ];
 
-// ── Top Brands ───────────────────────────────────────────────
 const topBrands = [
   { name: "SS", sales: 84, revenue: "AED 28,400", color: "#004b9c" },
   { name: "Gray-Nicolls", sales: 62, revenue: "AED 55,700", color: "#81bf42" },
@@ -134,216 +133,221 @@ const topBrands = [
   { name: "MRF", sales: 38, revenue: "AED 47,500", color: "#8b5cf6" },
 ];
 
-// ── Status Badge ─────────────────────────────────────────────
-function StatusBadge({ status }: { status: string }) {
-  const map: Record<
-    string,
-    { color: string; bg: string; icon: React.ElementType }
-  > = {
-    Delivered: { color: "#16a34a", bg: "#dcfce7", icon: CheckCircle2 },
-    Processing: { color: "#2563eb", bg: "#dbeafe", icon: Clock },
-    Pending: { color: "#d97706", bg: "#fef3c7", icon: AlertCircle },
-    Cancelled: { color: "#dc2626", bg: "#fee2e2", icon: AlertCircle },
-  };
-  const s = map[status] ?? map.Pending;
-  const Icon = s.icon;
+const statusMap: Record<
+  string,
+  { color: string; bg: string; icon: React.ElementType }
+> = {
+  Delivered: { color: "#16a34a", bg: "#f0fdf4", icon: CheckCircle2 },
+  Processing: { color: "#2563eb", bg: "#eff6ff", icon: Clock },
+  Pending: { color: "#d97706", bg: "#fffbeb", icon: Clock },
+  Cancelled: { color: "#dc2626", bg: "#fef2f2", icon: AlertCircle },
+};
 
+function StatusBadge({ status }: { status: string }) {
+  const s = statusMap[status] ?? statusMap.Pending;
+  const Icon = s.icon;
   return (
     <span
-      className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold"
-      style={{ color: s.color, backgroundColor: s.bg }}
+      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold border"
+      style={{
+        color: s.color,
+        backgroundColor: s.bg,
+        borderColor: `${s.color}20`,
+      }}
     >
-      <Icon size={10} />
+      <Icon size={9} strokeWidth={2.5} />
       {status}
     </span>
   );
 }
 
-// ── Stat Card ────────────────────────────────────────────────
 function StatCard({ stat, index }: { stat: (typeof stats)[0]; index: number }) {
   const Icon = stat.icon;
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.08, duration: 0.4 }}
-      className="bg-white rounded-2xl p-5 border border-gray-100 hover:shadow-[0_8px_32px_rgba(0,0,0,0.08)] transition-all duration-200 group"
+      transition={{
+        delay: index * 0.07,
+        duration: 0.4,
+        ease: [0.25, 0.46, 0.45, 0.94],
+      }}
+      className="bg-white rounded-2xl p-5 border border-gray-100 hover:border-gray-200 hover:shadow-[0_4px_24px_rgba(0,0,0,0.06)] transition-all duration-200 group relative overflow-hidden"
     >
-      <div className="flex items-start justify-between mb-4">
+      {/* Subtle bg accent */}
+      <div
+        className="absolute top-0 right-0 w-24 h-24 rounded-full blur-2xl opacity-[0.06] pointer-events-none"
+        style={{ background: stat.color, transform: "translate(30%, -30%)" }}
+      />
+      <div className="flex items-start justify-between mb-4 relative">
         <div
-          className="w-11 h-11 rounded-2xl flex items-center justify-center transition-transform duration-200 group-hover:scale-110"
-          style={{ backgroundColor: stat.lightColor }}
+          className="w-10 h-10 rounded-xl flex items-center justify-center transition-transform duration-200 group-hover:scale-110"
+          style={{ backgroundColor: stat.light }}
         >
-          <Icon size={20} style={{ color: stat.color }} strokeWidth={2} />
+          <Icon size={18} strokeWidth={2} style={{ color: stat.color }} />
         </div>
         <span
-          className={`flex items-center gap-1 text-[12px] font-bold px-2 py-1 rounded-full ${
-            stat.up ? "text-green-600 bg-green-50" : "text-red-500 bg-red-50"
-          }`}
+          className={`flex items-center gap-0.5 text-[11px] font-bold px-2 py-1 rounded-lg ${stat.up ? "text-green-600 bg-green-50" : "text-red-500 bg-red-50"}`}
         >
-          {stat.up ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
+          {stat.up ? <ArrowUpRight size={11} /> : <ArrowDownRight size={11} />}
           {stat.change}
         </span>
       </div>
-      <p className="text-[26px] font-black text-gray-900 leading-none mb-1 tracking-tight">
+      <p className="text-[24px] font-black text-gray-900 leading-none tracking-tight mb-1 relative">
         {stat.value}
       </p>
-      <p className="text-[13px] font-medium text-gray-500">{stat.label}</p>
-      <p className="text-[11px] text-gray-400 mt-0.5">{stat.sub}</p>
+      <p className="text-[12px] font-medium text-gray-500">{stat.label}</p>
+      <p className="text-[10px] text-gray-400 mt-0.5">{stat.sub}</p>
     </motion.div>
   );
 }
 
-// ── Main Dashboard ───────────────────────────────────────────
 export default function AdminDashboard() {
+  const { data: session } = useSession();
+  const hour = new Date().getHours();
+  const greeting =
+    hour < 12 ? "Good Morning" : hour < 17 ? "Good Afternoon" : "Good Evening";
+
   return (
-    <div className="space-y-6 max-w-[1400px]">
-      {/* ── Welcome Bar ── */}
+    <div className="space-y-5 max-w-[1380px]">
+      {/* ── Page Header ── */}
       <motion.div
-        initial={{ opacity: 0, y: -10 }}
+        initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex items-center justify-between flex-wrap gap-4"
+        className="flex items-center justify-between flex-wrap gap-3"
       >
         <div>
+          <p className="text-[11px] font-semibold text-[#81bf42] tracking-[0.15em] uppercase mb-1">
+            {greeting}
+          </p>
           <h2
-            className="text-[26px] font-black text-gray-900 tracking-tight"
+            className="text-[22px] font-black text-gray-900 tracking-tight leading-tight"
             style={{ fontFamily: "'Barlow Condensed', sans-serif" }}
           >
-            Good Morning, Admin 👋
+            {session?.user?.name ?? "Admin"} — iSports Dashboard
           </h2>
-          <p className="text-[13px] text-gray-400 mt-0.5">
-            Here's what's happening at iSports Cricket today.
-          </p>
         </div>
-        <Link href="/admin/products/new">
-          <motion.button
-            whileHover={{ scale: 1.02, y: -1 }}
-            whileTap={{ scale: 0.97 }}
-            className="flex items-center gap-2 px-5 py-2.5 bg-[#004b9c] hover:bg-[#003d82] text-white text-[13px] font-bold rounded-xl shadow-[0_4px_16px_rgba(0,75,156,0.3)] transition-all"
-          >
-            <Plus size={15} />
-            Add Product
-          </motion.button>
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link href="/admin/products/new">
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.97 }}
+              className="flex items-center gap-2 px-4 py-2.5 text-white text-[12px] font-bold rounded-xl transition-all shadow-[0_4px_12px_rgba(0,75,156,0.25)]"
+              style={{
+                background: "linear-gradient(135deg, #004b9c, #0062cc)",
+              }}
+            >
+              <Plus size={14} />
+              Add Product
+            </motion.button>
+          </Link>
+        </div>
       </motion.div>
 
-      {/* ── Stat Cards ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        {stats.map((stat, i) => (
-          <StatCard key={stat.label} stat={stat} index={i} />
+      {/* ── Stats ── */}
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3.5">
+        {stats.map((s, i) => (
+          <StatCard key={s.label} stat={s} index={i} />
         ))}
       </div>
 
-      {/* ── Middle Row: Orders Table + Top Brands ── */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
-        {/* Recent Orders */}
+      {/* ── Orders + Brands ── */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+        {/* Orders table */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.35 }}
+          transition={{ delay: 0.3 }}
           className="xl:col-span-2 bg-white rounded-2xl border border-gray-100 overflow-hidden"
         >
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-50">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-50">
             <div>
-              <h3 className="text-[15px] font-bold text-gray-900">
+              <h3 className="text-[13.5px] font-bold text-gray-900">
                 Recent Orders
               </h3>
-              <p className="text-[11px] text-gray-400">
-                Last 5 orders across all channels
+              <p className="text-[11px] text-gray-400 mt-0.5">
+                Latest 5 across all channels
               </p>
             </div>
             <Link
               href="/admin/orders"
-              className="text-[12px] font-semibold text-[#004b9c] hover:underline flex items-center gap-1"
+              className="flex items-center gap-1 text-[11.5px] font-semibold text-[#004b9c] hover:gap-2 transition-all"
             >
-              View all
-              <ArrowUpRight size={12} />
+              View all <ArrowRight size={11} />
             </Link>
           </div>
-
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-gray-50">
-                  {[
-                    "Order",
-                    "Customer",
-                    "Product",
-                    "Amount",
-                    "Source",
-                    "Status",
-                    "",
-                  ].map((h) => (
-                    <th
-                      key={h}
-                      className="px-5 py-3 text-left text-[11px] font-bold text-gray-400 tracking-wider uppercase"
-                    >
-                      {h}
-                    </th>
-                  ))}
+                <tr className="border-b border-gray-50/80">
+                  {["Order", "Customer", "Amount", "Channel", "Status", ""].map(
+                    (h) => (
+                      <th
+                        key={h}
+                        className="px-5 py-2.5 text-left text-[10px] font-bold text-gray-400 tracking-[0.1em] uppercase"
+                      >
+                        {h}
+                      </th>
+                    ),
+                  )}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
+              <tbody>
                 {recentOrders.map((order, i) => (
                   <motion.tr
                     key={order.id}
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.4 + i * 0.06 }}
-                    className="hover:bg-gray-50/50 transition-colors group"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.35 + i * 0.05 }}
+                    className="border-b border-gray-50/60 hover:bg-gray-50/40 transition-colors group"
                   >
-                    <td className="px-5 py-3.5">
-                      <span className="text-[12px] font-bold text-[#004b9c]">
+                    <td className="px-5 py-3">
+                      <p className="text-[11.5px] font-bold text-[#004b9c]">
                         {order.id}
-                      </span>
+                      </p>
                       <p className="text-[10px] text-gray-400 mt-0.5">
                         {order.time}
                       </p>
                     </td>
-                    <td className="px-5 py-3.5">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#004b9c] to-[#81bf42] flex items-center justify-center flex-shrink-0">
-                          <span className="text-white text-[10px] font-bold">
-                            {order.customer.charAt(0)}
-                          </span>
+                    <td className="px-5 py-3">
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="w-6 h-6 rounded-lg flex items-center justify-center text-white text-[9px] font-black flex-shrink-0"
+                          style={{
+                            background:
+                              "linear-gradient(135deg, #004b9c, #81bf42)",
+                          }}
+                        >
+                          {order.customer.charAt(0)}
                         </div>
-                        <span className="text-[12px] font-medium text-gray-700 whitespace-nowrap">
+                        <span className="text-[11.5px] font-medium text-gray-700 whitespace-nowrap">
                           {order.customer}
                         </span>
                       </div>
                     </td>
-                    <td className="px-5 py-3.5">
-                      <span className="text-[12px] text-gray-600 whitespace-nowrap">
-                        {order.product}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <span className="text-[13px] font-bold text-gray-900">
+                    <td className="px-5 py-3">
+                      <span className="text-[12px] font-bold text-gray-900">
                         {order.amount}
                       </span>
                     </td>
-                    <td className="px-5 py-3.5">
+                    <td className="px-5 py-3">
                       <span
-                        className={`flex items-center gap-1.5 text-[11px] font-semibold ${
-                          order.source === "WhatsApp"
-                            ? "text-green-600"
-                            : "text-blue-600"
-                        }`}
+                        className={`flex items-center gap-1 text-[10.5px] font-semibold ${order.source === "WhatsApp" ? "text-green-600" : "text-blue-500"}`}
                       >
                         {order.source === "WhatsApp" ? (
-                          <MessageCircle size={11} />
+                          <MessageCircle size={10} />
                         ) : (
-                          <Eye size={11} />
+                          <Eye size={10} />
                         )}
                         {order.source}
                       </span>
                     </td>
-                    <td className="px-5 py-3.5">
+                    <td className="px-5 py-3">
                       <StatusBadge status={order.status} />
                     </td>
-                    <td className="px-5 py-3.5">
-                      <button className="opacity-0 group-hover:opacity-100 w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 transition-all">
-                        <MoreHorizontal size={14} />
+                    <td className="px-5 py-3">
+                      <button className="opacity-0 group-hover:opacity-100 w-6 h-6 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 transition-all">
+                        <MoreHorizontal size={12} />
                       </button>
                     </td>
                   </motion.tr>
@@ -355,45 +359,56 @@ export default function AdminDashboard() {
 
         {/* Top Brands */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="bg-white rounded-2xl border border-gray-100 p-6"
+          transition={{ delay: 0.35 }}
+          className="bg-white rounded-2xl border border-gray-100 p-5"
         >
-          <div className="mb-5">
-            <h3 className="text-[15px] font-bold text-gray-900">Top Brands</h3>
-            <p className="text-[11px] text-gray-400">By sales volume</p>
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h3 className="text-[13.5px] font-bold text-gray-900">
+                Top Brands
+              </h3>
+              <p className="text-[11px] text-gray-400 mt-0.5">
+                By sales volume
+              </p>
+            </div>
           </div>
-
           <div className="space-y-4">
             {topBrands.map((brand, i) => (
               <motion.div
                 key={brand.name}
-                initial={{ opacity: 0, x: 20 }}
+                initial={{ opacity: 0, x: 12 }}
                 animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.5 + i * 0.07 }}
+                transition={{ delay: 0.45 + i * 0.07 }}
               >
                 <div className="flex items-center justify-between mb-1.5">
                   <div className="flex items-center gap-2">
                     <div
-                      className="w-2 h-2 rounded-full"
+                      className="w-2 h-2 rounded-full flex-shrink-0"
                       style={{ backgroundColor: brand.color }}
                     />
-                    <span className="text-[13px] font-semibold text-gray-700">
+                    <span className="text-[12.5px] font-semibold text-gray-800">
                       {brand.name}
                     </span>
                   </div>
-                  <span className="text-[11px] font-bold text-gray-500">
-                    {brand.sales} sales
+                  <span className="text-[10.5px] font-bold text-gray-400">
+                    {brand.sales} units
                   </span>
                 </div>
-                <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${(brand.sales / 84) * 100}%` }}
-                    transition={{ delay: 0.6 + i * 0.08, duration: 0.6 }}
+                    transition={{
+                      delay: 0.55 + i * 0.08,
+                      duration: 0.7,
+                      ease: "easeOut",
+                    }}
                     className="h-full rounded-full"
-                    style={{ backgroundColor: brand.color }}
+                    style={{
+                      background: `linear-gradient(90deg, ${brand.color}cc, ${brand.color})`,
+                    }}
                   />
                 </div>
                 <p className="text-[10px] text-gray-400 mt-1">
@@ -405,71 +420,66 @@ export default function AdminDashboard() {
         </motion.div>
       </div>
 
-      {/* ── Bottom Row: Low Stock + Quick Actions ── */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
-        {/* Low Stock Alert */}
+      {/* ── Low Stock + Quick Actions ── */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+        {/* Low Stock */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
+          transition={{ delay: 0.4 }}
           className="xl:col-span-2 bg-white rounded-2xl border border-gray-100 overflow-hidden"
         >
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-50">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 bg-red-50 rounded-lg flex items-center justify-center">
-                <AlertCircle size={14} className="text-red-500" />
+          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-50">
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-xl bg-red-50 border border-red-100 flex items-center justify-center">
+                <AlertCircle size={13} className="text-red-500" />
               </div>
               <div>
-                <h3 className="text-[15px] font-bold text-gray-900">
+                <h3 className="text-[13.5px] font-bold text-gray-900">
                   Low Stock Alert
                 </h3>
                 <p className="text-[11px] text-gray-400">
-                  Products running low
+                  Needs immediate attention
                 </p>
               </div>
             </div>
             <Link
               href="/admin/products"
-              className="text-[12px] font-semibold text-[#004b9c] hover:underline"
+              className="flex items-center gap-1 text-[11.5px] font-semibold text-[#004b9c] hover:gap-2 transition-all"
             >
-              Manage
+              Manage <ArrowRight size={11} />
             </Link>
           </div>
-
-          <div className="divide-y divide-gray-50">
+          <div>
             {lowStock.map((item, i) => (
               <motion.div
                 key={item.name}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ delay: 0.6 + i * 0.06 }}
-                className="flex items-center justify-between px-6 py-3.5 hover:bg-gray-50/50 transition-colors"
+                transition={{ delay: 0.5 + i * 0.05 }}
+                className="flex items-center justify-between px-5 py-3.5 hover:bg-gray-50/50 transition-colors border-b border-gray-50/60 last:border-0"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-gray-50 rounded-xl flex items-center justify-center">
-                    <Package size={14} className="text-gray-400" />
+                  <div className="w-8 h-8 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center flex-shrink-0">
+                    <Package size={13} className="text-gray-400" />
                   </div>
                   <div>
-                    <p className="text-[13px] font-semibold text-gray-800">
+                    <p className="text-[12.5px] font-semibold text-gray-800">
                       {item.name}
                     </p>
-                    <p className="text-[11px] text-gray-400">
+                    <p className="text-[10.5px] text-gray-400">
                       {item.brand} · {item.category}
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
                   <span
-                    className={`text-[12px] font-bold px-2.5 py-1 rounded-full ${
-                      item.stock <= 2
-                        ? "text-red-600 bg-red-50"
-                        : "text-amber-600 bg-amber-50"
-                    }`}
+                    className={`text-[11px] font-bold px-2.5 py-1 rounded-lg border ${item.stock <= 2 ? "text-red-600 bg-red-50 border-red-100" : "text-amber-600 bg-amber-50 border-amber-100"}`}
                   >
                     {item.stock} left
                   </span>
-                  <button className="text-[12px] font-semibold text-[#004b9c] hover:underline">
-                    Restock
+                  <button className="text-[11px] font-semibold text-[#004b9c] hover:underline whitespace-nowrap">
+                    Restock →
                   </button>
                 </div>
               </motion.div>
@@ -479,16 +489,15 @@ export default function AdminDashboard() {
 
         {/* Quick Actions */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.55 }}
-          className="bg-white rounded-2xl border border-gray-100 p-6"
+          transition={{ delay: 0.45 }}
+          className="bg-white rounded-2xl border border-gray-100 p-5"
         >
-          <h3 className="text-[15px] font-bold text-gray-900 mb-5">
+          <h3 className="text-[13.5px] font-bold text-gray-900 mb-4">
             Quick Actions
           </h3>
-
-          <div className="space-y-2.5">
+          <div className="space-y-1.5">
             {[
               {
                 label: "Add New Product",
@@ -530,24 +539,24 @@ export default function AdminDashboard() {
               return (
                 <Link key={action.label} href={action.href}>
                   <motion.div
-                    initial={{ opacity: 0, x: 10 }}
+                    initial={{ opacity: 0, x: 8 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.65 + i * 0.06 }}
-                    whileHover={{ x: 4 }}
-                    className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-all cursor-pointer group"
+                    transition={{ delay: 0.55 + i * 0.05 }}
+                    whileHover={{ x: 3 }}
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-50 transition-all cursor-pointer group"
                   >
                     <div
-                      className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                      className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
                       style={{ backgroundColor: action.bg }}
                     >
-                      <Icon size={15} style={{ color: action.color }} />
+                      <Icon size={13} style={{ color: action.color }} />
                     </div>
-                    <span className="text-[13px] font-semibold text-gray-700 group-hover:text-gray-900 transition-colors">
+                    <span className="text-[12.5px] font-medium text-gray-700 group-hover:text-gray-900 transition-colors flex-1">
                       {action.label}
                     </span>
-                    <ArrowUpRight
-                      size={13}
-                      className="ml-auto text-gray-300 group-hover:text-gray-500 transition-colors"
+                    <ArrowRight
+                      size={11}
+                      className="text-gray-300 group-hover:text-gray-500 transition-colors"
                     />
                   </motion.div>
                 </Link>

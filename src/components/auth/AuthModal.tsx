@@ -185,6 +185,7 @@ export default function AuthModal({
                     src="/ISportsCricket-Logo.png"
                     alt="iSPORTS"
                     fill
+                    sizes="100px"
                     className="object-contain object-left"
                   />
                 </div>

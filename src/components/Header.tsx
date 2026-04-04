@@ -115,6 +115,7 @@ export default function Header() {
                   src="/ISportsCricket-Logo.png"
                   alt="iSPORTS Cricket"
                   fill
+                  sizes="155px"
                   className="object-contain object-left"
                   priority
                 />
@@ -320,6 +321,7 @@ export default function Header() {
                     src="/ISportsCricket-Logo.png"
                     alt="iSPORTS"
                     fill
+                    sizes="130px"
                     className="object-contain object-left"
                   />
                 </div>

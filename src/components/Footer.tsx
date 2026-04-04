@@ -40,6 +40,7 @@ const Footer = () => {
             src="/ISportsCricket-Logo.png"
             alt="iSPORTS Logo"
             fill
+            sizes="100px"
             className="object-contain"
           />
         </div>

@@ -107,6 +107,7 @@ export default function AdminLoginPage() {
                   src="/ISportsCricket-Logo.png"
                   alt="iSPORTS Cricket"
                   fill
+                  sizes="(max-width: 768px) 100vw, 400px"
                   className="object-contain p-3"
                   priority
                 />
