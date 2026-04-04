@@ -5,19 +5,29 @@ export interface IBrand extends Document {
   name: string;
   slug: string;
   logo?: string;
+  country?: string;
   createdAt: Date;
 }
 
 const BrandSchema = new Schema<IBrand>(
   {
     name: { type: String, required: true, unique: true, trim: true },
-    slug: { type: String, required: true, unique: true, trim: true, lowercase: true },
+    slug: {
+      type: String,
+      required: true,
+      unique: true,
+      trim: true,
+      lowercase: true,
+    },
     logo: { type: String },
+    country: { type: String, trim: true },
   },
-  { timestamps: { createdAt: true, updatedAt: false } }
+  { timestamps: { createdAt: true, updatedAt: false } },
 );
 
+// Delete cached model to avoid OverwriteModelError in dev hot-reload
 const Brand: Model<IBrand> =
-  mongoose.models.Brand || mongoose.model<IBrand>("Brand", BrandSchema);
+  (mongoose.models.Brand as Model<IBrand>) ||
+  mongoose.model<IBrand>("Brand", BrandSchema);
 
 export default Brand;
