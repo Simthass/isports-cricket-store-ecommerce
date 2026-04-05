@@ -1,92 +1,29 @@
+// src/components/home/FeaturedBrands.tsx
 "use client";
 
-import React, { useRef } from "react";
-import Link from "next/link";
+import React, { useRef, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { motion, useInView } from "framer-motion";
 
-const BRANDS = [
-  {
-    id: 1,
-    name: "Adidas",
-    logo: "/brands/adidas.png",
-    href: "/brand/adidas",
-  },
-  {
-    id: 2,
-    name: "Nike",
-    logo: "/brands/nike.png",
-    href: "/brand/nike",
-  },
-  {
-    id: 3,
-    name: "Puma",
-    logo: "/brands/puma.png",
-    href: "/brand/puma",
-  },
-  {
-    id: 4,
-    name: "MoonWalkr",
-    logo: "/brands/moonwalkr.png",
-    href: "/brand/moonwalkr",
-  },
-  {
-    id: 5,
-    name: "Shrey",
-    logo: "/brands/shrey.png",
-    href: "/brand/shrey",
-  },
-  {
-    id: 6,
-    name: "New Balance",
-    logo: "/brands/newBalance.png",
-    href: "/brand/new-balance",
-  },
-  {
-    id: 7,
-    name: "Gray-Nicolls",
-    logo: "/brands/grayNicolls.png",
-    href: "/brand/gray-nicolls",
-  },
-  {
-    id: 8,
-    name: "Kookaburra",
-    logo: "/brands/kookaburra.png",
-    href: "/brand/kookaburra",
-  },
-  {
-    id: 9,
-    name: "MRF",
-    logo: "/brands/MRF.png",
-    href: "/brand/mrf",
-  },
-  {
-    id: 10,
-    name: "SS Sports",
-    logo: "/brands/SS.png",
-    href: "/brand/ss-sports",
-  },
-  {
-    id: 11,
-    name: "SG Cricket",
-    logo: "/brands/SG.png",
-    href: "/brand/sg-cricket",
-  },
-  {
-    id: 12,
-    name: "CA Sports",
-    logo: "/brands/CA.png",
-    href: "/brand/ca-sports",
-  },
-];
-
-// Triple the brands so the marquee never gaps
-const MARQUEE_BRANDS = [...BRANDS, ...BRANDS, ...BRANDS];
+interface IBrand {
+  _id: string;
+  name: string;
+  slug: string;
+  logo?: string;
+  country?: string;
+}
 
 // ─── Single Brand Card ────────────────────────────────────────────
-function BrandCard({ brand }) {
+function BrandCard({ brand, onClick }: { brand: IBrand; onClick: () => void }) {
+  const initials = brand.name.slice(0, 2).toUpperCase();
+
   return (
-    <Link href={brand.href} className="group flex-shrink-0">
+    <button
+      onClick={onClick}
+      className="group flex-shrink-0 cursor-pointer text-left"
+      aria-label={`Shop ${brand.name}`}
+    >
       <div
         className="
           relative flex items-center justify-center
@@ -106,18 +43,33 @@ function BrandCard({ brand }) {
         {/* Top accent rule — grows on hover */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 h-[2.5px] w-0 group-hover:w-full bg-gradient-to-r from-[#004b9c] to-[#81bf42] rounded-b-full transition-all duration-500 pointer-events-none" />
 
-        {/* Logo */}
-        <div className="relative w-[120px] h-[56px] transition-all duration-300 group-hover:scale-105">
-          <Image
-            src={brand.logo}
-            alt={brand.name}
-            fill
-            className="object-contain grayscale group-hover:grayscale-0 transition-all duration-400"
-            sizes="120px"
-          />
+        {/* Logo or initials fallback */}
+        <div className="relative w-[120px] h-[56px] transition-all duration-300 group-hover:scale-105 flex items-center justify-center">
+          {brand.logo ? (
+            <Image
+              src={brand.logo}
+              alt={brand.name}
+              fill
+              className="object-contain grayscale group-hover:grayscale-0 transition-all duration-400"
+              sizes="120px"
+            />
+          ) : (
+            <span className="text-[22px] font-black text-[#004b9c]/30 group-hover:text-[#004b9c]/70 transition-colors duration-300 tracking-wide select-none">
+              {initials}
+            </span>
+          )}
         </div>
       </div>
-    </Link>
+    </button>
+  );
+}
+
+// ─── Skeleton card (same dimensions as BrandCard) ─────────────────
+function BrandCardSkeleton() {
+  return (
+    <div className="flex-shrink-0 mx-2.5">
+      <div className="w-[175px] h-[100px] rounded-2xl bg-gray-100 animate-pulse" />
+    </div>
   );
 }
 
@@ -125,6 +77,41 @@ function BrandCard({ brand }) {
 export default function FeaturedBrands() {
   const ref = useRef(null);
   const inView = useInView(ref, { once: true, margin: "-60px" });
+  const router = useRouter();
+
+  const [brands, setBrands] = useState<IBrand[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchBrands = async () => {
+      try {
+        const res = await fetch("/api/brands");
+        const json = await res.json();
+        if (json.success) {
+          setBrands(json.data as IBrand[]);
+        }
+      } catch (err) {
+        console.error("Failed to fetch brands", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchBrands();
+  }, []);
+
+  const handleBrandClick = (slug: string) => {
+    router.push(`/shop?brand=${slug}`);
+  };
+
+  // Triple the brands for seamless marquee loop (same as original MARQUEE_BRANDS logic)
+  const marqueeBrands = [...brands, ...brands, ...brands];
+
+  // Skeleton placeholders — use 12 to match original BRANDS.length
+  const skeletonCount = 12;
+  const skeletonMarquee = [...Array(skeletonCount * 3).fill(null)];
+
+  // Don't render section if no brands loaded and not loading
+  if (!loading && brands.length === 0) return null;
 
   return (
     <>
@@ -202,10 +189,6 @@ export default function FeaturedBrands() {
         </div>
 
         {/* ── Marquee Track ── */}
-        {/*
-          Edge fade masks using Tailwind arbitrary gradient values.
-          The track itself overflows the container intentionally.
-        */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={inView ? { opacity: 1 } : {}}
@@ -219,11 +202,24 @@ export default function FeaturedBrands() {
 
           {/* Scrolling strip */}
           <div className="flex overflow-hidden py-4">
-            <div className="animate-brand-marquee flex items-center will-change-transform">
-              {MARQUEE_BRANDS.map((brand, idx) => (
-                <BrandCard key={`${brand.id}-${idx}`} brand={brand} />
-              ))}
-            </div>
+            {loading ? (
+              /* Skeleton strip — static, no animation while loading */
+              <div className="flex items-center">
+                {skeletonMarquee.map((_, idx) => (
+                  <BrandCardSkeleton key={idx} />
+                ))}
+              </div>
+            ) : (
+              <div className="animate-brand-marquee flex items-center will-change-transform">
+                {marqueeBrands.map((brand, idx) => (
+                  <BrandCard
+                    key={`${brand._id}-${idx}`}
+                    brand={brand}
+                    onClick={() => handleBrandClick(brand.slug)}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         </motion.div>
       </section>

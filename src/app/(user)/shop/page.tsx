@@ -1,7 +1,8 @@
 // src/app/(shop)/shop/page.tsx
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { SlidersHorizontal, X, ChevronRight } from "lucide-react";
 import Link from "next/link";
@@ -42,13 +43,43 @@ const DEFAULT_FILTERS: Filters = {
 };
 
 export default function ShopPage() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  // ── Read URL params to pre-populate filters ────────────────
+  const initialFilters: Filters = {
+    categories: searchParams.get("category")
+      ? [searchParams.get("category")!]
+      : [],
+    brands: searchParams.get("brand") ? [searchParams.get("brand")!] : [],
+    priceRange: null,
+    inStockOnly: false,
+  };
+
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
+  const [filters, setFilters] = useState<Filters>(initialFilters);
   const [sort, setSort] = useState("featured");
   const [view, setView] = useState<"grid" | "list">("grid");
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
   const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 });
+
+  // Track if this is the very first render (skip page-reset on mount)
+  const isFirstRender = useRef(true);
+
+  // ── Sync URL when filters change ──────────────────────────
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    const params = new URLSearchParams();
+    if (filters.brands.length > 0) params.set("brand", filters.brands[0]);
+    if (filters.categories.length > 0)
+      params.set("category", filters.categories[0]);
+    const query = params.toString();
+    router.replace(query ? `/shop?${query}` : "/shop", { scroll: false });
+  }, [filters, router]);
 
   const fetchProducts = useCallback(async () => {
     setLoading(true);
@@ -90,6 +121,12 @@ export default function ShopPage() {
     fetchProducts();
   }, [fetchProducts]);
 
+  // Reset to page 1 whenever filters/sort change (but not on first render)
+  const handleFiltersChange = (newFilters: Filters) => {
+    setPagination((p) => ({ ...p, page: 1 }));
+    setFilters(newFilters);
+  };
+
   const activeFilterCount =
     filters.categories.length +
     filters.brands.length +
@@ -117,7 +154,7 @@ export default function ShopPage() {
                 All Products
               </h1>
               <p className="text-gray-500 text-[14px] mt-1">
-                Premium cricket gear from the world's best brands
+                Premium cricket gear from the world&apos;s best brands
               </p>
             </div>
             {/* Active filter pills */}
@@ -131,7 +168,7 @@ export default function ShopPage() {
                     {c}
                     <button
                       onClick={() =>
-                        setFilters({
+                        handleFiltersChange({
                           ...filters,
                           categories: filters.categories.filter((x) => x !== c),
                         })
@@ -149,7 +186,7 @@ export default function ShopPage() {
                     {b}
                     <button
                       onClick={() =>
-                        setFilters({
+                        handleFiltersChange({
                           ...filters,
                           brands: filters.brands.filter((x) => x !== b),
                         })
@@ -164,7 +201,10 @@ export default function ShopPage() {
                     In Stock
                     <button
                       onClick={() =>
-                        setFilters({ ...filters, inStockOnly: false })
+                        handleFiltersChange({
+                          ...filters,
+                          inStockOnly: false,
+                        })
                       }
                     >
                       <X size={10} />
@@ -185,7 +225,7 @@ export default function ShopPage() {
             <div className="sticky top-[120px]">
               <FilterSidebar
                 filters={filters}
-                onChange={setFilters}
+                onChange={handleFiltersChange}
                 totalResults={pagination.total}
               />
             </div>
@@ -239,7 +279,7 @@ export default function ShopPage() {
                   Try adjusting your filters
                 </p>
                 <button
-                  onClick={() => setFilters(DEFAULT_FILTERS)}
+                  onClick={() => handleFiltersChange(DEFAULT_FILTERS)}
                   className="px-6 py-3 bg-[#004b9c] text-white text-[13px] font-bold rounded-xl hover:bg-[#003d82] transition-colors"
                 >
                   Clear Filters
@@ -329,7 +369,7 @@ export default function ShopPage() {
               <div className="p-5">
                 <FilterSidebar
                   filters={filters}
-                  onChange={setFilters}
+                  onChange={handleFiltersChange}
                   totalResults={pagination.total}
                 />
               </div>

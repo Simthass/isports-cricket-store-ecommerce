@@ -14,11 +14,11 @@ export default function HomePage() {
     <main>
       <HeroSection />
       <CategoriesSection />
+      <Featuredbrands />
       <TrendingProducts />
       <Bannerssection />
       <Newslettersection />
       <NewArrivals />
-      <Featuredbrands />
       <Truststrip />
       <FeaturedProducts />
       <Testimonialssection />
