@@ -1,11 +1,17 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 
+// ── Size with individual price ────────────────────────────────
+export interface ISizeOption {
+  label: string; // e.g. "Short Handle", "SH", "6"
+  price: number; // price for this size
+}
+
 export interface IProduct extends Document {
   _id: mongoose.Types.ObjectId;
   name: string;
   slug: string;
   description?: string;
-  price: number;
+  price: number; // base / default price
   originalPrice?: number;
   images: string[];
   inStock: boolean;
@@ -15,17 +21,35 @@ export interface IProduct extends Document {
   isFeatured: boolean;
   rating: number;
   reviewCount: number;
-  sizes: string[];
+  // Sizes — stored as objects when price-per-size is enabled
+  sizes: string[]; // kept for backward compat (simple labels)
+  sizeOptions: ISizeOption[]; // rich size+price objects (use this when enableSizePrice = true)
+  enableSizePrice: boolean; // if true, use sizeOptions instead of sizes
+  colors: string[];
   categoryId: mongoose.Types.ObjectId;
   brandId: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
 
+const SizeOptionSchema = new Schema<ISizeOption>(
+  {
+    label: { type: String, required: true, trim: true },
+    price: { type: Number, required: true, min: 0 },
+  },
+  { _id: false },
+);
+
 const ProductSchema = new Schema(
   {
     name: { type: String, required: true, trim: true },
-    slug: { type: String, required: true, unique: true, trim: true, lowercase: true },
+    slug: {
+      type: String,
+      required: true,
+      unique: true,
+      trim: true,
+      lowercase: true,
+    },
     description: { type: String },
     price: { type: Number, required: true },
     originalPrice: { type: Number },
@@ -38,10 +62,17 @@ const ProductSchema = new Schema(
     rating: { type: Number, default: 0 },
     reviewCount: { type: Number, default: 0 },
     sizes: { type: [String], default: [] },
-    categoryId: { type: Schema.Types.ObjectId, ref: "Category", required: true },
+    sizeOptions: { type: [SizeOptionSchema], default: [] },
+    enableSizePrice: { type: Boolean, default: false },
+    colors: { type: [String], default: [] },
+    categoryId: {
+      type: Schema.Types.ObjectId,
+      ref: "Category",
+      required: true,
+    },
     brandId: { type: Schema.Types.ObjectId, ref: "Brand", required: true },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 const Product: Model<IProduct> =

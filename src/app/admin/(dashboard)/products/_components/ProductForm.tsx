@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { motion, AnimatePresence, Reorder } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Upload,
   X,
@@ -10,9 +10,8 @@ import {
   AlertCircle,
   Plus,
   GripVertical,
-  Star,
-  Zap,
-  Award,
+  Save,
+  ArrowLeft,
   Tag,
   DollarSign,
   Package,
@@ -21,10 +20,8 @@ import {
   Palette,
   Ruler,
   ChevronDown,
-  Image as ImageIcon,
-  Trash2,
-  ArrowLeft,
-  Save,
+  ImageIcon,
+  Award,
   ToggleLeft,
   ToggleRight,
 } from "lucide-react";
@@ -35,23 +32,27 @@ import { cn } from "@/lib/utils";
 interface ICategory {
   _id: string;
   name: string;
-  slug: string;
 }
 interface IBrand {
   _id: string;
   name: string;
-  slug: string;
   logo?: string;
 }
 
 interface UploadedImage {
-  id: string; // local temp id
-  url: string; // cloudinary or preview url
+  id: string;
+  url: string;
   uploading?: boolean;
   error?: string;
 }
 
-interface ProductFormData {
+interface SizeOption {
+  id: string; // local key only
+  label: string;
+  price: string;
+}
+
+interface FormData {
   name: string;
   description: string;
   price: string;
@@ -63,21 +64,16 @@ interface ProductFormData {
   isNew: boolean;
   isBestSeller: boolean;
   isFeatured: boolean;
-  // optional toggleable
   enableSizes: boolean;
-  sizes: string[];
+  enableSizePrice: boolean;
+  sizeOptions: SizeOption[];
   sizeInput: string;
+  sizePriceInput: string;
   enableColors: boolean;
   colors: string[];
   colorInput: string;
 }
 
-interface ProductFormProps {
-  mode: "new" | "edit";
-  productId?: string;
-}
-
-// ── Colour swatches for quick pick ────────────────────────────
 const COLOR_PRESETS = [
   { label: "Black", hex: "#000000" },
   { label: "White", hex: "#FFFFFF" },
@@ -91,25 +87,18 @@ const COLOR_PRESETS = [
   { label: "Maroon", hex: "#7F1D1D" },
 ];
 
-// ── Section wrapper ───────────────────────────────────────────
+// ── Tiny helpers ──────────────────────────────────────────────
 function Section({
   title,
   icon: Icon,
   children,
-  className,
 }: {
   title: string;
   icon: React.ElementType;
   children: React.ReactNode;
-  className?: string;
 }) {
   return (
-    <div
-      className={cn(
-        "bg-white rounded-2xl border border-gray-100 overflow-hidden",
-        className,
-      )}
-    >
+    <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
       <div className="flex items-center gap-2.5 px-5 py-4 border-b border-gray-50">
         <div className="w-7 h-7 rounded-lg bg-[#e8f0fb] flex items-center justify-center">
           <Icon size={14} style={{ color: "#004b9c" }} />
@@ -121,7 +110,6 @@ function Section({
   );
 }
 
-// ── Field wrapper ─────────────────────────────────────────────
 function Field({
   label,
   required,
@@ -138,7 +126,8 @@ function Field({
   return (
     <div>
       <label className="block text-[12px] font-semibold text-gray-700 mb-1.5">
-        {label} {required && <span className="text-red-500">*</span>}
+        {label}
+        {required && <span className="text-red-500 ml-0.5">*</span>}
       </label>
       {children}
       {error && (
@@ -154,9 +143,9 @@ function Field({
   );
 }
 
-// ── Input ─────────────────────────────────────────────────────
-function Input({
+function InputEl({
   error,
+  className,
   ...props
 }: React.InputHTMLAttributes<HTMLInputElement> & { error?: string }) {
   return (
@@ -167,13 +156,12 @@ function Input({
         error
           ? "border-red-300 focus:border-red-400 focus:ring-2 focus:ring-red-100"
           : "border-gray-200 focus:border-[#004b9c] focus:ring-2 focus:ring-[#004b9c]/10",
-        props.className,
+        className,
       )}
     />
   );
 }
 
-// ── Toggle switch ─────────────────────────────────────────────
 function Toggle({
   checked,
   onChange,
@@ -214,24 +202,115 @@ function Toggle({
   );
 }
 
+// ── Drag-to-reorder image grid ────────────────────────────────
+// Uses pure mouse/touch events — no framer Reorder (avoids the state-sync bug)
+function ImageGrid({
+  images,
+  onChange,
+}: {
+  images: UploadedImage[];
+  onChange: (imgs: UploadedImage[]) => void;
+}) {
+  const dragIndex = useRef<number | null>(null);
+
+  function onDragStart(i: number) {
+    dragIndex.current = i;
+  }
+
+  function onDrop(i: number) {
+    if (dragIndex.current === null || dragIndex.current === i) return;
+    const next = [...images];
+    const [moved] = next.splice(dragIndex.current, 1);
+    next.splice(i, 0, moved);
+    dragIndex.current = null;
+    onChange(next);
+  }
+
+  function remove(id: string) {
+    onChange(images.filter((img) => img.id !== id));
+  }
+
+  return (
+    <div className="flex flex-wrap gap-3 mt-1">
+      {images.map((img, i) => (
+        <div
+          key={img.id}
+          draggable={!img.uploading}
+          onDragStart={() => onDragStart(i)}
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={() => onDrop(i)}
+          className={cn(
+            "relative w-[88px] h-[88px] rounded-xl overflow-hidden border-2 transition-all select-none",
+            img.uploading
+              ? "opacity-70 cursor-wait"
+              : "cursor-grab active:cursor-grabbing",
+            i === 0
+              ? "border-[#004b9c]"
+              : "border-gray-200 hover:border-gray-300",
+            img.error ? "border-red-300" : "",
+          )}
+        >
+          <img
+            src={img.url}
+            alt=""
+            className="w-full h-full object-cover pointer-events-none"
+          />
+
+          {/* Uploading overlay */}
+          {img.uploading && (
+            <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+              <Loader2 size={18} className="text-white animate-spin" />
+            </div>
+          )}
+          {/* Error overlay */}
+          {img.error && !img.uploading && (
+            <div className="absolute inset-0 bg-red-500/20 flex items-center justify-center">
+              <AlertCircle size={16} className="text-red-500" />
+            </div>
+          )}
+          {/* Drag handle hint */}
+          {!img.uploading && (
+            <div className="absolute bottom-0 inset-x-0 flex justify-center py-0.5 bg-black/20">
+              <GripVertical size={12} className="text-white/80" />
+            </div>
+          )}
+          {/* Cover badge */}
+          {i === 0 && (
+            <div className="absolute top-1 left-1 px-1.5 py-0.5 rounded-md text-[8px] font-black text-white bg-[#004b9c]">
+              COVER
+            </div>
+          )}
+          {/* Remove */}
+          {!img.uploading && (
+            <button
+              type="button"
+              onClick={() => remove(img.id)}
+              className="absolute top-1 right-1 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600 transition-colors shadow"
+            >
+              <X size={10} />
+            </button>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ── Image Upload Zone ─────────────────────────────────────────
 function ImageUploadZone({
   images,
   onChange,
 }: {
   images: UploadedImage[];
-  onChange: (images: UploadedImage[]) => void;
+  onChange: (imgs: UploadedImage[]) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
 
   const uploadFile = useCallback(async (file: File): Promise<string> => {
-    const formData = new FormData();
-    formData.append("file", file);
-    const res = await fetch("/api/admin/upload", {
-      method: "POST",
-      body: formData,
-    });
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await fetch("/api/admin/upload", { method: "POST", body: fd });
     const json = await res.json();
     if (!res.ok || !json.success)
       throw new Error(json.error ?? "Upload failed");
@@ -240,38 +319,46 @@ function ImageUploadZone({
 
   const handleFiles = useCallback(
     async (files: FileList) => {
-      const remaining = 10 - images.filter((i) => !i.error).length;
-      const toProcess = Array.from(files).slice(0, remaining);
+      const allowed = [
+        "image/jpeg",
+        "image/jpg",
+        "image/png",
+        "image/webp",
+        "image/avif",
+      ];
+      const toProcess = Array.from(files)
+        .filter((f) => allowed.includes(f.type) && f.size <= 5 * 1024 * 1024)
+        .slice(0, 10 - images.filter((i) => !i.error).length);
+
       if (!toProcess.length) return;
 
-      // Add placeholders
       const placeholders: UploadedImage[] = toProcess.map((f) => ({
         id: `${Date.now()}-${Math.random()}`,
         url: URL.createObjectURL(f),
         uploading: true,
       }));
+
+      // Use functional update to avoid stale closure
       onChange([...images, ...placeholders]);
 
-      // Upload each
-      const updated = [...images, ...placeholders];
       for (let i = 0; i < toProcess.length; i++) {
         try {
           const url = await uploadFile(toProcess[i]);
-          const idx = updated.findIndex((img) => img.id === placeholders[i].id);
-          if (idx !== -1) {
-            updated[idx] = { ...updated[idx], url, uploading: false };
-            onChange([...updated]);
-          }
-        } catch (err) {
-          const idx = updated.findIndex((img) => img.id === placeholders[i].id);
-          if (idx !== -1) {
-            updated[idx] = {
-              ...updated[idx],
-              uploading: false,
-              error: "Upload failed",
-            };
-            onChange([...updated]);
-          }
+          onChange((prev) =>
+            prev.map((img) =>
+              img.id === placeholders[i].id
+                ? { ...img, url, uploading: false }
+                : img,
+            ),
+          );
+        } catch {
+          onChange((prev) =>
+            prev.map((img) =>
+              img.id === placeholders[i].id
+                ? { ...img, uploading: false, error: "Upload failed" }
+                : img,
+            ),
+          );
         }
       }
     },
@@ -284,13 +371,8 @@ function ImageUploadZone({
     if (e.dataTransfer.files.length) handleFiles(e.dataTransfer.files);
   }
 
-  function removeImage(id: string) {
-    onChange(images.filter((img) => img.id !== id));
-  }
-
   return (
     <div className="space-y-3">
-      {/* Drop zone */}
       <div
         onClick={() => inputRef.current?.click()}
         onDragOver={(e) => {
@@ -300,21 +382,21 @@ function ImageUploadZone({
         onDragLeave={() => setDragOver(false)}
         onDrop={handleDrop}
         className={cn(
-          "border-2 border-dashed rounded-2xl p-8 flex flex-col items-center justify-center gap-3 cursor-pointer transition-all",
+          "border-2 border-dashed rounded-2xl p-7 flex flex-col items-center justify-center gap-2.5 cursor-pointer transition-all",
           dragOver
-            ? "border-[#004b9c] bg-[#e8f0fb]/60"
+            ? "border-[#004b9c] bg-[#e8f0fb]/50"
             : "border-gray-200 hover:border-[#004b9c]/50 hover:bg-gray-50/50",
         )}
       >
-        <div className="w-12 h-12 rounded-2xl bg-[#e8f0fb] flex items-center justify-center">
-          <Upload size={20} style={{ color: "#004b9c" }} />
+        <div className="w-11 h-11 rounded-2xl bg-[#e8f0fb] flex items-center justify-center">
+          <Upload size={18} style={{ color: "#004b9c" }} />
         </div>
         <div className="text-center">
           <p className="text-[13px] font-bold text-gray-700">
             Drop images here or click to upload
           </p>
           <p className="text-[11px] text-gray-400 mt-0.5">
-            JPG, PNG, WebP · Max 5MB each · Up to 10 images
+            JPG, PNG, WebP · Max 5MB · Up to 10 images
           </p>
         </div>
         <input
@@ -327,81 +409,30 @@ function ImageUploadZone({
         />
       </div>
 
-      {/* Image grid with drag-to-reorder */}
       {images.length > 0 && (
-        <div>
-          <p className="text-[11px] text-gray-400 mb-2 flex items-center gap-1">
-            <GripVertical size={11} /> Drag to reorder · First image is the
-            cover
+        <>
+          <p className="text-[11px] text-gray-400 flex items-center gap-1.5">
+            <GripVertical size={11} />
+            Drag images to reorder · First image is the cover
           </p>
-          <Reorder.Group
-            axis="x"
-            values={images}
-            onReorder={onChange}
-            className="flex flex-wrap gap-2.5"
-          >
-            {images.map((img, idx) => (
-              <Reorder.Item
-                key={img.id}
-                value={img}
-                className="relative flex-shrink-0 cursor-grab active:cursor-grabbing"
-              >
-                <div
-                  className={cn(
-                    "w-20 h-20 rounded-xl overflow-hidden border-2 transition-all",
-                    idx === 0 ? "border-[#004b9c]" : "border-gray-200",
-                    img.error ? "border-red-300 opacity-60" : "",
-                  )}
-                >
-                  <img
-                    src={img.url}
-                    alt=""
-                    className="w-full h-full object-cover"
-                  />
-                  {img.uploading && (
-                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center rounded-xl">
-                      <Loader2 size={16} className="text-white animate-spin" />
-                    </div>
-                  )}
-                  {img.error && (
-                    <div className="absolute inset-0 bg-red-500/20 flex items-center justify-center rounded-xl">
-                      <AlertCircle size={16} className="text-red-500" />
-                    </div>
-                  )}
-                </div>
-                {/* Cover badge */}
-                {idx === 0 && (
-                  <div
-                    className="absolute -top-1.5 -left-1.5 px-1.5 py-0.5 rounded-md text-[8px] font-black text-white"
-                    style={{ background: "#004b9c" }}
-                  >
-                    COVER
-                  </div>
-                )}
-                {/* Remove */}
-                {!img.uploading && (
-                  <button
-                    type="button"
-                    onClick={() => removeImage(img.id)}
-                    className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center shadow-md hover:bg-red-600 transition-colors"
-                  >
-                    <X size={10} />
-                  </button>
-                )}
-              </Reorder.Item>
-            ))}
-          </Reorder.Group>
-        </div>
+          <ImageGrid images={images} onChange={onChange} />
+        </>
       )}
     </div>
   );
 }
 
-// ── Main Form Component ───────────────────────────────────────
-export default function ProductForm({ mode, productId }: ProductFormProps) {
+// ── Main Form ─────────────────────────────────────────────────
+export default function ProductForm({
+  mode,
+  productId,
+}: {
+  mode: "new" | "edit";
+  productId?: string;
+}) {
   const router = useRouter();
 
-  const [form, setForm] = useState<ProductFormData>({
+  const [form, setForm] = useState<FormData>({
     name: "",
     description: "",
     price: "",
@@ -414,8 +445,10 @@ export default function ProductForm({ mode, productId }: ProductFormProps) {
     isBestSeller: false,
     isFeatured: false,
     enableSizes: false,
-    sizes: [],
+    enableSizePrice: false,
+    sizeOptions: [],
     sizeInput: "",
+    sizePriceInput: "",
     enableColors: false,
     colors: [],
     colorInput: "",
@@ -431,7 +464,7 @@ export default function ProductForm({ mode, productId }: ProductFormProps) {
     message: string;
   } | null>(null);
 
-  // Load categories + brands
+  // Load categories & brands
   useEffect(() => {
     Promise.all([
       fetch("/api/categories").then((r) => r.json()),
@@ -442,7 +475,7 @@ export default function ProductForm({ mode, productId }: ProductFormProps) {
     });
   }, []);
 
-  // Load existing product for edit mode
+  // Load product for edit
   useEffect(() => {
     if (mode !== "edit" || !productId) return;
     setPageLoading(true);
@@ -451,6 +484,8 @@ export default function ProductForm({ mode, productId }: ProductFormProps) {
       .then((json) => {
         if (!json.success) return;
         const p = json.data;
+        const hasSizeOptions =
+          Array.isArray(p.sizeOptions) && p.sizeOptions.length > 0;
         setForm({
           name: p.name ?? "",
           description: p.description ?? "",
@@ -463,9 +498,21 @@ export default function ProductForm({ mode, productId }: ProductFormProps) {
           isNew: p.isNew ?? false,
           isBestSeller: p.isBestSeller ?? false,
           isFeatured: p.isFeatured ?? false,
-          enableSizes: (p.sizes ?? []).length > 0,
-          sizes: p.sizes ?? [],
+          enableSizes: hasSizeOptions || (p.sizes ?? []).length > 0,
+          enableSizePrice: p.enableSizePrice ?? false,
+          sizeOptions: hasSizeOptions
+            ? p.sizeOptions.map((s: { label: string; price: number }) => ({
+                id: `${Date.now()}-${Math.random()}`,
+                label: s.label,
+                price: String(s.price),
+              }))
+            : (p.sizes ?? []).map((s: string) => ({
+                id: `${Date.now()}-${Math.random()}`,
+                label: s,
+                price: "",
+              })),
           sizeInput: "",
+          sizePriceInput: "",
           enableColors: (p.colors ?? []).length > 0,
           colors: p.colors ?? [],
           colorInput: "",
@@ -481,54 +528,77 @@ export default function ProductForm({ mode, productId }: ProductFormProps) {
       .finally(() => setPageLoading(false));
   }, [mode, productId]);
 
-  function setField<K extends keyof ProductFormData>(
-    key: K,
-    value: ProductFormData[K],
-  ) {
-    setForm((f) => ({ ...f, [key]: value }));
-    if (errors[key])
-      setErrors((e) => {
-        const n = { ...e };
-        delete n[key];
-        return n;
-      });
-  }
+  const setF = useCallback(
+    <K extends keyof FormData>(key: K, val: FormData[K]) => {
+      setForm((f) => ({ ...f, [key]: val }));
+      if (errors[key])
+        setErrors((e) => {
+          const n = { ...e };
+          delete n[key];
+          return n;
+        });
+    },
+    [errors],
+  );
 
-  // ── Sizes ────────────────────────────────────────────────────
+  // Sizes
   function addSize() {
-    const val = form.sizeInput.trim();
-    if (!val || form.sizes.includes(val)) return;
-    setField("sizes", [...form.sizes, val]);
-    setField("sizeInput", "");
+    const label = form.sizeInput.trim();
+    const price = form.sizePriceInput.trim();
+    if (!label) return;
+    if (form.sizeOptions.some((s) => s.label === label)) return;
+    setF("sizeOptions", [
+      ...form.sizeOptions,
+      { id: `${Date.now()}`, label, price },
+    ]);
+    setF("sizeInput", "");
+    setF("sizePriceInput", "");
   }
-  function removeSize(s: string) {
-    setField(
-      "sizes",
-      form.sizes.filter((x) => x !== s),
+  function removeSize(id: string) {
+    setF(
+      "sizeOptions",
+      form.sizeOptions.filter((s) => s.id !== id),
+    );
+  }
+  function updateSizePrice(id: string, price: string) {
+    setF(
+      "sizeOptions",
+      form.sizeOptions.map((s) => (s.id === id ? { ...s, price } : s)),
     );
   }
 
-  // ── Colors ───────────────────────────────────────────────────
+  // Colors
   function addColor(val: string) {
     const v = val.trim();
     if (!v || form.colors.includes(v)) return;
-    setField("colors", [...form.colors, v]);
-    setField("colorInput", "");
+    setF("colors", [...form.colors, v]);
+    setF("colorInput", "");
   }
   function removeColor(c: string) {
-    setField(
+    setF(
       "colors",
       form.colors.filter((x) => x !== c),
     );
   }
 
-  // ── Validate ─────────────────────────────────────────────────
+  // Validate
   function validate(): boolean {
     const e: Record<string, string> = {};
     if (!form.name.trim() || form.name.trim().length < 2)
       e.name = "Name must be at least 2 characters";
-    if (!form.price || isNaN(Number(form.price)) || Number(form.price) <= 0)
-      e.price = "Valid price is required";
+    if (!form.enableSizePrice) {
+      if (!form.price || isNaN(Number(form.price)) || Number(form.price) <= 0)
+        e.price = "Valid price is required";
+    } else {
+      if (form.sizeOptions.length === 0)
+        e.sizes = "Add at least one size with a price";
+      if (
+        form.sizeOptions.some(
+          (s) => !s.price || isNaN(Number(s.price)) || Number(s.price) <= 0,
+        )
+      )
+        e.sizes = "All sizes need a valid price";
+    }
     if (
       form.originalPrice &&
       (isNaN(Number(form.originalPrice)) || Number(form.originalPrice) <= 0)
@@ -536,25 +606,45 @@ export default function ProductForm({ mode, productId }: ProductFormProps) {
       e.originalPrice = "Must be a valid positive number";
     if (!form.categoryId) e.categoryId = "Category is required";
     if (!form.brandId) e.brandId = "Brand is required";
-    const validImages = images.filter((i) => !i.uploading && !i.error);
-    if (validImages.length === 0) e.images = "At least one image is required";
+    const validImgs = images.filter((i) => !i.uploading && !i.error);
+    if (validImgs.length === 0) e.images = "At least one image is required";
     if (images.some((i) => i.uploading))
-      e.images = "Please wait for all images to finish uploading";
+      e.images = "Please wait for uploads to finish";
     setErrors(e);
     return Object.keys(e).length === 0;
   }
 
-  // ── Submit ───────────────────────────────────────────────────
+  // Submit
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!validate()) return;
+    if (!validate()) {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
     setSaving(true);
 
-    // Ensure proper data types
+    const sizeOptsPayload =
+      form.enableSizes && form.enableSizePrice
+        ? form.sizeOptions.map((s) => ({
+            label: s.label,
+            price: Number(s.price),
+          }))
+        : [];
+
+    const simpleLabels =
+      form.enableSizes && !form.enableSizePrice
+        ? form.sizeOptions.map((s) => s.label)
+        : [];
+
+    const basePrice =
+      form.enableSizePrice && sizeOptsPayload.length > 0
+        ? sizeOptsPayload[0].price
+        : Number(form.price);
+
     const payload = {
       name: form.name.trim(),
-      description: form.description.trim() || undefined,
-      price: Number(form.price),
+      description: form.description.trim(),
+      price: basePrice,
       originalPrice: form.originalPrice ? Number(form.originalPrice) : null,
       images: images.filter((i) => !i.uploading && !i.error).map((i) => i.url),
       categoryId: form.categoryId,
@@ -564,55 +654,58 @@ export default function ProductForm({ mode, productId }: ProductFormProps) {
       isNew: form.isNew,
       isBestSeller: form.isBestSeller,
       isFeatured: form.isFeatured,
-      sizes: form.enableSizes ? form.sizes : [],
+      sizes: simpleLabels,
+      sizeOptions: sizeOptsPayload,
+      enableSizePrice: form.enableSizePrice,
       colors: form.enableColors ? form.colors : [],
     };
-
-    console.log("Sending payload:", payload); // Debug log
 
     try {
       const url =
         mode === "new" ? "/api/products" : `/api/products/${productId}`;
       const method = mode === "new" ? "POST" : "PUT";
-
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-
       const json = await res.json();
-      console.log("Response:", json); // Debug log
-
       if (!res.ok || !json.success) {
-        const errMsg = json.details
-          ? Object.values(json.details).flat().join(", ")
-          : json.error || "Failed to save product";
-        setToast({ type: "error", message: errMsg });
+        setToast({
+          type: "error",
+          message:
+            typeof json.error === "string"
+              ? json.error
+              : "Failed to save product",
+        });
         return;
       }
-
       setToast({
         type: "success",
         message: mode === "new" ? "Product created!" : "Product updated!",
       });
-      setTimeout(() => router.push("/admin/products"), 1200);
-    } catch (err) {
-      console.error("Submit error:", err);
+      setTimeout(() => router.push("/admin/products"), 1100);
+    } catch {
       setToast({ type: "error", message: "Network error. Please try again." });
     } finally {
       setSaving(false);
     }
   }
 
-  // ── Loading skeleton ─────────────────────────────────────────
+  const discountPct =
+    form.originalPrice &&
+    form.price &&
+    Number(form.originalPrice) > Number(form.price)
+      ? Math.round((1 - Number(form.price) / Number(form.originalPrice)) * 100)
+      : null;
+
   if (pageLoading) {
     return (
-      <div className="space-y-4 max-w-[900px] animate-pulse">
+      <div className="space-y-4 animate-pulse">
         <div className="h-8 bg-gray-100 rounded-xl w-48" />
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div className="lg:col-span-2 space-y-4">
-            {[160, 120, 200].map((h, i) => (
+            {[180, 240, 160, 140, 140].map((h, i) => (
               <div
                 key={i}
                 className="bg-white rounded-2xl border border-gray-100"
@@ -621,7 +714,7 @@ export default function ProductForm({ mode, productId }: ProductFormProps) {
             ))}
           </div>
           <div className="space-y-4">
-            {[120, 100, 140].map((h, i) => (
+            {[160, 140, 180, 56].map((h, i) => (
               <div
                 key={i}
                 className="bg-white rounded-2xl border border-gray-100"
@@ -634,10 +727,9 @@ export default function ProductForm({ mode, productId }: ProductFormProps) {
     );
   }
 
-  // ── Render ───────────────────────────────────────────────────
   return (
-    <div className="max-w-[900px] space-y-5">
-      {/* Page header */}
+    <div className="space-y-5">
+      {/* Page Header */}
       <motion.div
         initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
@@ -665,33 +757,33 @@ export default function ProductForm({ mode, productId }: ProductFormProps) {
 
       <form onSubmit={handleSubmit}>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {/* ── LEFT COLUMN ─────────────────────────────────── */}
+          {/* ── LEFT col ─────────────────────────────────────── */}
           <div className="lg:col-span-2 space-y-4">
             {/* Basic Info */}
             <motion.div
-              initial={{ opacity: 0, y: 12 }}
+              initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.05 }}
+              transition={{ delay: 0.04 }}
             >
               <Section title="Basic Information" icon={FileText}>
                 <div className="space-y-4">
                   <Field label="Product Name" required error={errors.name}>
-                    <Input
+                    <InputEl
                       value={form.name}
-                      onChange={(e) => setField("name", e.target.value)}
+                      onChange={(e) => setF("name", e.target.value)}
                       placeholder="e.g. SS Ton Ranger Cricket Bat"
                       error={errors.name}
                     />
                   </Field>
                   <Field
                     label="Description"
-                    hint="Markdown supported. Describe features, specs, material."
+                    hint="Describe features, materials and specifications."
                   >
                     <textarea
                       value={form.description}
-                      onChange={(e) => setField("description", e.target.value)}
+                      onChange={(e) => setF("description", e.target.value)}
                       rows={5}
-                      placeholder="Describe the product in detail…"
+                      placeholder="Describe the product…"
                       className="w-full px-4 py-3 rounded-xl border border-gray-200 text-[13.5px] text-gray-900 placeholder-gray-400 bg-gray-50 focus:bg-white focus:border-[#004b9c] focus:ring-2 focus:ring-[#004b9c]/10 transition-all outline-none resize-none"
                     />
                   </Field>
@@ -701,9 +793,9 @@ export default function ProductForm({ mode, productId }: ProductFormProps) {
 
             {/* Images */}
             <motion.div
-              initial={{ opacity: 0, y: 12 }}
+              initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.08 }}
+              transition={{ delay: 0.07 }}
             >
               <Section title="Product Images" icon={ImageIcon}>
                 <ImageUploadZone images={images} onChange={setImages} />
@@ -718,89 +810,118 @@ export default function ProductForm({ mode, productId }: ProductFormProps) {
 
             {/* Pricing */}
             <motion.div
-              initial={{ opacity: 0, y: 12 }}
+              initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.11 }}
+              transition={{ delay: 0.1 }}
             >
               <Section title="Pricing" icon={DollarSign}>
-                <div className="grid grid-cols-2 gap-4">
-                  <Field
-                    label="Selling Price (AED)"
-                    required
-                    error={errors.price}
-                  >
-                    <div className="relative">
-                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[12px] font-bold text-gray-400">
-                        AED
-                      </span>
-                      <Input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={form.price}
-                        onChange={(e) => setField("price", e.target.value)}
-                        placeholder="0.00"
+                <div className="space-y-4">
+                  {!form.enableSizePrice && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <Field
+                        label="Selling Price (AED)"
+                        required
                         error={errors.price}
-                        className="pl-12"
-                      />
-                    </div>
-                  </Field>
-                  <Field
-                    label="Original Price (AED)"
-                    hint="Leave empty if no discount"
-                    error={errors.originalPrice}
-                  >
-                    <div className="relative">
-                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[12px] font-bold text-gray-400">
-                        AED
-                      </span>
-                      <Input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={form.originalPrice}
-                        onChange={(e) =>
-                          setField("originalPrice", e.target.value)
-                        }
-                        placeholder="0.00"
+                      >
+                        <div className="relative">
+                          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[11px] font-bold text-gray-400">
+                            AED
+                          </span>
+                          <InputEl
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={form.price}
+                            onChange={(e) => setF("price", e.target.value)}
+                            placeholder="0.00"
+                            error={errors.price}
+                            className="pl-12"
+                          />
+                        </div>
+                      </Field>
+                      <Field
+                        label="Original Price (AED)"
+                        hint="Leave empty if no discount"
                         error={errors.originalPrice}
-                        className="pl-12"
-                      />
+                      >
+                        <div className="relative">
+                          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[11px] font-bold text-gray-400">
+                            AED
+                          </span>
+                          <InputEl
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={form.originalPrice}
+                            onChange={(e) =>
+                              setF("originalPrice", e.target.value)
+                            }
+                            placeholder="0.00"
+                            error={errors.originalPrice}
+                            className="pl-12"
+                          />
+                        </div>
+                      </Field>
                     </div>
-                  </Field>
-                </div>
-                {form.originalPrice &&
-                  form.price &&
-                  Number(form.originalPrice) > Number(form.price) && (
-                    <div className="mt-3 p-3 rounded-xl bg-green-50 border border-green-100 flex items-center gap-2">
-                      <CheckCircle2 size={14} className="text-green-500" />
-                      <p className="text-[12px] font-semibold text-green-700">
-                        {Math.round(
-                          (1 -
-                            Number(form.price) / Number(form.originalPrice)) *
-                            100,
-                        )}
-                        % discount applied
+                  )}
+                  {form.enableSizePrice && (
+                    <div>
+                      <Field
+                        label="Original Price (AED)"
+                        hint="Leave empty if no discount"
+                        error={errors.originalPrice}
+                      >
+                        <div className="relative w-48">
+                          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[11px] font-bold text-gray-400">
+                            AED
+                          </span>
+                          <InputEl
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={form.originalPrice}
+                            onChange={(e) =>
+                              setF("originalPrice", e.target.value)
+                            }
+                            placeholder="0.00"
+                            className="pl-12"
+                          />
+                        </div>
+                      </Field>
+                      <p className="text-[11px] text-gray-400 mt-2 flex items-center gap-1">
+                        <CheckCircle2 size={10} className="text-[#004b9c]" />
+                        Price per size is enabled — enter individual prices in
+                        the Sizes section below.
                       </p>
                     </div>
                   )}
+                  {discountPct !== null && (
+                    <div className="p-3 rounded-xl bg-green-50 border border-green-100 flex items-center gap-2">
+                      <CheckCircle2 size={14} className="text-green-500" />
+                      <p className="text-[12px] font-semibold text-green-700">
+                        {discountPct}% discount applied
+                      </p>
+                    </div>
+                  )}
+                </div>
               </Section>
             </motion.div>
 
-            {/* Optional: Sizes */}
+            {/* Sizes */}
             <motion.div
-              initial={{ opacity: 0, y: 12 }}
+              initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.14 }}
+              transition={{ delay: 0.13 }}
             >
               <Section title="Sizes" icon={Ruler}>
                 <div className="space-y-3">
                   <Toggle
                     checked={form.enableSizes}
-                    onChange={(v) => setField("enableSizes", v)}
+                    onChange={(v) => setF("enableSizes", v)}
                     label="Enable size options"
-                    description="Let customers choose a size when ordering"
+                    description="Customers can choose a size when ordering"
                   />
+
                   <AnimatePresence>
                     {form.enableSizes && (
                       <motion.div
@@ -809,24 +930,62 @@ export default function ProductForm({ mode, productId }: ProductFormProps) {
                         exit={{ opacity: 0, height: 0 }}
                         className="overflow-hidden"
                       >
-                        <div className="pt-1 space-y-3">
-                          <div className="flex gap-2">
-                            <Input
+                        <div className="pt-2 space-y-3">
+                          {/* Price-per-size toggle */}
+                          <Toggle
+                            checked={form.enableSizePrice}
+                            onChange={(v) => setF("enableSizePrice", v)}
+                            label="Different price per size"
+                            description="Each size has its own selling price"
+                            accent="#f59e0b"
+                          />
+
+                          {/* Add size row */}
+                          <div
+                            className={cn(
+                              "grid gap-2",
+                              form.enableSizePrice
+                                ? "grid-cols-[1fr_120px_auto]"
+                                : "grid-cols-[1fr_auto]",
+                            )}
+                          >
+                            <InputEl
                               value={form.sizeInput}
                               onChange={(e) =>
-                                setField("sizeInput", e.target.value)
+                                setF("sizeInput", e.target.value)
                               }
                               onKeyDown={(e) =>
                                 e.key === "Enter" &&
                                 (e.preventDefault(), addSize())
                               }
-                              placeholder="e.g. Short Handle, Long Handle, SH, 5, 6…"
-                              className="flex-1"
+                              placeholder="Size label (e.g. Short Handle)"
                             />
+                            {form.enableSizePrice && (
+                              <div className="relative">
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-gray-400">
+                                  AED
+                                </span>
+                                <InputEl
+                                  type="number"
+                                  min="0"
+                                  step="0.01"
+                                  value={form.sizePriceInput}
+                                  onChange={(e) =>
+                                    setF("sizePriceInput", e.target.value)
+                                  }
+                                  onKeyDown={(e) =>
+                                    e.key === "Enter" &&
+                                    (e.preventDefault(), addSize())
+                                  }
+                                  placeholder="Price"
+                                  className="pl-10"
+                                />
+                              </div>
+                            )}
                             <button
                               type="button"
                               onClick={addSize}
-                              className="px-4 py-3 rounded-xl text-white text-[12px] font-bold flex-shrink-0 flex items-center gap-1.5"
+                              className="px-4 py-3 rounded-xl text-white text-[12px] font-bold flex items-center gap-1 flex-shrink-0"
                               style={{
                                 background:
                                   "linear-gradient(135deg, #004b9c, #0062cc)",
@@ -835,22 +994,51 @@ export default function ProductForm({ mode, productId }: ProductFormProps) {
                               <Plus size={13} /> Add
                             </button>
                           </div>
-                          {form.sizes.length > 0 && (
-                            <div className="flex flex-wrap gap-2">
-                              {form.sizes.map((s) => (
-                                <span
-                                  key={s}
-                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#e8f0fb] border border-[#004b9c]/20 text-[12px] font-semibold text-[#004b9c]"
+
+                          {errors.sizes && (
+                            <p className="text-[11px] text-red-500 flex items-center gap-1">
+                              <AlertCircle size={10} />
+                              {errors.sizes}
+                            </p>
+                          )}
+
+                          {/* Size chips */}
+                          {form.sizeOptions.length > 0 && (
+                            <div className="space-y-2">
+                              {form.sizeOptions.map((s) => (
+                                <div
+                                  key={s.id}
+                                  className="flex items-center gap-2"
                                 >
-                                  {s}
+                                  <span className="flex-1 inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-[#e8f0fb] border border-[#004b9c]/15 text-[12.5px] font-semibold text-[#004b9c]">
+                                    <Ruler size={12} /> {s.label}
+                                  </span>
+                                  {form.enableSizePrice && (
+                                    <div className="relative w-36 flex-shrink-0">
+                                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-gray-400">
+                                        AED
+                                      </span>
+                                      <InputEl
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        value={s.price}
+                                        onChange={(e) =>
+                                          updateSizePrice(s.id, e.target.value)
+                                        }
+                                        placeholder="0.00"
+                                        className="pl-10 py-2 text-[12px]"
+                                      />
+                                    </div>
+                                  )}
                                   <button
                                     type="button"
-                                    onClick={() => removeSize(s)}
-                                    className="hover:text-red-500 transition-colors"
+                                    onClick={() => removeSize(s.id)}
+                                    className="w-8 h-8 rounded-lg flex items-center justify-center text-red-400 hover:bg-red-50 hover:text-red-600 transition-all flex-shrink-0"
                                   >
-                                    <X size={11} />
+                                    <X size={13} />
                                   </button>
-                                </span>
+                                </div>
                               ))}
                             </div>
                           )}
@@ -862,19 +1050,19 @@ export default function ProductForm({ mode, productId }: ProductFormProps) {
               </Section>
             </motion.div>
 
-            {/* Optional: Colors */}
+            {/* Colors */}
             <motion.div
-              initial={{ opacity: 0, y: 12 }}
+              initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.17 }}
+              transition={{ delay: 0.16 }}
             >
               <Section title="Colors" icon={Palette}>
                 <div className="space-y-3">
                   <Toggle
                     checked={form.enableColors}
-                    onChange={(v) => setField("enableColors", v)}
+                    onChange={(v) => setF("enableColors", v)}
                     label="Enable colour options"
-                    description="Let customers choose a colour variant"
+                    description="Customers can choose a colour variant"
                   />
                   <AnimatePresence>
                     {form.enableColors && (
@@ -884,8 +1072,8 @@ export default function ProductForm({ mode, productId }: ProductFormProps) {
                         exit={{ opacity: 0, height: 0 }}
                         className="overflow-hidden"
                       >
-                        <div className="pt-1 space-y-3">
-                          {/* Quick colour swatches */}
+                        <div className="pt-2 space-y-3">
+                          {/* Swatches */}
                           <div className="flex flex-wrap gap-2">
                             {COLOR_PRESETS.map((c) => (
                               <button
@@ -910,12 +1098,12 @@ export default function ProductForm({ mode, productId }: ProductFormProps) {
                               />
                             ))}
                           </div>
-                          {/* Custom color input */}
+                          {/* Custom input */}
                           <div className="flex gap-2">
-                            <Input
+                            <InputEl
                               value={form.colorInput}
                               onChange={(e) =>
-                                setField("colorInput", e.target.value)
+                                setF("colorInput", e.target.value)
                               }
                               onKeyDown={(e) =>
                                 e.key === "Enter" &&
@@ -927,7 +1115,7 @@ export default function ProductForm({ mode, productId }: ProductFormProps) {
                             <button
                               type="button"
                               onClick={() => addColor(form.colorInput)}
-                              className="px-4 py-3 rounded-xl text-white text-[12px] font-bold flex-shrink-0 flex items-center gap-1.5"
+                              className="px-4 py-3 rounded-xl text-white text-[12px] font-bold flex items-center gap-1 flex-shrink-0"
                               style={{
                                 background:
                                   "linear-gradient(135deg, #004b9c, #0062cc)",
@@ -949,7 +1137,7 @@ export default function ProductForm({ mode, productId }: ProductFormProps) {
                                   >
                                     {preset && (
                                       <span
-                                        className="w-3 h-3 rounded-full border border-gray-300 flex-shrink-0"
+                                        className="w-3 h-3 rounded-full border border-gray-300"
                                         style={{ backgroundColor: preset.hex }}
                                       />
                                     )}
@@ -975,13 +1163,13 @@ export default function ProductForm({ mode, productId }: ProductFormProps) {
             </motion.div>
           </div>
 
-          {/* ── RIGHT COLUMN ────────────────────────────────── */}
+          {/* ── RIGHT col ────────────────────────────────────── */}
           <div className="space-y-4">
             {/* Category & Brand */}
             <motion.div
-              initial={{ opacity: 0, y: 12 }}
+              initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.06 }}
+              transition={{ delay: 0.05 }}
             >
               <Section title="Category & Brand" icon={Tag}>
                 <div className="space-y-4">
@@ -989,9 +1177,9 @@ export default function ProductForm({ mode, productId }: ProductFormProps) {
                     <div className="relative">
                       <select
                         value={form.categoryId}
-                        onChange={(e) => setField("categoryId", e.target.value)}
+                        onChange={(e) => setF("categoryId", e.target.value)}
                         className={cn(
-                          "w-full px-4 py-3 rounded-xl border text-[13.5px] text-gray-900 bg-gray-50 focus:bg-white focus:border-[#004b9c] focus:ring-2 focus:ring-[#004b9c]/10 transition-all outline-none appearance-none cursor-pointer",
+                          "w-full px-4 py-3 rounded-xl border text-[13.5px] text-gray-900 bg-gray-50 focus:bg-white focus:border-[#004b9c] focus:ring-2 focus:ring-[#004b9c]/10 outline-none appearance-none cursor-pointer transition-all",
                           errors.categoryId
                             ? "border-red-300"
                             : "border-gray-200",
@@ -1014,9 +1202,9 @@ export default function ProductForm({ mode, productId }: ProductFormProps) {
                     <div className="relative">
                       <select
                         value={form.brandId}
-                        onChange={(e) => setField("brandId", e.target.value)}
+                        onChange={(e) => setF("brandId", e.target.value)}
                         className={cn(
-                          "w-full px-4 py-3 rounded-xl border text-[13.5px] text-gray-900 bg-gray-50 focus:bg-white focus:border-[#004b9c] focus:ring-2 focus:ring-[#004b9c]/10 transition-all outline-none appearance-none cursor-pointer",
+                          "w-full px-4 py-3 rounded-xl border text-[13.5px] text-gray-900 bg-gray-50 focus:bg-white focus:border-[#004b9c] focus:ring-2 focus:ring-[#004b9c]/10 outline-none appearance-none cursor-pointer transition-all",
                           errors.brandId ? "border-red-300" : "border-gray-200",
                         )}
                       >
@@ -1039,9 +1227,9 @@ export default function ProductForm({ mode, productId }: ProductFormProps) {
 
             {/* Inventory */}
             <motion.div
-              initial={{ opacity: 0, y: 12 }}
+              initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.09 }}
+              transition={{ delay: 0.08 }}
             >
               <Section title="Inventory" icon={Package}>
                 <div className="space-y-4">
@@ -1051,11 +1239,11 @@ export default function ProductForm({ mode, productId }: ProductFormProps) {
                         size={14}
                         className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
                       />
-                      <Input
+                      <InputEl
                         type="number"
                         min="0"
                         value={form.stockQty}
-                        onChange={(e) => setField("stockQty", e.target.value)}
+                        onChange={(e) => setF("stockQty", e.target.value)}
                         placeholder="0"
                         className="pl-9"
                       />
@@ -1063,7 +1251,7 @@ export default function ProductForm({ mode, productId }: ProductFormProps) {
                   </Field>
                   <Toggle
                     checked={form.inStock}
-                    onChange={(v) => setField("inStock", v)}
+                    onChange={(v) => setF("inStock", v)}
                     label="Available for sale"
                     description="Show as In Stock on the store"
                     accent="#16a34a"
@@ -1072,44 +1260,44 @@ export default function ProductForm({ mode, productId }: ProductFormProps) {
               </Section>
             </motion.div>
 
-            {/* Product Labels */}
+            {/* Labels */}
             <motion.div
-              initial={{ opacity: 0, y: 12 }}
+              initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.12 }}
+              transition={{ delay: 0.11 }}
             >
               <Section title="Product Labels" icon={Award}>
                 <div className="space-y-2.5">
                   <Toggle
                     checked={form.isFeatured}
-                    onChange={(v) => setField("isFeatured", v)}
+                    onChange={(v) => setF("isFeatured", v)}
                     label="Featured Product"
                     description="Shown in homepage featured section"
                     accent="#f59e0b"
                   />
                   <Toggle
                     checked={form.isNew}
-                    onChange={(v) => setField("isNew", v)}
+                    onChange={(v) => setF("isNew", v)}
                     label="New Arrival"
                     description="Shows NEW badge on product"
                     accent="#3b82f6"
                   />
                   <Toggle
                     checked={form.isBestSeller}
-                    onChange={(v) => setField("isBestSeller", v)}
+                    onChange={(v) => setF("isBestSeller", v)}
                     label="Best Seller"
-                    description="Shows BESTSELLER badge on product"
+                    description="Shows BESTSELLER badge"
                     accent="#16a34a"
                   />
                 </div>
               </Section>
             </motion.div>
 
-            {/* Save button */}
+            {/* Save */}
             <motion.div
-              initial={{ opacity: 0, y: 12 }}
+              initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.15 }}
+              transition={{ delay: 0.14 }}
             >
               <button
                 type="submit"

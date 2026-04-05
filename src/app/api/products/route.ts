@@ -1,4 +1,3 @@
-// src/app/api/products/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import slugify from "slugify";
@@ -7,7 +6,11 @@ import connectDB from "@/lib/mongodb";
 import Product from "@/models/Product";
 import { auth } from "@/lib/auth";
 
-// Validation schema for creating a product
+const SizeOptionSchema = z.object({
+  label: z.string().min(1).trim(),
+  price: z.number().min(0),
+});
+
 const CreateProductSchema = z.object({
   name: z.string().min(2).max(120).trim(),
   description: z.string().max(5000).optional().or(z.literal("")),
@@ -22,63 +25,47 @@ const CreateProductSchema = z.object({
   isBestSeller: z.boolean().default(false),
   isFeatured: z.boolean().default(false),
   sizes: z.array(z.string().trim()).default([]),
+  sizeOptions: z.array(SizeOptionSchema).default([]),
+  enableSizePrice: z.boolean().default(false),
   colors: z.array(z.string().trim()).default([]),
 });
 
-// ── GET /api/products ────────────────────────────────────
+// ── GET /api/products ─────────────────────────────────────────
 export async function GET(req: NextRequest) {
   try {
     await connectDB();
-
     const { searchParams } = new URL(req.url);
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "20");
-    const search = searchParams.get("search") || "";
+    const page = Math.max(1, parseInt(searchParams.get("page") ?? "1"));
+    const limit = Math.min(50, parseInt(searchParams.get("limit") ?? "20"));
+    const search = searchParams.get("search") ?? "";
+    const categoryId = searchParams.get("categoryId") ?? "";
+    const brandId = searchParams.get("brandId") ?? "";
     const inStock = searchParams.get("inStock");
-    const categoryId = searchParams.get("categoryId");
-    const brandId = searchParams.get("brandId");
 
-    const skip = (page - 1) * limit;
-
-    // Build filter
-    const filter: any = {};
-
-    if (search) {
-      filter.$or = [
-        { name: { $regex: search, $options: "i" } },
-        { description: { $regex: search, $options: "i" } },
-      ];
-    }
-
-    if (inStock === "true") filter.inStock = true;
-    if (inStock === "false") filter.inStock = false;
-    if (categoryId && mongoose.Types.ObjectId.isValid(categoryId)) {
-      filter.categoryId = new mongoose.Types.ObjectId(categoryId);
-    }
-    if (brandId && mongoose.Types.ObjectId.isValid(brandId)) {
-      filter.brandId = new mongoose.Types.ObjectId(brandId);
-    }
+    const query: Record<string, unknown> = {};
+    if (search) query.name = { $regex: search, $options: "i" };
+    if (categoryId && mongoose.Types.ObjectId.isValid(categoryId))
+      query.categoryId = new mongoose.Types.ObjectId(categoryId);
+    if (brandId && mongoose.Types.ObjectId.isValid(brandId))
+      query.brandId = new mongoose.Types.ObjectId(brandId);
+    if (inStock === "true") query.inStock = true;
+    if (inStock === "false") query.inStock = false;
 
     const [products, total] = await Promise.all([
-      Product.find(filter)
+      Product.find(query)
         .populate("categoryId", "name slug")
         .populate("brandId", "name slug logo")
         .sort({ createdAt: -1 })
-        .skip(skip)
+        .skip((page - 1) * limit)
         .limit(limit)
         .lean(),
-      Product.countDocuments(filter),
+      Product.countDocuments(query),
     ]);
 
     return NextResponse.json({
       success: true,
       data: products,
-      pagination: {
-        page,
-        limit,
-        total,
-        pages: Math.ceil(total / limit),
-      },
+      pagination: { page, limit, total, pages: Math.ceil(total / limit) },
     });
   } catch (error) {
     console.error("[GET /api/products]", error);
@@ -89,68 +76,58 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// ── POST /api/products ───────────────────────────────────
+// ── POST /api/products ────────────────────────────────────────
 export async function POST(req: NextRequest) {
   try {
-    // Check admin authentication
     const session = await auth();
-    if (!session || session.user?.role !== "ADMIN") {
+    if (!session || session.user?.role !== "ADMIN")
       return NextResponse.json(
-        { success: false, error: "Unauthorized. Admin access required." },
+        { success: false, error: "Unauthorized" },
         { status: 401 },
       );
-    }
 
-    await connectDB();
-
-    const body = await req.json();
-    console.log("Received body:", body);
-
-    // Validate input
+    const body: unknown = await req.json();
     const parsed = CreateProductSchema.safeParse(body);
-    if (!parsed.success) {
-      console.log("Validation errors:", parsed.error.flatten());
+    if (!parsed.success)
       return NextResponse.json(
-        {
-          success: false,
-          error: "Validation failed",
-          details: parsed.error.flatten().fieldErrors,
-        },
+        { success: false, error: parsed.error.flatten().fieldErrors },
         { status: 400 },
       );
-    }
 
-    const data = parsed.data;
+    await connectDB();
+    const { name, ...rest } = parsed.data;
 
-    // Generate slug
-    let slug = slugify(data.name, { lower: true, strict: true, trim: true });
-    const existingProduct = await Product.findOne({ slug });
-    if (existingProduct) {
-      slug = `${slug}-${Date.now()}`;
-    }
+    let slug = slugify(name, { lower: true, strict: true });
+    if (await Product.findOne({ slug })) slug = `${slug}-${Date.now()}`;
 
-    // Create product
+    // When size-based pricing is on, base price = first size's price
+    const basePrice =
+      rest.enableSizePrice && rest.sizeOptions.length > 0
+        ? rest.sizeOptions[0].price
+        : rest.price;
+
     const product = await Product.create({
-      ...data,
+      name,
       slug,
-      categoryId: new mongoose.Types.ObjectId(data.categoryId),
-      brandId: new mongoose.Types.ObjectId(data.brandId),
+      ...rest,
+      price: basePrice,
+      categoryId: new mongoose.Types.ObjectId(rest.categoryId),
+      brandId: new mongoose.Types.ObjectId(rest.brandId),
       rating: 0,
       reviewCount: 0,
     });
 
-    // Populate references
-    const populatedProduct = await Product.findById(product._id)
+    const populated = await Product.findById(product._id)
       .populate("categoryId", "name slug")
       .populate("brandId", "name slug logo")
       .lean();
 
     return NextResponse.json(
-      { success: true, data: populatedProduct },
+      { success: true, data: populated },
       { status: 201 },
     );
   } catch (error) {
-    console.error("[POST /api/products] Error:", error);
+    console.error("[POST /api/products]", error);
     return NextResponse.json(
       { success: false, error: "Failed to create product" },
       { status: 500 },
