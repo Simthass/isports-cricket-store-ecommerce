@@ -1,3 +1,4 @@
+// src/app/api/products/route.ts - Complete updated file
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import slugify from "slugify";
@@ -21,9 +22,12 @@ const CreateProductSchema = z.object({
   brandId: z.string().min(1),
   stockQty: z.number().int().min(0).default(0),
   inStock: z.boolean().default(true),
-  isNew: z.boolean().default(false),
+  isNewArrival: z.boolean().default(false),
   isBestSeller: z.boolean().default(false),
   isFeatured: z.boolean().default(false),
+  isTrending: z.boolean().default(false),
+  isHeroProduct: z.boolean().default(false),
+  heroOrder: z.number().int().min(0).max(3).default(0),
   sizes: z.array(z.string().trim()).default([]),
   sizeOptions: z.array(SizeOptionSchema).default([]),
   enableSizePrice: z.boolean().default(false),
@@ -34,6 +38,11 @@ const CreateProductSchema = z.object({
 export async function GET(req: NextRequest) {
   try {
     await connectDB();
+
+    // Ensure models are registered
+    await import("@/models/Category");
+    await import("@/models/Brand");
+
     const { searchParams } = new URL(req.url);
     const page = Math.max(1, parseInt(searchParams.get("page") ?? "1"));
     const limit = Math.min(50, parseInt(searchParams.get("limit") ?? "20"));
@@ -88,11 +97,13 @@ export async function POST(req: NextRequest) {
 
     const body: unknown = await req.json();
     const parsed = CreateProductSchema.safeParse(body);
-    if (!parsed.success)
+    if (!parsed.success) {
+      console.error("Validation errors:", parsed.error.flatten().fieldErrors);
       return NextResponse.json(
         { success: false, error: parsed.error.flatten().fieldErrors },
         { status: 400 },
       );
+    }
 
     await connectDB();
     const { name, ...rest } = parsed.data;
@@ -106,11 +117,15 @@ export async function POST(req: NextRequest) {
         ? rest.sizeOptions[0].price
         : rest.price;
 
+    // If hero product, ensure heroOrder is set
+    const heroOrderValue = rest.isHeroProduct ? rest.heroOrder : 0;
+
     const product = await Product.create({
       name,
       slug,
       ...rest,
       price: basePrice,
+      heroOrder: heroOrderValue,
       categoryId: new mongoose.Types.ObjectId(rest.categoryId),
       brandId: new mongoose.Types.ObjectId(rest.brandId),
       rating: 0,

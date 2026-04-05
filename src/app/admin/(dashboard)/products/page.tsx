@@ -20,6 +20,8 @@ import {
   ChevronDown,
   ToggleLeft,
   ToggleRight,
+  TrendingUp,
+  Crown,
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -34,9 +36,12 @@ interface IProduct {
   images: string[];
   inStock: boolean;
   stockQty: number;
-  isNew: boolean;
+  isNewArrival: boolean;
   isBestSeller: boolean;
   isFeatured: boolean;
+  isTrending: boolean;
+  isHeroProduct: boolean;
+  heroOrder: number;
   categoryId?: { _id: string; name: string };
   brandId?: { _id: string; name: string; logo?: string };
   createdAt: string;
@@ -274,6 +279,10 @@ export default function AdminProductsPage() {
   }
 
   const inStockCount = products.filter((p) => p.inStock).length;
+  const featuredCount = products.filter((p) => p.isFeatured).length;
+  const newArrivalsCount = products.filter((p) => p.isNewArrival).length;
+  const trendingCount = products.filter((p) => p.isTrending).length;
+  const heroCount = products.filter((p) => p.isHeroProduct).length;
 
   return (
     <div className="space-y-5 max-w-[1380px]">
@@ -311,7 +320,7 @@ export default function AdminProductsPage() {
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.06 }}
-        className="grid grid-cols-2 sm:grid-cols-4 gap-3"
+        className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3"
       >
         {[
           {
@@ -330,17 +339,31 @@ export default function AdminProductsPage() {
           },
           {
             label: "Featured",
-            value: products.filter((p) => p.isFeatured).length,
+            value: featuredCount,
             icon: Star,
             color: "#f59e0b",
             bg: "#fef3c7",
           },
           {
             label: "New Arrivals",
-            value: products.filter((p) => p.isNew).length,
+            value: newArrivalsCount,
             icon: Zap,
+            color: "#3b82f6",
+            bg: "#dbeafe",
+          },
+          {
+            label: "Trending",
+            value: trendingCount,
+            icon: TrendingUp,
             color: "#8b5cf6",
             bg: "#ede9fe",
+          },
+          {
+            label: "Hero",
+            value: heroCount,
+            icon: Crown,
+            color: "#f59e0b",
+            bg: "#fed7aa",
           },
         ].map((s, i) => (
           <motion.div
@@ -445,7 +468,7 @@ export default function AdminProductsPage() {
                 <th className="text-left px-4 py-3.5 text-[11px] font-bold text-gray-400 uppercase tracking-wider hidden md:table-cell">
                   Stock
                 </th>
-                <th className="text-left px-4 py-3.5 text-[11px] font-bold text-gray-400 uppercase tracking-wider hidden lg:table-cell">
+                <th className="text-left px-4 py-3.5 text-[11px] font-bold text-gray-400 uppercase tracking-wider min-w-[200px]">
                   Tags
                 </th>
                 <th className="text-right px-5 py-3.5 text-[11px] font-bold text-gray-400 uppercase tracking-wider">
@@ -475,8 +498,8 @@ export default function AdminProductsPage() {
                     <td className="px-4 py-4 hidden md:table-cell">
                       <div className="h-6 bg-gray-100 rounded-lg w-20" />
                     </td>
-                    <td className="px-4 py-4 hidden lg:table-cell">
-                      <div className="h-5 bg-gray-100 rounded-lg w-16" />
+                    <td className="px-4 py-4">
+                      <div className="h-5 bg-gray-100 rounded-lg w-32" />
                     </td>
                     <td className="px-5 py-4">
                       <div className="h-8 bg-gray-100 rounded-xl w-20 ml-auto" />
@@ -589,22 +612,37 @@ export default function AdminProductsPage() {
                           onToggle={handleStockToggle}
                         />
                       </td>
-                      {/* Tags */}
-                      <td className="px-4 py-3.5 hidden lg:table-cell">
+                      {/* Tags - All section flags */}
+                      <td className="px-4 py-3.5">
                         <div className="flex items-center gap-1 flex-wrap">
-                          {product.isFeatured && (
-                            <span className="px-1.5 py-0.5 rounded-md bg-amber-50 border border-amber-100 text-[9.5px] font-bold text-amber-600">
-                              FEATURED
+                          {product.isHeroProduct && (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-100 border border-amber-200 text-[9.5px] font-bold text-amber-700">
+                              <Crown size={10} /> HERO
                             </span>
                           )}
-                          {product.isNew && (
-                            <span className="px-1.5 py-0.5 rounded-md bg-blue-50 border border-blue-100 text-[9.5px] font-bold text-blue-600">
-                              NEW
+                          {product.isFeatured && (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-orange-100 border border-orange-200 text-[9.5px] font-bold text-orange-700">
+                              <Star size={10} /> FEATURED
+                            </span>
+                          )}
+                          {product.isTrending && (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-purple-100 border border-purple-200 text-[9.5px] font-bold text-purple-700">
+                              <TrendingUp size={10} /> TRENDING
+                            </span>
+                          )}
+                          {product.isNewArrival && (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-blue-100 border border-blue-200 text-[9.5px] font-bold text-blue-700">
+                              <Zap size={10} /> NEW
                             </span>
                           )}
                           {product.isBestSeller && (
-                            <span className="px-1.5 py-0.5 rounded-md bg-green-50 border border-green-100 text-[9.5px] font-bold text-green-600">
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-green-100 border border-green-200 text-[9.5px] font-bold text-green-700">
                               BESTSELLER
+                            </span>
+                          )}
+                          {product.heroOrder > 0 && product.isHeroProduct && (
+                            <span className="px-1.5 py-0.5 rounded-md bg-amber-50 border border-amber-200 text-[9.5px] font-bold text-amber-600">
+                              Order: {product.heroOrder}
                             </span>
                           )}
                         </div>

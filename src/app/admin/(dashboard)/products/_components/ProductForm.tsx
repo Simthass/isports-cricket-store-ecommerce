@@ -1,3 +1,4 @@
+// src/app/admin/products/_components/ProductForm.tsx
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
@@ -24,6 +25,8 @@ import {
   Award,
   ToggleLeft,
   ToggleRight,
+  Layers,
+  Info,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -47,7 +50,7 @@ interface UploadedImage {
 }
 
 interface SizeOption {
-  id: string; // local key only
+  id: string;
   label: string;
   price: string;
 }
@@ -61,9 +64,11 @@ interface FormData {
   brandId: string;
   stockQty: string;
   inStock: boolean;
-  isNew: boolean;
-  isBestSeller: boolean;
+  isNewArrival: boolean;
   isFeatured: boolean;
+  isTrending: boolean;
+  isHeroProduct: boolean;
+  heroOrder: number;
   enableSizes: boolean;
   enableSizePrice: boolean;
   sizeOptions: SizeOption[];
@@ -203,7 +208,6 @@ function Toggle({
 }
 
 // ── Drag-to-reorder image grid ────────────────────────────────
-// Uses pure mouse/touch events — no framer Reorder (avoids the state-sync bug)
 function ImageGrid({
   images,
   onChange,
@@ -256,31 +260,26 @@ function ImageGrid({
             className="w-full h-full object-cover pointer-events-none"
           />
 
-          {/* Uploading overlay */}
           {img.uploading && (
             <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
               <Loader2 size={18} className="text-white animate-spin" />
             </div>
           )}
-          {/* Error overlay */}
           {img.error && !img.uploading && (
             <div className="absolute inset-0 bg-red-500/20 flex items-center justify-center">
               <AlertCircle size={16} className="text-red-500" />
             </div>
           )}
-          {/* Drag handle hint */}
           {!img.uploading && (
             <div className="absolute bottom-0 inset-x-0 flex justify-center py-0.5 bg-black/20">
               <GripVertical size={12} className="text-white/80" />
             </div>
           )}
-          {/* Cover badge */}
           {i === 0 && (
             <div className="absolute top-1 left-1 px-1.5 py-0.5 rounded-md text-[8px] font-black text-white bg-[#004b9c]">
               COVER
             </div>
           )}
-          {/* Remove */}
           {!img.uploading && (
             <button
               type="button"
@@ -338,7 +337,6 @@ function ImageUploadZone({
         uploading: true,
       }));
 
-      // Use functional update to avoid stale closure
       onChange([...images, ...placeholders]);
 
       for (let i = 0; i < toProcess.length; i++) {
@@ -432,6 +430,11 @@ export default function ProductForm({
 }) {
   const router = useRouter();
 
+  // Track existing hero products to disable taken orders
+  const [existingHeroProducts, setExistingHeroProducts] = useState<
+    Array<{ _id: string; heroOrder: number }>
+  >([]);
+
   const [form, setForm] = useState<FormData>({
     name: "",
     description: "",
@@ -441,9 +444,11 @@ export default function ProductForm({
     brandId: "",
     stockQty: "0",
     inStock: true,
-    isNew: false,
-    isBestSeller: false,
+    isNewArrival: false,
     isFeatured: false,
+    isTrending: false,
+    isHeroProduct: false,
+    heroOrder: 1,
     enableSizes: false,
     enableSizePrice: false,
     sizeOptions: [],
@@ -463,6 +468,26 @@ export default function ProductForm({
     type: "success" | "error";
     message: string;
   } | null>(null);
+
+  // Load existing hero products to know which orders are taken
+  useEffect(() => {
+    const fetchExistingHeroProducts = async () => {
+      try {
+        const res = await fetch("/api/home/hero");
+        const json = await res.json();
+        if (json.success && json.data.length > 0) {
+          // Exclude current product if editing
+          const heroes = json.data
+            .filter((p: any) => p._id !== productId)
+            .map((p: any) => ({ _id: p._id, heroOrder: p.heroOrder }));
+          setExistingHeroProducts(heroes);
+        }
+      } catch (error) {
+        console.error("Error fetching hero products:", error);
+      }
+    };
+    fetchExistingHeroProducts();
+  }, [productId]);
 
   // Load categories & brands
   useEffect(() => {
@@ -495,9 +520,11 @@ export default function ProductForm({
           brandId: p.brandId?._id ?? p.brandId ?? "",
           stockQty: String(p.stockQty ?? 0),
           inStock: p.inStock ?? true,
-          isNew: p.isNew ?? false,
-          isBestSeller: p.isBestSeller ?? false,
+          isNewArrival: p.isNewArrival ?? false,
           isFeatured: p.isFeatured ?? false,
+          isTrending: p.isTrending ?? false,
+          isHeroProduct: p.isHeroProduct ?? false,
+          heroOrder: p.heroOrder ?? 1,
           enableSizes: hasSizeOptions || (p.sizes ?? []).length > 0,
           enableSizePrice: p.enableSizePrice ?? false,
           sizeOptions: hasSizeOptions
@@ -540,6 +567,45 @@ export default function ProductForm({
     },
     [errors],
   );
+
+  // Get available hero orders (1-3) excluding taken ones
+  const getAvailableHeroOrders = () => {
+    const takenOrders = existingHeroProducts
+      .filter((p) => p.heroOrder > 0)
+      .map((p) => p.heroOrder);
+
+    const available = [];
+    for (let i = 1; i <= 3; i++) {
+      if (!takenOrders.includes(i) || form.heroOrder === i) {
+        available.push(i);
+      }
+    }
+    return available;
+  };
+
+  // Handle hero product toggle
+  const handleHeroToggle = (checked: boolean) => {
+    setF("isHeroProduct", checked);
+    if (checked) {
+      setF("isTrending", false);
+      setF("isFeatured", false);
+      setF("isNewArrival", false);
+
+      // Auto-select first available order
+      const availableOrders = getAvailableHeroOrders();
+      if (
+        availableOrders.length > 0 &&
+        !existingHeroProducts.some((p) => p.heroOrder === form.heroOrder)
+      ) {
+        setF("heroOrder", availableOrders[0]);
+      }
+    }
+  };
+
+  // Handle hero order change
+  const handleHeroOrderChange = (order: number) => {
+    setF("heroOrder", order);
+  };
 
   // Sizes
   function addSize() {
@@ -610,6 +676,15 @@ export default function ProductForm({
     if (validImgs.length === 0) e.images = "At least one image is required";
     if (images.some((i) => i.uploading))
       e.images = "Please wait for uploads to finish";
+
+    // Hero order validation
+    if (form.isHeroProduct) {
+      const availableOrders = getAvailableHeroOrders();
+      if (!availableOrders.includes(form.heroOrder)) {
+        e.heroOrder = "This hero position is already taken by another product";
+      }
+    }
+
     setErrors(e);
     return Object.keys(e).length === 0;
   }
@@ -651,9 +726,11 @@ export default function ProductForm({
       brandId: form.brandId,
       stockQty: Number(form.stockQty) || 0,
       inStock: form.inStock,
-      isNew: form.isNew,
-      isBestSeller: form.isBestSeller,
+      isNewArrival: form.isNewArrival,
       isFeatured: form.isFeatured,
+      isTrending: form.isTrending,
+      isHeroProduct: form.isHeroProduct,
+      heroOrder: form.isHeroProduct ? form.heroOrder : 0,
       sizes: simpleLabels,
       sizeOptions: sizeOptsPayload,
       enableSizePrice: form.enableSizePrice,
@@ -699,6 +776,8 @@ export default function ProductForm({
       ? Math.round((1 - Number(form.price) / Number(form.originalPrice)) * 100)
       : null;
 
+  const availableHeroOrders = getAvailableHeroOrders();
+
   if (pageLoading) {
     return (
       <div className="space-y-4 animate-pulse">
@@ -714,7 +793,7 @@ export default function ProductForm({
             ))}
           </div>
           <div className="space-y-4">
-            {[160, 140, 180, 56].map((h, i) => (
+            {[160, 140, 180, 200, 56].map((h, i) => (
               <div
                 key={i}
                 className="bg-white rounded-2xl border border-gray-100"
@@ -931,7 +1010,6 @@ export default function ProductForm({
                         className="overflow-hidden"
                       >
                         <div className="pt-2 space-y-3">
-                          {/* Price-per-size toggle */}
                           <Toggle
                             checked={form.enableSizePrice}
                             onChange={(v) => setF("enableSizePrice", v)}
@@ -940,7 +1018,6 @@ export default function ProductForm({
                             accent="#f59e0b"
                           />
 
-                          {/* Add size row */}
                           <div
                             className={cn(
                               "grid gap-2",
@@ -1002,7 +1079,6 @@ export default function ProductForm({
                             </p>
                           )}
 
-                          {/* Size chips */}
                           {form.sizeOptions.length > 0 && (
                             <div className="space-y-2">
                               {form.sizeOptions.map((s) => (
@@ -1073,7 +1149,6 @@ export default function ProductForm({
                         className="overflow-hidden"
                       >
                         <div className="pt-2 space-y-3">
-                          {/* Swatches */}
                           <div className="flex flex-wrap gap-2">
                             {COLOR_PRESETS.map((c) => (
                               <button
@@ -1098,7 +1173,6 @@ export default function ProductForm({
                               />
                             ))}
                           </div>
-                          {/* Custom input */}
                           <div className="flex gap-2">
                             <InputEl
                               value={form.colorInput}
@@ -1260,7 +1334,7 @@ export default function ProductForm({
               </Section>
             </motion.div>
 
-            {/* Labels */}
+            {/* Product Labels */}
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -1276,19 +1350,96 @@ export default function ProductForm({
                     accent="#f59e0b"
                   />
                   <Toggle
-                    checked={form.isNew}
-                    onChange={(v) => setF("isNew", v)}
+                    checked={form.isNewArrival}
+                    onChange={(v) => setF("isNewArrival", v)}
                     label="New Arrival"
                     description="Shows NEW badge on product"
                     accent="#3b82f6"
                   />
                   <Toggle
-                    checked={form.isBestSeller}
-                    onChange={(v) => setF("isBestSeller", v)}
-                    label="Best Seller"
-                    description="Shows BESTSELLER badge"
-                    accent="#16a34a"
+                    checked={form.isTrending}
+                    onChange={(v) => setF("isTrending", v)}
+                    label="Trending Product"
+                    description="Appears in trending products section"
+                    accent="#8b5cf6"
                   />
+                </div>
+              </Section>
+            </motion.div>
+
+            {/* Section Assignment */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.12 }}
+            >
+              <Section title="Section Assignment" icon={Layers}>
+                <div className="space-y-3">
+                  <Toggle
+                    checked={form.isHeroProduct}
+                    onChange={handleHeroToggle}
+                    label="Show in Hero Slider"
+                    description="Product appears in homepage hero slider (max 3 products)"
+                    accent="#f59e0b"
+                  />
+
+                  {form.isHeroProduct && (
+                    <div className="ml-6 pl-4 border-l-2 border-[#f59e0b]/30">
+                      <Field
+                        label="Hero Position"
+                        hint="Select position in hero slider (1-3)"
+                        error={errors.heroOrder}
+                      >
+                        <div className="relative">
+                          <select
+                            value={form.heroOrder}
+                            onChange={(e) =>
+                              handleHeroOrderChange(parseInt(e.target.value))
+                            }
+                            className={cn(
+                              "w-full px-4 py-3 rounded-xl border text-[13.5px] text-gray-900 bg-gray-50 focus:bg-white focus:border-[#004b9c] focus:ring-2 focus:ring-[#004b9c]/10 outline-none appearance-none cursor-pointer transition-all",
+                              errors.heroOrder
+                                ? "border-red-300"
+                                : "border-gray-200",
+                            )}
+                          >
+                            {[1, 2, 3].map((order) => {
+                              const isTaken = existingHeroProducts.some(
+                                (p) =>
+                                  p.heroOrder === order && p._id !== productId,
+                              );
+                              return (
+                                <option
+                                  key={order}
+                                  value={order}
+                                  disabled={isTaken && form.heroOrder !== order}
+                                >
+                                  Position {order}{" "}
+                                  {isTaken && form.heroOrder !== order
+                                    ? "(Already taken)"
+                                    : ""}
+                                </option>
+                              );
+                            })}
+                          </select>
+                          <ChevronDown
+                            size={14}
+                            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                          />
+                        </div>
+                      </Field>
+                      <p className="text-[10px] text-amber-600 mt-1 flex items-center gap-1">
+                        <Info size={10} />
+                        Position 1 appears first, position 3 appears last
+                      </p>
+                    </div>
+                  )}
+
+                  <p className="text-[10px] text-gray-400 mt-2 flex items-center gap-1">
+                    <Info size={10} />
+                    Products can only belong to one section at a time (Hero
+                    takes priority)
+                  </p>
                 </div>
               </Section>
             </motion.div>

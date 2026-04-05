@@ -1,4 +1,4 @@
-import HeroBanner from "@/components/home/HeroSection";
+import HeroSection from "@/components/home/HeroSection";
 import CategoriesSection from "@/components/home/CategoriesSection";
 import TrendingProducts from "@/components/home/TrendingProducts";
 import Bannerssection from "@/components/home/Bannerssection";
@@ -12,7 +12,7 @@ import Testimonialssection from "@/components/home/Testimonialssection";
 export default function HomePage() {
   return (
     <main>
-      <HeroBanner />
+      <HeroSection />
       <CategoriesSection />
       <TrendingProducts />
       <Bannerssection />

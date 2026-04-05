@@ -1,3 +1,4 @@
+// src/models/Brand.ts
 import mongoose, { Schema, Document, Model } from "mongoose";
 
 export interface IBrand extends Document {
@@ -25,9 +26,11 @@ const BrandSchema = new Schema<IBrand>(
   { timestamps: { createdAt: true, updatedAt: false } },
 );
 
-// Delete cached model to avoid OverwriteModelError in dev hot-reload
-const Brand: Model<IBrand> =
-  (mongoose.models.Brand as Model<IBrand>) ||
-  mongoose.model<IBrand>("Brand", BrandSchema);
+// Clear the model cache to ensure fresh registration
+if (mongoose.models.Brand) {
+  delete mongoose.models.Brand;
+}
+
+const Brand: Model<IBrand> = mongoose.model<IBrand>("Brand", BrandSchema);
 
 export default Brand;

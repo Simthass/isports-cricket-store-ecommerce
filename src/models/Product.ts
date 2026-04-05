@@ -1,9 +1,9 @@
+// src/models/Product.ts
 import mongoose, { Schema, Document, Model } from "mongoose";
 
-// ── Size with individual price ────────────────────────────────
 export interface ISizeOption {
-  label: string; // e.g. "Short Handle", "SH", "6"
-  price: number; // price for this size
+  label: string;
+  price: number;
 }
 
 export interface IProduct extends Document {
@@ -11,20 +11,22 @@ export interface IProduct extends Document {
   name: string;
   slug: string;
   description?: string;
-  price: number; // base / default price
+  price: number;
   originalPrice?: number;
   images: string[];
   inStock: boolean;
   stockQty: number;
-  isNew: boolean;
+  isNewArrival: boolean; // Changed from isNew
   isBestSeller: boolean;
   isFeatured: boolean;
+  isTrending: boolean;
+  isHeroProduct: boolean;
+  heroOrder: number;
   rating: number;
   reviewCount: number;
-  // Sizes — stored as objects when price-per-size is enabled
-  sizes: string[]; // kept for backward compat (simple labels)
-  sizeOptions: ISizeOption[]; // rich size+price objects (use this when enableSizePrice = true)
-  enableSizePrice: boolean; // if true, use sizeOptions instead of sizes
+  sizes: string[];
+  sizeOptions: ISizeOption[];
+  enableSizePrice: boolean;
   colors: string[];
   categoryId: mongoose.Types.ObjectId;
   brandId: mongoose.Types.ObjectId;
@@ -56,9 +58,12 @@ const ProductSchema = new Schema(
     images: { type: [String], default: [] },
     inStock: { type: Boolean, default: true },
     stockQty: { type: Number, default: 0 },
-    isNew: { type: Boolean, default: false },
+    isNewArrival: { type: Boolean, default: false }, // Changed from isNew
     isBestSeller: { type: Boolean, default: false },
     isFeatured: { type: Boolean, default: false },
+    isTrending: { type: Boolean, default: false },
+    isHeroProduct: { type: Boolean, default: false },
+    heroOrder: { type: Number, default: 0 },
     rating: { type: Number, default: 0 },
     reviewCount: { type: Number, default: 0 },
     sizes: { type: [String], default: [] },

@@ -1,3 +1,4 @@
+// src/app/api/products/[id]/route.ts - Complete updated file
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import slugify from "slugify";
@@ -21,9 +22,12 @@ const UpdateProductSchema = z.object({
   brandId: z.string().min(1).optional(),
   stockQty: z.number().int().min(0).optional(),
   inStock: z.boolean().optional(),
-  isNew: z.boolean().optional(),
+  isNewArrival: z.boolean().optional(),
   isBestSeller: z.boolean().optional(),
   isFeatured: z.boolean().optional(),
+  isTrending: z.boolean().optional(),
+  isHeroProduct: z.boolean().optional(),
+  heroOrder: z.number().int().min(0).max(3).optional(),
   sizes: z.array(z.string().trim()).optional(),
   sizeOptions: z.array(SizeOptionSchema).optional(),
   enableSizePrice: z.boolean().optional(),
@@ -42,6 +46,11 @@ export async function GET(_req: NextRequest, context: RouteContext) {
         { status: 400 },
       );
     await connectDB();
+
+    // Ensure models are registered
+    await import("@/models/Category");
+    await import("@/models/Brand");
+
     const product = await Product.findById(id)
       .populate("categoryId", "name slug")
       .populate("brandId", "name slug logo")
@@ -80,16 +89,19 @@ export async function PUT(req: NextRequest, context: RouteContext) {
 
     const body: unknown = await req.json();
     const parsed = UpdateProductSchema.safeParse(body);
-    if (!parsed.success)
+    if (!parsed.success) {
+      console.error("Validation errors:", parsed.error.flatten().fieldErrors);
       return NextResponse.json(
         { success: false, error: parsed.error.flatten().fieldErrors },
         { status: 400 },
       );
+    }
 
     await connectDB();
 
     const updateData: Record<string, unknown> = { ...parsed.data };
 
+    // Handle slug update if name changed
     if (parsed.data.name) {
       let slug = slugify(parsed.data.name, { lower: true, strict: true });
       if (await Product.findOne({ slug, _id: { $ne: id } }))
@@ -97,12 +109,18 @@ export async function PUT(req: NextRequest, context: RouteContext) {
       updateData.slug = slug;
     }
 
+    // Handle originalPrice removal
     if (parsed.data.originalPrice === null)
       updateData.originalPrice = undefined;
 
     // Sync base price when size pricing is on
     if (parsed.data.enableSizePrice && parsed.data.sizeOptions?.length) {
       updateData.price = parsed.data.sizeOptions[0].price;
+    }
+
+    // If not hero product, ensure heroOrder is 0
+    if (parsed.data.isHeroProduct === false) {
+      updateData.heroOrder = 0;
     }
 
     const updated = await Product.findByIdAndUpdate(id, updateData, {
