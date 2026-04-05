@@ -378,18 +378,18 @@ export default function FeaturedProducts() {
             <div className="flex items-center gap-3 mb-4">
               <div className="h-[2px] w-8 bg-[#81bf42]" />
               <span className="text-xs font-bold uppercase tracking-[0.2em] text-[#81bf42]">
-                Trending Collections
+                Editor's Pick
               </span>
             </div>
             <h2 className="text-4xl lg:text-6xl font-extrabold text-gray-900 tracking-tight leading-[1.1]">
-              Elite Performance <br />
+              Featured <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#004b9c] to-[#002f6c]">
-                Most Popular Gear
+                Top Rated Equipment
               </span>
             </h2>
             <p className="text-gray-500 text-base mt-6 max-w-lg leading-relaxed">
-              Equip yourself with the same gear used by professionals. Our
-              most-wanted cricket equipment and apparel, updated daily.
+              Discover our hand-picked selection of premium cricket gear. Each
+              product is carefully chosen for quality, performance, and value.
             </p>
           </motion.div>
 
@@ -402,7 +402,7 @@ export default function FeaturedProducts() {
               href="/shop"
               className="group flex items-center gap-3 bg-gray-900 text-white px-8 py-4 rounded-full text-sm font-bold hover:bg-[#004b9c] transition-all duration-300 shadow-xl hover:shadow-blue-200"
             >
-              Explore Full Catalog
+              View All Featured
               <ArrowRight
                 size={18}
                 className="group-hover:translate-x-1 transition-transform"
@@ -411,9 +411,9 @@ export default function FeaturedProducts() {
           </motion.div>
         </div>
 
-        {/* Product Grid */}
+        {/* Product Grid - 2 columns on mobile, 4-5 on desktop */}
         <div className="space-y-8">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6 lg:gap-8">
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 lg:gap-6 xl:gap-8">
             {PRODUCTS.slice(0, 5).map((p, i) => (
               <ProductCard key={p.id} product={p} index={i} />
             ))}
