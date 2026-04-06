@@ -1,4 +1,3 @@
-// src/components/home/NewArrivals.tsx
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -20,7 +19,7 @@ interface Product {
   categoryId: { name: string; slug: string };
 }
 
-function ProductCard({ product, index }: { product: Product; index: number }) {
+function ProductCard({ product, index, onAuthRequired }: { product: Product; index: number; onAuthRequired?: () => void }) {
   const discount = product.originalPrice
     ? Math.round(
         ((product.originalPrice - product.price) / product.originalPrice) * 100,
@@ -100,7 +99,11 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
   );
 }
 
-export default function NewArrivals() {
+interface NewArrivalsProps {
+  onAuthRequired?: () => void;
+}
+
+export default function NewArrivals({ onAuthRequired }: NewArrivalsProps) {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -192,7 +195,7 @@ export default function NewArrivals() {
         {/* Product Grid - 2 columns on mobile, 4-5 on desktop */}
         <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 lg:gap-6 xl:gap-8">
           {products.slice(0, 10).map((product, i) => (
-            <ProductCard key={product._id} product={product} index={i} />
+            <ProductCard key={product._id} product={product} index={i} onAuthRequired={onAuthRequired} />
           ))}
         </div>
       </div>

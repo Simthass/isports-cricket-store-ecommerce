@@ -1,17 +1,25 @@
-// src/app/api/shop/products/[slug]/route.ts
+// src/app/api/shop/products/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import connectDB from "@/lib/mongodb";
 import Product from "@/models/Product";
+import mongoose from "mongoose";
 
-type RouteContext = { params: Promise<{ slug: string }> };
+type RouteContext = { params: Promise<{ id: string }> };
 
 export async function GET(_req: NextRequest, context: RouteContext) {
   try {
     await connectDB();
 
-    const { slug } = await context.params;
+    const { id } = await context.params;
 
-    const product = await Product.findOne({ slug })
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return NextResponse.json(
+        { success: false, error: "Invalid product ID" },
+        { status: 400 },
+      );
+    }
+
+    const product = await Product.findById(id)
       .populate("categoryId", "name slug")
       .populate("brandId", "name slug logo")
       .lean();
@@ -23,9 +31,8 @@ export async function GET(_req: NextRequest, context: RouteContext) {
       );
     }
 
-    // Get related products (same category)
     const relatedProducts = await Product.find({
-      categoryId: product.categoryId,
+      categoryId: (product as any).categoryId,
       _id: { $ne: product._id },
       inStock: true,
     })
@@ -38,7 +45,7 @@ export async function GET(_req: NextRequest, context: RouteContext) {
       data: { product, relatedProducts },
     });
   } catch (error) {
-    console.error("[GET /api/shop/products/[slug]]", error);
+    console.error("[GET /api/shop/products/[id]]", error);
     return NextResponse.json(
       { success: false, error: "Failed to fetch product" },
       { status: 500 },

@@ -1,4 +1,3 @@
-// src/components/home/FeaturedProducts.tsx (Updated)
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -20,7 +19,7 @@ interface Product {
   categoryId: { name: string; slug: string };
 }
 
-function ProductCard({ product, index }: { product: Product; index: number }) {
+function ProductCard({ product, index, onAuthRequired }: { product: Product; index: number; onAuthRequired?: () => void }) {
   const discount = product.originalPrice
     ? Math.round(
         ((product.originalPrice - product.price) / product.originalPrice) * 100,
@@ -97,7 +96,11 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
   );
 }
 
-export default function FeaturedProducts() {
+interface FeaturedProductsProps {
+  onAuthRequired?: () => void;
+}
+
+export default function FeaturedProducts({ onAuthRequired }: FeaturedProductsProps) {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -171,7 +174,7 @@ export default function FeaturedProducts() {
 
         <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 lg:gap-6 xl:gap-8">
           {products.slice(0, 10).map((product, i) => (
-            <ProductCard key={product._id} product={product} index={i} />
+            <ProductCard key={product._id} product={product} index={i} onAuthRequired={onAuthRequired} />
           ))}
         </div>
       </div>

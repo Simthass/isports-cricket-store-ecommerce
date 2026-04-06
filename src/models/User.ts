@@ -1,3 +1,4 @@
+// src/models/User.ts
 import mongoose, { Schema, Document, Model } from "mongoose";
 
 export interface IUser extends Document {
@@ -9,6 +10,9 @@ export interface IUser extends Document {
   role: "CUSTOMER" | "ADMIN";
   emailVerified?: Date;
   image?: string;
+  address: string;
+  city: string;
+  emirate: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -46,6 +50,18 @@ const UserSchema = new Schema<IUser>(
     },
     image: {
       type: String,
+    },
+    address: {
+      type: String,
+      default: "",
+    },
+    city: {
+      type: String,
+      default: "",
+    },
+    emirate: {
+      type: String,
+      default: "",
     },
   },
   { timestamps: true }
