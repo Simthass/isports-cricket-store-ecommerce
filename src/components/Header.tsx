@@ -27,6 +27,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import AuthModal from "@/components/auth/AuthModal";
 import { useRouter } from "next/navigation";
+import { useCart } from "@/context/CartContext";
 
 // ── Types ─────────────────────────────────────────────────────
 interface NavCategory {
@@ -125,9 +126,7 @@ function ShopMegaMenu({
       transition={{ duration: 0.18 }}
       className="absolute top-full left-1/2 -translate-x-1/2 mt-1 w-[560px] bg-white rounded-2xl shadow-[0_16px_60px_rgba(0,75,156,0.18)] border border-gray-100 overflow-hidden z-50"
     >
-      {/* Two-column layout: left panel switcher, right content */}
       <div className="flex">
-        {/* Left: panel switcher */}
         <div className="w-[180px] flex-shrink-0 bg-[#f8f9fc] border-r border-gray-100 p-3 flex flex-col gap-1">
           <p className="text-[9px] font-black text-gray-400 tracking-[0.18em] uppercase px-3 pt-1 pb-2">
             Browse By
@@ -180,8 +179,6 @@ function ShopMegaMenu({
               }
             />
           </button>
-
-          {/* Divider + View All Shop */}
           <div className="mt-auto pt-3 border-t border-gray-200">
             <Link
               href="/shop"
@@ -193,7 +190,6 @@ function ShopMegaMenu({
           </div>
         </div>
 
-        {/* Right: content panel */}
         <div className="flex-1 p-4 max-h-[360px] overflow-y-auto">
           <AnimatePresence mode="wait">
             {activePanel === "categories" ? (
@@ -289,13 +285,13 @@ function ShopMegaMenu({
 // ── Main Header ───────────────────────────────────────────────
 export default function Header() {
   const { data: session, status } = useSession();
+  const { cartCount } = useCart(); // ✅ Get real cart count from context
   const isLoggedIn = status === "authenticated";
   const isAdmin = session?.user?.role === "ADMIN";
 
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [shopMenuOpen, setShopMenuOpen] = useState(false);
-  const [cartCount] = useState(2);
   const [searchValue, setSearchValue] = useState("");
   const [authOpen, setAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState<"login" | "register">("login");
@@ -619,7 +615,7 @@ export default function Header() {
                 </button>
               )}
 
-              {/* Cart */}
+              {/* Cart - Updated with real cart count */}
               <Link
                 href="/cart"
                 className="relative flex items-center justify-center w-10 h-10 rounded-xl text-gray-600 hover:text-[#004b9c] hover:bg-blue-50 transition-all duration-150"
@@ -793,7 +789,6 @@ export default function Header() {
                         transition={{ duration: 0.22 }}
                         className="overflow-hidden ml-4 border-l-2 border-[#004b9c]/20 pl-3"
                       >
-                        {/* View All */}
                         <Link
                           href="/shop"
                           onClick={() => setMobileOpen(false)}
