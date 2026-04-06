@@ -1,4 +1,3 @@
-// src/components/home/TrendingProducts.tsx
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -6,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { motion, useInView } from "framer-motion";
 import { ArrowRight, Star, Loader2, Zap, Sparkles } from "lucide-react";
+import ProductCard from "@/components/products/ProductCard";
 
 interface Product {
   _id: string;
@@ -22,7 +22,8 @@ interface Product {
   isNew?: boolean;
 }
 
-function ProductCard({ product, index }: { product: Product; index: number }) {
+// Update the local ProductCard to accept onAuthRequired and use the real ProductCard component
+function LocalProductCard({ product, index, onAuthRequired }: { product: Product; index: number; onAuthRequired?: () => void }) {
   const discount = product.originalPrice
     ? Math.round(
         ((product.originalPrice - product.price) / product.originalPrice) * 100,
@@ -109,7 +110,11 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
   );
 }
 
-export default function TrendingProducts() {
+interface TrendingProductsProps {
+  onAuthRequired?: () => void;
+}
+
+export default function TrendingProducts({ onAuthRequired }: TrendingProductsProps) {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -205,7 +210,7 @@ export default function TrendingProducts() {
           {/* First Row */}
           <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 lg:gap-6 xl:gap-8">
             {firstRow.map((product, i) => (
-              <ProductCard key={product._id} product={product} index={i} />
+              <LocalProductCard key={product._id} product={product} index={i} onAuthRequired={onAuthRequired} />
             ))}
           </div>
 
@@ -226,10 +231,11 @@ export default function TrendingProducts() {
           {secondRow.length > 0 && (
             <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 lg:gap-6 xl:gap-8">
               {secondRow.map((product, i) => (
-                <ProductCard
+                <LocalProductCard
                   key={product._id}
                   product={product}
                   index={i + 5}
+                  onAuthRequired={onAuthRequired}
                 />
               ))}
             </div>
