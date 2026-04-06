@@ -30,13 +30,15 @@ function checkRateLimit(ip: string): { allowed: boolean; retryAfterSeconds: numb
 const EMAIL_REGEX = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
 const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]).{8,}$/;
 
-function validateRegisterInput(name: string, email: string, password: string) {
+function validateRegisterInput(firstName: string, lastName: string, email: string, password: string) {
   const errors: string[] = [];
 
-  if (!name || name.trim().length < 2)
-    errors.push("Name must be at least 2 characters.");
-  if (name.trim().length > 60)
-    errors.push("Name must be under 60 characters.");
+  if (!firstName || firstName.trim().length < 2)
+    errors.push("First name must be at least 2 characters.");
+  if (firstName.trim().length > 60)
+    errors.push("First name must be under 60 characters.");
+  if (lastName && lastName.trim().length > 60)
+    errors.push("Last name must be under 60 characters.");
 
   if (!email || !EMAIL_REGEX.test(email.trim()))
     errors.push("Please enter a valid email address.");
@@ -74,10 +76,10 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { name, email, password, phone } = body;
+    const { firstName, lastName, email, password, phone, address, city, emirate } = body;
 
     // Validate inputs
-    const validationErrors = validateRegisterInput(name, email, password);
+    const validationErrors = validateRegisterInput(firstName, lastName, email, password);
     if (validationErrors.length > 0) {
       return NextResponse.json({ error: validationErrors[0] }, { status: 400 });
     }
@@ -93,19 +95,25 @@ export async function POST(req: NextRequest) {
     }
 
     const hashedPassword = await bcrypt.hash(password, 12);
+    const fullName = `${firstName.trim()} ${lastName ? lastName.trim() : ""}`.trim();
 
     const user = await User.create({
-      name: name.trim(),
+      firstName: firstName.trim(),
+      lastName: lastName?.trim() || "",
+      name: fullName,
       email: email.toLowerCase().trim(),
       password: hashedPassword,
-      phone: phone?.trim() || undefined,
+      phone: phone?.trim() || "",
+      address: address?.trim() || "",
+      city: city?.trim() || "",
+      emirate: emirate?.trim() || "",
       role: "CUSTOMER",
     });
 
     return NextResponse.json(
       {
         message: "Account created successfully",
-        user: { id: user._id.toString(), name: user.name, email: user.email },
+        user: { id: user._id.toString(), firstName: user.firstName, lastName: user.lastName, email: user.email },
       },
       { status: 201 }
     );

@@ -1,4 +1,3 @@
-// src/components/admin/AdminSidebar.tsx
 "use client";
 
 import React, { useState } from "react";
@@ -39,7 +38,6 @@ const navGroups = [
         label: "Orders",
         href: "/admin/orders",
         icon: ClipboardList,
-        badge: "12",
       },
       { label: "Customers", href: "/admin/customers", icon: Users },
     ],
@@ -75,7 +73,6 @@ export default function AdminSidebar() {
       initial={false}
       animate={{ width: collapsed ? 80 : 260 }}
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
-      // Upgraded to a deep, rich brand-blue background with subtle glowing borders
       className="relative flex flex-col h-screen flex-shrink-0 z-40 bg-gradient-to-b from-[#0A1325] to-[#050A14] border-r border-blue-900/30 select-none shadow-[4px_0_24px_rgba(0,0,0,0.2)]"
     >
       {/* Brand Header */}
@@ -89,7 +86,6 @@ export default function AdminSidebar() {
               exit={{ opacity: 0, x: -10 }}
               className="flex items-center gap-3 w-full"
             >
-              {/* Image Container for Expanded State */}
               <div className="relative w-9 h-9 flex-shrink-0 drop-shadow-md">
                 <Image
                   src="/ISportsCricket-Logo.png"
@@ -116,7 +112,6 @@ export default function AdminSidebar() {
               exit={{ opacity: 0, scale: 0.8 }}
               className="w-full flex justify-center"
             >
-              {/* Image Container for Collapsed State */}
               <div className="relative w-10 h-10 drop-shadow-md">
                 <Image
                   src="/ISportsCricket-Logo.png"
@@ -198,30 +193,12 @@ export default function AdminSidebar() {
                           {item.label}
                         </motion.span>
                       )}
-
-                      {/* Badge */}
-                      {!collapsed && item.badge && (
-                        <span
-                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full min-w-[20px] text-center shadow-sm transition-colors ${
-                            isActive
-                              ? "bg-white text-blue-600"
-                              : "bg-blue-500 text-white group-hover:bg-blue-400"
-                          }`}
-                        >
-                          {item.badge}
-                        </span>
-                      )}
                     </div>
 
-                    {/* Highly Polished Tooltip for Collapsed State */}
+                    {/* Tooltip for Collapsed State */}
                     {collapsed && (
                       <div className="absolute left-full ml-4 px-3 py-2 bg-[#0F1C35] text-white text-[13px] font-semibold rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-200 translate-x-[-10px] group-hover:translate-x-0 whitespace-nowrap z-50 border border-blue-500/20 shadow-[0_8px_24px_rgba(0,0,0,0.4)] flex items-center gap-2">
                         {item.label}
-                        {item.badge && (
-                          <span className="bg-blue-500 text-white text-[10px] px-1.5 py-0.5 rounded-md">
-                            {item.badge}
-                          </span>
-                        )}
                       </div>
                     )}
                   </Link>

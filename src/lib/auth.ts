@@ -1,115 +1,99 @@
 import NextAuth from "next-auth";
-import Credentials from "next-auth/providers/credentials";
+import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
-import connectDB from "@/lib/mongodb";
+import connectDB from "./dbConnect";
 import User from "@/models/User";
-import {
-  getLoginAttemptStatus,
-  recordFailedLogin,
-  clearLoginAttempts,
-} from "@/app/api/login/route";
 
-export const { auth, handlers, signIn, signOut } = NextAuth({
-  session: { strategy: "jwt" },
-  secret: process.env.NEXTAUTH_SECRET,
-
-  pages: {
-    signIn: "/login",
-    error: "/login",
-  },
-
+export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
-    Credentials({
-      name: "Credentials",
+    CredentialsProvider({
+      name: "credentials",
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
-          throw new Error("Email and password are required.");
+          throw new Error("Invalid credentials");
         }
 
-        const email = (credentials.email as string).toLowerCase().trim();
-        const password = credentials.password as string;
-
-        // ── Rate limit check BEFORE hitting the DB ──────────────────
-        const status = getLoginAttemptStatus(email);
-        if (status.blocked) {
-          const mins = Math.ceil(status.retryAfterSeconds / 60);
-          throw new Error(
-            `RATE_LIMITED:Account temporarily locked. Try again in ${mins} minute(s).`
-          );
+        await connectDB();
+        
+        const user = await User.findOne({ email: credentials.email });
+        
+        if (!user) {
+          throw new Error("Invalid credentials");
         }
 
-        try {
-          await connectDB();
-
-          const user = await User.findOne({ email }).select("+password");
-
-          // ── No account found ────────────────────────────────────────
-          if (!user || !user.password) {
-            recordFailedLogin(email);
-            const updated = getLoginAttemptStatus(email);
-            throw new Error(
-              updated.blocked
-                ? `RATE_LIMITED:Too many failed attempts. Account locked for 10 minutes.`
-                : `INVALID_CREDENTIALS:No account found with that email. ${updated.attemptsLeft} attempt(s) remaining.`
-            );
-          }
-
-          const isValid = await bcrypt.compare(password, user.password);
-
-          // ── Wrong password ──────────────────────────────────────────
-          if (!isValid) {
-            recordFailedLogin(email);
-            const updated = getLoginAttemptStatus(email);
-            throw new Error(
-              updated.blocked
-                ? `RATE_LIMITED:Too many failed attempts. Account locked for 10 minutes.`
-                : `WRONG_PASSWORD:Incorrect password. ${updated.attemptsLeft} attempt(s) remaining.`
-            );
-          }
-
-          // ── Success — clear lockout counter ─────────────────────────
-          clearLoginAttempts(email);
-
-          return {
-            id: user._id.toString(),
-            email: user.email,
-            name: user.name ?? "User",
-            role: user.role,
-          };
-        } catch (error) {
-          // Re-throw our structured errors as-is, log unexpected ones
-          if (error instanceof Error && (
-            error.message.startsWith("RATE_LIMITED:") ||
-            error.message.startsWith("WRONG_PASSWORD:") ||
-            error.message.startsWith("INVALID_CREDENTIALS:")
-          )) {
-            throw error;
-          }
-          console.error("Auth error:", error);
-          throw new Error("Something went wrong. Please try again.");
+        // Fix: Cast both values to string
+        const inputPassword = String(credentials.password);
+        const hashedPassword = String(user.password);
+        
+        if (!hashedPassword) {
+          throw new Error("Invalid credentials");
         }
+
+        const isValid = bcrypt.compareSync(
+          inputPassword,
+          hashedPassword
+        );
+
+        if (!isValid) {
+          throw new Error("Invalid credentials");
+        }
+
+        return {
+          id: user._id.toString(),
+          firstName: user.firstName || "",
+          lastName: user.lastName || "",
+          name: user.name || "",
+          email: user.email,
+          phone: user.phone || "",
+          address: user.address || "",
+          city: user.city || "",
+          emirate: user.emirate || "",
+          role: user.role || "CUSTOMER",
+        };
       },
     }),
   ],
-
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
-        token.role = (user as any).role;
+        token.firstName = user.firstName;
+        token.lastName = user.lastName;
+        token.name = user.name;
+        token.email = user.email;
+        token.phone = user.phone;
+        token.address = user.address;
+        token.city = user.city;
+        token.emirate = user.emirate;
+        token.role = user.role;
       }
       return token;
     },
     async session({ session, token }) {
-      if (session.user) {
+      if (token) {
         session.user.id = token.id as string;
-        session.user.role = token.role as "ADMIN" | "CUSTOMER";
+        session.user.firstName = token.firstName as string;
+        session.user.lastName = token.lastName as string;
+        session.user.name = token.name as string;
+        session.user.email = token.email as string;
+        session.user.phone = token.phone as string;
+        session.user.address = token.address as string;
+        session.user.city = token.city as string;
+        session.user.emirate = token.emirate as string;
+        session.user.role = token.role as string;
       }
       return session;
     },
+  },
+  session: {
+    strategy: "jwt",
+  },
+  secret: process.env.NEXTAUTH_SECRET,
+  pages: {
+    signIn: "/login",
   },
 });

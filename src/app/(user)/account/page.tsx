@@ -42,10 +42,13 @@ export default function AccountPage() {
 
   // Profile form — initialized from session
   const [profile, setProfile] = useState({
-    name: "",
+    firstName: "",
+    lastName: "",
     email: "",
     phone: "",
-    dob: "",
+    address: "",
+    city: "",
+    emirate: "",
   });
 
   // Password form
@@ -64,14 +67,40 @@ export default function AccountPage() {
 
   // ── Populate profile from session when it loads ──
   useEffect(() => {
-    if (session?.user) {
-      setProfile({
-        name: session.user.name || "",
-        email: session.user.email || "",
-        phone: (session.user as any).phone || "",
-        dob: (session.user as any).dob || "",
-      });
-    }
+    const loadUserData = async () => {
+      if (session?.user) {
+        try {
+          const response = await fetch("/api/users/address");
+          if (response.ok) {
+            const userData = await response.json();
+            setProfile({
+              firstName: userData.firstName || "",
+              lastName: userData.lastName || "",
+              email: userData.email || session.user.email || "",
+              phone: userData.phone || "",
+              address: userData.address || "",
+              city: userData.city || "",
+              emirate: userData.emirate || "",
+            });
+          } else {
+            // Fallback to session data
+            setProfile({
+              firstName: (session.user as any).firstName || "",
+              lastName: (session.user as any).lastName || "",
+              email: session.user.email || "",
+              phone: (session.user as any).phone || "",
+              address: (session.user as any).address || "",
+              city: (session.user as any).city || "",
+              emirate: (session.user as any).emirate || "",
+            });
+          }
+        } catch (error) {
+          console.error("Failed to load user data:", error);
+        }
+      }
+    };
+    
+    loadUserData();
   }, [session]);
 
   // ── Redirect to login if not authenticated ──
@@ -97,22 +126,30 @@ export default function AccountPage() {
   if (!session?.user) return null;
 
   const user = session.user;
-  const initials = user.name
-    ? user.name.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()
-    : user.email?.slice(0, 2).toUpperCase() || "??";
+  const fullName = profile.firstName || profile.lastName 
+    ? `${profile.firstName} ${profile.lastName}`.trim() 
+    : user.name || user.email?.slice(0, 2).toUpperCase() || "??";
+  
+  const initials = profile.firstName && profile.lastName
+    ? (profile.firstName[0] + profile.lastName[0]).toUpperCase()
+    : fullName.slice(0, 2).toUpperCase();
 
   // ── Save profile ──
   const handleSaveProfile = async () => {
     setSaving(true);
     setSaveError("");
     try {
-      const res = await fetch("/api/user/update-profile", {
+      const res = await fetch("/api/users/address", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: profile.name,
+          firstName: profile.firstName,
+          lastName: profile.lastName,
           phone: profile.phone,
-          dob: profile.dob,
+          email: profile.email,
+          address: profile.address,
+          city: profile.city,
+          emirate: profile.emirate,
         }),
       });
 
@@ -121,8 +158,12 @@ export default function AccountPage() {
       if (!res.ok) {
         setSaveError(data.error || "Failed to save. Please try again.");
       } else {
-        // Update session with new name
-        await update({ name: profile.name });
+        // Update session with new info
+        await update({
+          firstName: profile.firstName,
+          lastName: profile.lastName,
+          name: `${profile.firstName} ${profile.lastName}`.trim(),
+        });
         setSaved(true);
         setTimeout(() => setSaved(false), 2500);
       }
@@ -206,9 +247,9 @@ export default function AccountPage() {
                 </div>
                 <div>
                   <h1 className="text-white text-3xl lg:text-4xl font-black italic uppercase">
-                    {user.name || "My Account"}
+                    {fullName || "My Account"}
                   </h1>
-                  <p className="text-blue-200 text-[14px] mt-0.5">{user.email}</p>
+                  <p className="text-blue-200 text-[14px] mt-0.5">{profile.email || user.email}</p>
                 </div>
               </div>
 
@@ -292,31 +333,54 @@ export default function AccountPage() {
                 <>
                   <h2 className="text-[18px] font-bold text-gray-800 mb-6">Personal Information</h2>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                    {[
-                      { label: "Full Name", key: "name", type: "text", placeholder: "Your full name" },
-                      { label: "Email Address", key: "email", type: "email", placeholder: "your@email.com", disabled: true },
-                      { label: "Phone Number", key: "phone", type: "tel", placeholder: "+971 XX XXX XXXX" },
-                      { label: "Date of Birth", key: "dob", type: "date", placeholder: "" },
-                    ].map(({ label, key, type, placeholder, disabled }) => (
-                      <div key={key} className="flex flex-col gap-1.5">
-                        <label className="text-[12px] font-bold text-gray-500 uppercase tracking-wider">
-                          {label}
-                          {disabled && <span className="ml-2 text-gray-300 normal-case font-normal">(cannot change)</span>}
-                        </label>
-                        <input
-                          type={type}
-                          value={profile[key as keyof typeof profile]}
-                          onChange={(e) =>
-                            !disabled && setProfile({ ...profile, [key]: e.target.value })
-                          }
-                          placeholder={placeholder}
-                          disabled={disabled}
-                          className={`w-full border border-gray-200 rounded-xl px-4 py-3 text-[14px] text-gray-700 placeholder-gray-300 focus:outline-none focus:border-[#004b9c] focus:ring-2 focus:ring-[#004b9c]/10 transition-all ${
-                            disabled ? "bg-gray-50 text-gray-400 cursor-not-allowed" : "bg-white"
-                          }`}
-                        />
-                      </div>
-                    ))}
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[12px] font-bold text-gray-500 uppercase tracking-wider">
+                        First Name *
+                      </label>
+                      <input
+                        type="text"
+                        value={profile.firstName}
+                        onChange={(e) => setProfile({ ...profile, firstName: e.target.value })}
+                        placeholder="Your first name"
+                        className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[14px] text-gray-700 placeholder-gray-300 focus:outline-none focus:border-[#004b9c] focus:ring-2 focus:ring-[#004b9c]/10 transition-all bg-white"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[12px] font-bold text-gray-500 uppercase tracking-wider">
+                        Last Name
+                      </label>
+                      <input
+                        type="text"
+                        value={profile.lastName}
+                        onChange={(e) => setProfile({ ...profile, lastName: e.target.value })}
+                        placeholder="Your last name"
+                        className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[14px] text-gray-700 placeholder-gray-300 focus:outline-none focus:border-[#004b9c] focus:ring-2 focus:ring-[#004b9c]/10 transition-all bg-white"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[12px] font-bold text-gray-500 uppercase tracking-wider">
+                        Email Address *
+                      </label>
+                      <input
+                        type="email"
+                        value={profile.email}
+                        onChange={(e) => setProfile({ ...profile, email: e.target.value })}
+                        placeholder="your@email.com"
+                        className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[14px] text-gray-700 placeholder-gray-300 focus:outline-none focus:border-[#004b9c] focus:ring-2 focus:ring-[#004b9c]/10 transition-all bg-white"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[12px] font-bold text-gray-500 uppercase tracking-wider">
+                        Phone Number
+                      </label>
+                      <input
+                        type="tel"
+                        value={profile.phone}
+                        onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
+                        placeholder="+971 XX XXX XXXX"
+                        className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[14px] text-gray-700 placeholder-gray-300 focus:outline-none focus:border-[#004b9c] focus:ring-2 focus:ring-[#004b9c]/10 transition-all bg-white"
+                      />
+                    </div>
                   </div>
                   <div className="mt-8 flex items-center gap-4">
                     <button
@@ -342,40 +406,89 @@ export default function AccountPage() {
                 </>
               )}
 
+              {/* ── ADDRESSES TAB ── */}
+              {activeTab === "addresses" && (
+                <>
+                  <h2 className="text-[18px] font-bold text-gray-800 mb-6">Saved Addresses</h2>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {(profile.address || profile.city) ? (
+                      <div className="border-2 border-[#004b9c] rounded-2xl p-5 relative">
+                        <span className="absolute top-3 right-3 text-[10px] font-bold bg-[#004b9c] text-white px-2.5 py-1 rounded-full">
+                          DEFAULT
+                        </span>
+                        <p className="font-bold text-gray-800 text-[14px]">{profile.firstName} {profile.lastName}</p>
+                        <p className="text-gray-500 text-[13px] mt-1 leading-relaxed">
+                          {profile.address}<br />
+                          {profile.city}, {profile.emirate}
+                        </p>
+                        <div className="flex gap-3 mt-4">
+                          <button className="text-[12px] font-semibold text-[#004b9c] hover:underline">Edit</button>
+                          <button className="text-[12px] font-semibold text-red-400 hover:underline">Delete</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="border-2 border-gray-200 rounded-2xl p-5">
+                        <p className="text-gray-500 text-[13px]">No address saved yet.</p>
+                      </div>
+                    )}
+                    <button className="border border-dashed border-gray-300 rounded-2xl p-5 flex flex-col items-center justify-center gap-2 text-gray-400 hover:border-[#004b9c] hover:text-[#004b9c] transition-all duration-200 min-h-[160px]">
+                      <MapPin size={28} strokeWidth={1.4} />
+                      <span className="text-[13px] font-semibold">+ Add New Address</span>
+                    </button>
+                  </div>
+                </>
+              )}
+
               {/* ── SECURITY TAB ── */}
               {activeTab === "security" && (
                 <>
                   <h2 className="text-[18px] font-bold text-gray-800 mb-6">Change Password</h2>
                   <div className="flex flex-col gap-5 max-w-md">
-                    {[
-                      { label: "Current Password", key: "current" },
-                      { label: "New Password", key: "newPass" },
-                      { label: "Confirm New Password", key: "confirm" },
-                    ].map(({ label, key }) => (
-                      <div key={key} className="flex flex-col gap-1.5">
-                        <label className="text-[12px] font-bold text-gray-500 uppercase tracking-wider">
-                          {label}
-                        </label>
-                        <div className="relative">
-                          <input
-                            type={showPass ? "text" : "password"}
-                            value={passwords[key as keyof typeof passwords]}
-                            onChange={(e) =>
-                              setPasswords({ ...passwords, [key]: e.target.value })
-                            }
-                            placeholder="••••••••"
-                            className="w-full border border-gray-200 rounded-xl px-4 py-3 pr-11 text-[14px] text-gray-700 placeholder-gray-300 focus:outline-none focus:border-[#004b9c] focus:ring-2 focus:ring-[#004b9c]/10 transition-all"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setShowPass(!showPass)}
-                            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                          >
-                            {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
-                          </button>
-                        </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[12px] font-bold text-gray-500 uppercase tracking-wider">
+                        Current Password
+                      </label>
+                      <div className="relative">
+                        <input
+                          type={showPass ? "text" : "password"}
+                          value={passwords.current}
+                          onChange={(e) => setPasswords({ ...passwords, current: e.target.value })}
+                          placeholder="••••••••"
+                          className="w-full border border-gray-200 rounded-xl px-4 py-3 pr-11 text-[14px] text-gray-700 placeholder-gray-300 focus:outline-none focus:border-[#004b9c] focus:ring-2 focus:ring-[#004b9c]/10 transition-all"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPass(!showPass)}
+                          className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        >
+                          {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </button>
                       </div>
-                    ))}
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[12px] font-bold text-gray-500 uppercase tracking-wider">
+                        New Password
+                      </label>
+                      <input
+                        type={showPass ? "text" : "password"}
+                        value={passwords.newPass}
+                        onChange={(e) => setPasswords({ ...passwords, newPass: e.target.value })}
+                        placeholder="••••••••"
+                        className="w-full border border-gray-200 rounded-xl px-4 py-3 pr-11 text-[14px] text-gray-700 placeholder-gray-300 focus:outline-none focus:border-[#004b9c] focus:ring-2 focus:ring-[#004b9c]/10 transition-all"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[12px] font-bold text-gray-500 uppercase tracking-wider">
+                        Confirm New Password
+                      </label>
+                      <input
+                        type={showPass ? "text" : "password"}
+                        value={passwords.confirm}
+                        onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })}
+                        placeholder="••••••••"
+                        className="w-full border border-gray-200 rounded-xl px-4 py-3 pr-11 text-[14px] text-gray-700 placeholder-gray-300 focus:outline-none focus:border-[#004b9c] focus:ring-2 focus:ring-[#004b9c]/10 transition-all"
+                      />
+                    </div>
                     <p className="text-[12px] text-gray-400">
                       Password must be at least 8 characters with uppercase, lowercase, number and special character.
                     </p>
@@ -398,32 +511,6 @@ export default function AccountPage() {
                         <CheckCircle2 size={15} /> Password updated!
                       </motion.p>
                     )}
-                  </div>
-                </>
-              )}
-
-              {/* ── ADDRESSES TAB ── */}
-              {activeTab === "addresses" && (
-                <>
-                  <h2 className="text-[18px] font-bold text-gray-800 mb-6">Saved Addresses</h2>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="border-2 border-[#004b9c] rounded-2xl p-5 relative">
-                      <span className="absolute top-3 right-3 text-[10px] font-bold bg-[#004b9c] text-white px-2.5 py-1 rounded-full">
-                        DEFAULT
-                      </span>
-                      <p className="font-bold text-gray-800 text-[14px]">{user.name}</p>
-                      <p className="text-gray-500 text-[13px] mt-1 leading-relaxed">
-                        No address saved yet.<br />Add your delivery address below.
-                      </p>
-                      <div className="flex gap-3 mt-4">
-                        <button className="text-[12px] font-semibold text-[#004b9c] hover:underline">Edit</button>
-                        <button className="text-[12px] font-semibold text-red-400 hover:underline">Delete</button>
-                      </div>
-                    </div>
-                    <button className="border border-dashed border-gray-300 rounded-2xl p-5 flex flex-col items-center justify-center gap-2 text-gray-400 hover:border-[#004b9c] hover:text-[#004b9c] transition-all duration-200 min-h-[160px]">
-                      <MapPin size={28} strokeWidth={1.4} />
-                      <span className="text-[13px] font-semibold">+ Add New Address</span>
-                    </button>
                   </div>
                 </>
               )}
