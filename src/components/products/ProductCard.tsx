@@ -5,8 +5,15 @@ import Image from "next/image";
 import Link from "next/link";
 import { motion, useInView, AnimatePresence } from "framer-motion";
 import {
-  ShoppingCart, Star, ArrowRight, Check,
-  Sparkles, Flame, Zap, Loader2, MessageCircle,
+  ShoppingCart,
+  Star,
+  ArrowRight,
+  Check,
+  Sparkles,
+  Flame,
+  Zap,
+  Loader2,
+  MessageCircle,
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useCart } from "@/context/CartContext";
@@ -15,6 +22,7 @@ interface Product {
   id: string;
   name: string;
   brand: string;
+  slug: string;
   price: number;
   originalPrice?: number;
   image: string;
@@ -36,7 +44,11 @@ interface Props {
   onAuthRequired?: () => void;
 }
 
-export default function ProductCard({ product, index = 0, onAuthRequired }: Props) {
+export default function ProductCard({
+  product,
+  index = 0,
+  onAuthRequired,
+}: Props) {
   const { data: session } = useSession();
   const { addToCart } = useCart();
   const [hovered, setHovered] = useState(false);
@@ -48,18 +60,23 @@ export default function ProductCard({ product, index = 0, onAuthRequired }: Prop
   const discount =
     product.originalPrice && product.originalPrice > product.price
       ? Math.round(
-          ((product.originalPrice - product.price) / product.originalPrice) * 100
+          ((product.originalPrice - product.price) / product.originalPrice) *
+            100,
         )
       : null;
 
-  const priceDisplay = product.hasRange && product.priceMin && product.priceMax
-    ? `AED ${product.priceMin} – ${product.priceMax}`
-    : `AED ${product.price?.toLocaleString() ?? "0"}`;
+  const priceDisplay =
+    product.hasRange && product.priceMin && product.priceMax
+      ? `AED ${product.priceMin} – ${product.priceMax}`
+      : `AED ${product.price?.toLocaleString() ?? "0"}`;
 
   const getBadgeIcon = () => {
-    if (product.badge === "Hot") return <Flame size={12} className="text-red-500" />;
-    if (product.badge === "New") return <Sparkles size={12} className="text-blue-500" />;
-    if (product.badge === "Best Seller") return <Zap size={12} className="text-green-500" />;
+    if (product.badge === "Hot")
+      return <Flame size={12} className="text-red-500" />;
+    if (product.badge === "New")
+      return <Sparkles size={12} className="text-blue-500" />;
+    if (product.badge === "Best Seller")
+      return <Zap size={12} className="text-green-500" />;
     return null;
   };
 
@@ -82,7 +99,7 @@ export default function ProductCard({ product, index = 0, onAuthRequired }: Prop
     if (adding || added) return;
 
     setAdding(true);
-    
+
     await addToCart({
       productId: product.id,
       name: product.name,
@@ -92,7 +109,7 @@ export default function ProductCard({ product, index = 0, onAuthRequired }: Prop
       size: product.sizes?.[0] ?? "Standard",
       image: product.image ?? null,
     });
-    
+
     setAdded(true);
     setTimeout(() => setAdded(false), 2200);
     setAdding(false);
@@ -101,9 +118,9 @@ export default function ProductCard({ product, index = 0, onAuthRequired }: Prop
   const handleWhatsApp = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     const message = encodeURIComponent(
-      `Hi iSPORTS! I'm interested in the ${product.name} (AED ${product.price}). Can you help me with more details?`
+      `Hi iSPORTS! I'm interested in the ${product.name} (AED ${product.price}). Can you help me with more details?`,
     );
     const whatsappLink = `https://wa.me/971526514666?text=${message}`;
     window.open(whatsappLink, "_blank");
@@ -121,7 +138,10 @@ export default function ProductCard({ product, index = 0, onAuthRequired }: Prop
       transition={{ duration: 0.5, delay: (index % 5) * 0.1 }}
       className="h-full"
     >
-      <Link href={`/shop/product/${product.id}`} className="group block h-full">
+      <Link
+        href={`/shop/product/${product.slug}`}
+        className="group block h-full"
+      >
         <div
           onMouseEnter={() => setHovered(true)}
           onMouseLeave={() => setHovered(false)}
@@ -144,7 +164,9 @@ export default function ProductCard({ product, index = 0, onAuthRequired }: Prop
               <div className="absolute top-4 right-4 z-10">
                 <div className="flex items-center gap-1.5 bg-white/90 backdrop-blur-md border border-gray-100 rounded-full px-3 py-1 shadow-sm">
                   {getBadgeIcon()}
-                  <span className={`text-[9px] font-bold uppercase tracking-wider ${getBadgeColor()}`}>
+                  <span
+                    className={`text-[9px] font-bold uppercase tracking-wider ${getBadgeColor()}`}
+                  >
                     {product.badge}
                   </span>
                 </div>
@@ -194,7 +216,7 @@ export default function ProductCard({ product, index = 0, onAuthRequired }: Prop
                       <MessageCircle size={14} />
                       Inquire on WhatsApp
                     </button>
-                    
+
                     {/* Add to Cart / Quick Add Button */}
                     <button
                       onClick={handleCart}
@@ -203,8 +225,8 @@ export default function ProductCard({ product, index = 0, onAuthRequired }: Prop
                         added
                           ? "bg-[#81bf42]"
                           : adding
-                          ? "bg-[#004b9c] opacity-80"
-                          : "bg-[#004b9c] hover:bg-[#003d7e]"
+                            ? "bg-[#004b9c] opacity-80"
+                            : "bg-[#004b9c] hover:bg-[#003d7e]"
                       }`}
                     >
                       {adding ? (
@@ -250,7 +272,11 @@ export default function ProductCard({ product, index = 0, onAuthRequired }: Prop
                     key={s}
                     size={12}
                     strokeWidth={0}
-                    fill={s <= Math.floor(product.rating ?? 0) ? "#ffd700" : "#e2e8f0"}
+                    fill={
+                      s <= Math.floor(product.rating ?? 0)
+                        ? "#ffd700"
+                        : "#e2e8f0"
+                    }
                   />
                 ))}
               </div>
@@ -264,11 +290,12 @@ export default function ProductCard({ product, index = 0, onAuthRequired }: Prop
                 <span className="text-lg font-bold text-[#004b9c] leading-none">
                   {priceDisplay}
                 </span>
-                {product.originalPrice && product.originalPrice > (product.price ?? 0) && (
-                  <span className="text-[11px] text-gray-400 line-through mt-1">
-                    AED {product.originalPrice.toLocaleString()}
-                  </span>
-                )}
+                {product.originalPrice &&
+                  product.originalPrice > (product.price ?? 0) && (
+                    <span className="text-[11px] text-gray-400 line-through mt-1">
+                      AED {product.originalPrice.toLocaleString()}
+                    </span>
+                  )}
               </div>
               <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-[#004b9c] group-hover:text-white transition-all duration-300">
                 <ArrowRight size={14} />

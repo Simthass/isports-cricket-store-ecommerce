@@ -16,7 +16,7 @@ export interface IProduct extends Document {
   images: string[];
   inStock: boolean;
   stockQty: number;
-  isNewArrival: boolean; // Changed from isNew
+  isNewArrival: boolean;
   isBestSeller: boolean;
   isFeatured: boolean;
   isTrending: boolean;

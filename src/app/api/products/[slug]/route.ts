@@ -1,4 +1,3 @@
-// src/app/api/products/[id]/route.ts - Complete updated file
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import slugify from "slugify";
@@ -34,35 +33,31 @@ const UpdateProductSchema = z.object({
   colors: z.array(z.string().trim()).optional(),
 });
 
-type RouteContext = { params: Promise<{ id: string }> };
+type RouteContext = { params: Promise<{ slug: string }> };
 
-// ── GET /api/products/[id] ────────────────────────────────────
+// ── GET /api/products/[slug] ────────────────────────────────────
 export async function GET(_req: NextRequest, context: RouteContext) {
   try {
-    const { id } = await context.params;
-    if (!mongoose.Types.ObjectId.isValid(id))
-      return NextResponse.json(
-        { success: false, error: "Invalid ID" },
-        { status: 400 },
-      );
+    const { slug } = await context.params;
     await connectDB();
 
-    // Ensure models are registered
     await import("@/models/Category");
     await import("@/models/Brand");
 
-    const product = await Product.findById(id)
+    const product = await Product.findOne({ slug })
       .populate("categoryId", "name slug")
       .populate("brandId", "name slug logo")
       .lean();
+
     if (!product)
       return NextResponse.json(
         { success: false, error: "Product not found" },
         { status: 404 },
       );
+
     return NextResponse.json({ success: true, data: product });
   } catch (error) {
-    console.error("[GET /api/products/[id]]", error);
+    console.error("[GET /api/products/[slug]]", error);
     return NextResponse.json(
       { success: false, error: "Failed to fetch product" },
       { status: 500 },
@@ -70,7 +65,7 @@ export async function GET(_req: NextRequest, context: RouteContext) {
   }
 }
 
-// ── PUT /api/products/[id] ────────────────────────────────────
+// ── PUT /api/products/[slug] ────────────────────────────────────
 export async function PUT(req: NextRequest, context: RouteContext) {
   try {
     const session = await auth();
@@ -80,73 +75,63 @@ export async function PUT(req: NextRequest, context: RouteContext) {
         { status: 401 },
       );
 
-    const { id } = await context.params;
-    if (!mongoose.Types.ObjectId.isValid(id))
-      return NextResponse.json(
-        { success: false, error: "Invalid ID" },
-        { status: 400 },
-      );
+    const { slug: urlSlug } = await context.params;
+    await connectDB();
 
-    const body: unknown = await req.json();
+    // Find existing product first to get its ID
+    const existingProduct = await Product.findOne({ slug: urlSlug });
+    if (!existingProduct) {
+      return NextResponse.json(
+        { success: false, error: "Product not found" },
+        { status: 404 },
+      );
+    }
+
+    const body = await req.json();
     const parsed = UpdateProductSchema.safeParse(body);
     if (!parsed.success) {
-      console.error("Validation errors:", parsed.error.flatten().fieldErrors);
       return NextResponse.json(
         { success: false, error: parsed.error.flatten().fieldErrors },
         { status: 400 },
       );
     }
 
-    await connectDB();
+    const updateData: Record<string, any> = { ...parsed.data };
 
-    const updateData: Record<string, unknown> = { ...parsed.data };
-
-    // Handle slug update if name changed
     if (parsed.data.name) {
-      let slug = slugify(parsed.data.name, { lower: true, strict: true });
-      if (await Product.findOne({ slug, _id: { $ne: id } }))
-        slug = `${slug}-${Date.now()}`;
-      updateData.slug = slug;
+      let newSlug = slugify(parsed.data.name, { lower: true, strict: true });
+      // Check if new slug is taken by a DIFFERENT product
+      if (
+        await Product.findOne({
+          slug: newSlug,
+          _id: { $ne: existingProduct._id },
+        })
+      ) {
+        newSlug = `${newSlug}-${Date.now()}`;
+      }
+      updateData.slug = newSlug;
     }
 
-    // Handle originalPrice removal
-    if (parsed.data.originalPrice === null)
-      updateData.originalPrice = undefined;
-
-    // Sync base price when size pricing is on
-    if (parsed.data.enableSizePrice && parsed.data.sizeOptions?.length) {
-      updateData.price = parsed.data.sizeOptions[0].price;
-    }
-
-    // If not hero product, ensure heroOrder is 0
-    if (parsed.data.isHeroProduct === false) {
-      updateData.heroOrder = 0;
-    }
-
-    const updated = await Product.findByIdAndUpdate(id, updateData, {
-      new: true,
-    })
+    const updated = await Product.findByIdAndUpdate(
+      existingProduct._id,
+      updateData,
+      { new: true },
+    )
       .populate("categoryId", "name slug")
       .populate("brandId", "name slug logo")
       .lean();
 
-    if (!updated)
-      return NextResponse.json(
-        { success: false, error: "Product not found" },
-        { status: 404 },
-      );
-
     return NextResponse.json({ success: true, data: updated });
   } catch (error) {
-    console.error("[PUT /api/products/[id]]", error);
+    console.error("[PUT /api/products/[slug]]", error);
     return NextResponse.json(
-      { success: false, error: "Failed to update product" },
+      { success: false, error: "Update failed" },
       { status: 500 },
     );
   }
 }
 
-// ── DELETE /api/products/[id] ─────────────────────────────────
+// ── DELETE /api/products/[slug] ─────────────────────────────────
 export async function DELETE(_req: NextRequest, context: RouteContext) {
   try {
     const session = await auth();
@@ -156,15 +141,10 @@ export async function DELETE(_req: NextRequest, context: RouteContext) {
         { status: 401 },
       );
 
-    const { id } = await context.params;
-    if (!mongoose.Types.ObjectId.isValid(id))
-      return NextResponse.json(
-        { success: false, error: "Invalid ID" },
-        { status: 400 },
-      );
-
+    const { slug } = await context.params;
     await connectDB();
-    const deleted = await Product.findByIdAndDelete(id).lean();
+    const deleted = await Product.findOneAndDelete({ slug }).lean();
+
     if (!deleted)
       return NextResponse.json(
         { success: false, error: "Product not found" },
@@ -173,9 +153,8 @@ export async function DELETE(_req: NextRequest, context: RouteContext) {
 
     return NextResponse.json({ success: true, message: "Product deleted" });
   } catch (error) {
-    console.error("[DELETE /api/products/[id]]", error);
     return NextResponse.json(
-      { success: false, error: "Failed to delete product" },
+      { success: false, error: "Delete failed" },
       { status: 500 },
     );
   }

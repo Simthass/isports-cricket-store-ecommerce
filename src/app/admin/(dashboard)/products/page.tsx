@@ -650,7 +650,7 @@ export default function AdminProductsPage() {
                       {/* Actions */}
                       <td className="px-5 py-3.5">
                         <div className="flex items-center justify-end gap-2">
-                          <Link href={`/admin/products/${product._id}`}>
+                          <Link href={`/admin/products/${product.slug}`}>
                             <button className="w-8 h-8 rounded-lg border border-gray-200 flex items-center justify-center text-gray-500 hover:text-[#004b9c] hover:border-[#004b9c]/30 hover:bg-[#e8f0fb] transition-all">
                               <Pencil size={13} />
                             </button>
