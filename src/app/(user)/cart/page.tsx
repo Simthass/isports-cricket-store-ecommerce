@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Trash2, Plus, Minus, ShoppingBasket, ArrowRight,
@@ -28,13 +29,6 @@ interface CartItemDisplay {
 type Step = "cart" | "checkout" | "confirmed";
 type DeliveryMethod = "standard" | "express";
 
-// Simulated saved address — replace with real fetch from /api/users/address
-const SAVED_ADDRESS = {
-  address: "Villa 12, Al Nahda Street",
-  city: "Dubai",
-  emirate: "Dubai",
-};
-
 // ── Shared input style ─────────────────────────────────────────────────────────
 const inputCls =
   "w-full border border-gray-200 rounded-xl px-4 py-2.5 text-[14px] text-gray-700 placeholder-gray-300 focus:outline-none focus:border-[#004b9c] focus:ring-2 focus:ring-[#004b9c]/10 transition-all";
@@ -53,6 +47,7 @@ function SectionHeader({ number, title }: { number: number; title: string }) {
 
 // ══════════════════════════════════════════════════════════════════════════════
 export default function CartPage() {
+  const router = useRouter();
   const { cartItems, updateQuantity, removeFromCart, clearCart, fetchCart, cartCount, isLoading } = useCart();
   const { data: session } = useSession();
   const [coupon, setCoupon] = useState("");
@@ -62,22 +57,66 @@ export default function CartPage() {
   const [placing, setPlacing] = useState(false);
   const [orderNumber, setOrderNumber] = useState("");
   const [orderDetails, setOrderDetails] = useState<any>(null);
-  const pageRef = useRef<HTMLDivElement>(null);
   const topRef = useRef<HTMLDivElement>(null);
 
-  // Address toggle — true = fill new address, false = use saved
-  const [useNewAddress, setUseNewAddress] = useState(false);
-
+  // Address form state - No more hardcoded address
   const [info, setInfo] = useState({
     firstName: "",
     lastName: "",
     phone: "",
     email: "",
-    address: SAVED_ADDRESS.address,
-    city: SAVED_ADDRESS.city,
-    emirate: SAVED_ADDRESS.emirate,
+    address: "",
+    city: "",
+    emirate: "",
     notes: "",
   });
+
+  // Load saved address from localStorage AND database when logged in
+  useEffect(() => {
+    const loadUserData = async () => {
+      if (session?.user) {
+        // Try to load saved address from localStorage first
+        const savedAddress = localStorage.getItem("shippingAddress");
+        if (savedAddress) {
+          try {
+            const parsed = JSON.parse(savedAddress);
+            setInfo(prev => ({ ...prev, ...parsed }));
+          } catch (e) {
+            console.error("Failed to load saved address:", e);
+          }
+        }
+        
+        // Also fetch from user profile in database
+        try {
+          const response = await fetch("/api/users/address");
+          if (response.ok) {
+            const userData = await response.json();
+            if (userData.address || userData.phone) {
+              setInfo(prev => ({
+                ...prev,
+                firstName: userData.firstName || prev.firstName,
+                lastName: userData.lastName || prev.lastName,
+                phone: userData.phone || prev.phone,
+                email: userData.email || session.user.email || prev.email,
+                address: userData.address || prev.address,
+                city: userData.city || prev.city,
+                emirate: userData.emirate || prev.emirate,
+              }));
+            }
+          }
+        } catch (error) {
+          console.error("Failed to load user data:", error);
+        }
+      }
+    };
+    
+    loadUserData();
+  }, [session]);
+
+  // Save address to localStorage when user fills the form
+  const saveAddressToLocalStorage = (addressData: any) => {
+    localStorage.setItem("shippingAddress", JSON.stringify(addressData));
+  };
 
   // Convert cart items to display format
   const items: CartItemDisplay[] = cartItems.map(item => ({
@@ -107,6 +146,14 @@ export default function CartPage() {
     }
   }, [step]);
 
+  // Redirect to cart if someone tries to access checkout directly without items
+  useEffect(() => {
+    if (step === "checkout" && items.length === 0) {
+      setStep("cart");
+      router.push("/cart");
+    }
+  }, [step, items.length, router]);
+
   // Refresh cart when component mounts or when session changes
   useEffect(() => {
     if (session?.user) {
@@ -130,18 +177,21 @@ export default function CartPage() {
     }
   };
 
-  // ── Address switch ────────────────────────────────────────────────────────────
-  const handleAddressToggle = (newAddr: boolean) => {
-    setUseNewAddress(newAddr);
-    if (!newAddr) {
-      setInfo((prev) => ({
-        ...prev,
-        address: SAVED_ADDRESS.address,
-        city: SAVED_ADDRESS.city,
-        emirate: SAVED_ADDRESS.emirate,
-      }));
-    } else {
-      setInfo((prev) => ({ ...prev, address: "", city: "", emirate: "" }));
+  // ── Update form field and save to localStorage ────────────────────────────────
+  const handleInfoChange = (field: string, value: string) => {
+    const newInfo = { ...info, [field]: value };
+    setInfo(newInfo);
+    // Auto-save to localStorage as user types
+    if (session?.user) {
+      saveAddressToLocalStorage({
+        firstName: newInfo.firstName,
+        lastName: newInfo.lastName,
+        phone: newInfo.phone,
+        email: newInfo.email,
+        address: newInfo.address,
+        city: newInfo.city,
+        emirate: newInfo.emirate,
+      });
     }
   };
 
@@ -157,7 +207,13 @@ export default function CartPage() {
       `\n\n*Subtotal:* AED ${subtotal.toLocaleString()}` +
       (couponApplied ? `\n*Discount (10%):* -AED ${discount}` : "") +
       `\n*Shipping:* ${shippingCost === 0 ? "FREE" : `AED ${shippingCost}`}` +
-      `\n*Total:* AED ${total.toLocaleString()}\n\nPlease confirm this order. Thank you!`;
+      `\n*Total:* AED ${total.toLocaleString()}\n\n` +
+      `*Customer Details:*\n` +
+      `Name: ${info.firstName} ${info.lastName}\n` +
+      `Phone: ${info.phone}\n` +
+      `Email: ${info.email}\n` +
+      `Address: ${info.address}, ${info.city}, ${info.emirate}\n\n` +
+      `Please confirm this order. Thank you!`;
 
     window.open(
       `https://wa.me/${adminPhone}?text=${encodeURIComponent(msg)}`,
@@ -201,6 +257,28 @@ export default function CartPage() {
       });
 
       if (res.ok) {
+        // ✅ Save address to user profile in database for future auto-fill
+        if (session?.user) {
+          try {
+            await fetch("/api/users/address", {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                firstName: info.firstName,
+                lastName: info.lastName,
+                phone: info.phone,
+                email: info.email,
+                address: info.address,
+                city: info.city,
+                emirate: info.emirate,
+              }),
+            });
+            console.log("Address saved to user profile");
+          } catch (err) {
+            console.error("Failed to save address to profile:", err);
+          }
+        }
+
         const data = await res.json();
         setOrderNumber(data.orderNumber);
         setOrderDetails(orderData);
@@ -226,9 +304,8 @@ export default function CartPage() {
     );
   }
 
-  // ── Confirmed screen ──────────────────────────────────────────────────────────
+  // Confirmed screen with padding to avoid header overlap
   if (step === "confirmed") {
-    // Use orderDetails if available, otherwise use current state
     const displaySubtotal = orderDetails?.subtotal || subtotal;
     const displayDiscount = orderDetails?.discount || discount;
     const displayShipping = orderDetails?.shippingCost || shippingCost;
@@ -236,12 +313,12 @@ export default function CartPage() {
     const displayItems = orderDetails?.items || cartItems;
 
     return (
-      <div ref={topRef} className="min-h-screen bg-gray-50 flex items-center justify-center px-6">
+      <div ref={topRef} className="min-h-screen bg-gray-50 pt-[140px] lg:pt-[180px] px-6">
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.4 }}
-          className="bg-white rounded-2xl border border-gray-100 shadow-sm p-12 max-w-md w-full text-center"
+          className="bg-white rounded-2xl border border-gray-100 shadow-sm p-12 max-w-md w-full mx-auto text-center"
         >
           <div className="w-16 h-16 rounded-full bg-[#81bf42]/10 flex items-center justify-center mx-auto mb-5">
             <CheckCircle2 size={36} className="text-[#81bf42]" strokeWidth={1.8} />
@@ -264,7 +341,6 @@ export default function CartPage() {
             </span>
           </p>
 
-          {/* Order summary - Using correct values */}
           <div className="bg-gray-50 rounded-xl p-4 mb-8 text-left">
             <p className="text-[12px] font-bold text-gray-400 uppercase tracking-wider mb-3">
               Order Summary
@@ -311,7 +387,7 @@ export default function CartPage() {
 
   // ══════════════════════════════════════════════════════════════════════════════
   return (
-    <div ref={pageRef} className="min-h-screen bg-gray-50 font-poppins">
+    <div className="min-h-screen bg-gray-50 font-poppins">
       <div ref={topRef} className="max-w-[1400px] mx-auto px-6 lg:px-10 py-8 lg:py-12">
 
         {/* ── Breadcrumb ── */}
@@ -500,148 +576,115 @@ export default function CartPage() {
                   <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
                     <SectionHeader number={1} title="Personal Information" />
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {[
-                        { label: "First Name *", key: "firstName", placeholder: "Ahmed" },
-                        { label: "Last Name", key: "lastName", placeholder: "Al Mansoori" },
-                        { label: "Phone Number *", key: "phone", placeholder: "+971 52 XXX XXXX" },
-                        { label: "Email Address *", key: "email", placeholder: "you@example.com" },
-                      ].map(({ label, key, placeholder }) => (
-                        <div key={key} className="flex flex-col gap-1.5">
-                          <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">
-                            {label}
-                          </label>
-                          <input
-                            type="text"
-                            value={info[key as keyof typeof info]}
-                            onChange={(e) => setInfo({ ...info, [key]: e.target.value })}
-                            placeholder={placeholder}
-                            className={inputCls}
-                          />
-                        </div>
-                      ))}
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">
+                          First Name *
+                        </label>
+                        <input
+                          type="text"
+                          value={info.firstName}
+                          onChange={(e) => handleInfoChange("firstName", e.target.value)}
+                          placeholder="Ahmed"
+                          className={inputCls}
+                          required
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">
+                          Last Name
+                        </label>
+                        <input
+                          type="text"
+                          value={info.lastName}
+                          onChange={(e) => handleInfoChange("lastName", e.target.value)}
+                          placeholder="Al Mansoori"
+                          className={inputCls}
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">
+                          Phone Number *
+                        </label>
+                        <input
+                          type="tel"
+                          value={info.phone}
+                          onChange={(e) => handleInfoChange("phone", e.target.value)}
+                          placeholder="+971 52 XXX XXXX"
+                          className={inputCls}
+                          required
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">
+                          Email Address *
+                        </label>
+                        <input
+                          type="email"
+                          value={info.email}
+                          onChange={(e) => handleInfoChange("email", e.target.value)}
+                          placeholder="you@example.com"
+                          className={inputCls}
+                          required
+                        />
+                      </div>
                     </div>
                   </div>
 
                   {/* 2. Shipping Address */}
                   <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
                     <SectionHeader number={2} title="Shipping Address" />
-                    <div className="flex flex-col gap-3 mb-5">
-                      <label
-                        className={`flex items-start gap-3 border-2 rounded-xl px-5 py-4 cursor-pointer transition-all duration-150 ${
-                          !useNewAddress
-                            ? "border-[#004b9c] bg-blue-50/50"
-                            : "border-gray-100 hover:border-gray-200"
-                        }`}
-                      >
-                        <div
-                          className={`mt-0.5 w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all ${
-                            !useNewAddress ? "border-[#004b9c]" : "border-gray-300"
-                          }`}
-                        >
-                          {!useNewAddress && (
-                            <div className="w-2.5 h-2.5 rounded-full bg-[#004b9c]" />
-                          )}
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <MapPin size={13} className="text-[#004b9c]" />
-                            <p className="text-[13px] font-bold text-gray-800">Saved Address</p>
-                          </div>
-                          <p className="text-[13px] text-gray-500">
-                            {SAVED_ADDRESS.address}, {SAVED_ADDRESS.city},{" "}
-                            {SAVED_ADDRESS.emirate}
-                          </p>
-                        </div>
+                    
+                    <div className="grid grid-cols-1 gap-4">
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">
+                          Street Address *
+                        </label>
                         <input
-                          type="radio"
-                          name="addrType"
-                          className="sr-only"
-                          checked={!useNewAddress}
-                          onChange={() => handleAddressToggle(false)}
+                          type="text"
+                          value={info.address}
+                          onChange={(e) => handleInfoChange("address", e.target.value)}
+                          placeholder="Building, Street, Area"
+                          className={inputCls}
+                          required
                         />
-                      </label>
-
-                      <label
-                        className={`flex items-center gap-3 border-2 rounded-xl px-5 py-4 cursor-pointer transition-all duration-150 ${
-                          useNewAddress
-                            ? "border-[#004b9c] bg-blue-50/50"
-                            : "border-gray-100 hover:border-gray-200"
-                        }`}
-                      >
-                        <div
-                          className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all ${
-                            useNewAddress ? "border-[#004b9c]" : "border-gray-300"
-                          }`}
-                        >
-                          {useNewAddress && (
-                            <div className="w-2.5 h-2.5 rounded-full bg-[#004b9c]" />
-                          )}
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">
+                            City *
+                          </label>
+                          <input
+                            type="text"
+                            value={info.city}
+                            onChange={(e) => handleInfoChange("city", e.target.value)}
+                            placeholder="Dubai"
+                            className={inputCls}
+                            required
+                          />
                         </div>
-                        <div className="flex items-center gap-2">
-                          <PlusIcon size={13} className="text-gray-500" />
-                          <p className="text-[13px] font-bold text-gray-700">
-                            Use a Different Address
-                          </p>
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">
+                            Emirate
+                          </label>
+                          <input
+                            type="text"
+                            value={info.emirate}
+                            onChange={(e) => handleInfoChange("emirate", e.target.value)}
+                            placeholder="Dubai"
+                            className={inputCls}
+                          />
                         </div>
-                        <input
-                          type="radio"
-                          name="addrType"
-                          className="sr-only"
-                          checked={useNewAddress}
-                          onChange={() => handleAddressToggle(true)}
-                        />
-                      </label>
+                      </div>
                     </div>
 
-                    <AnimatePresence>
-                      {useNewAddress && (
-                        <motion.div
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: "auto" }}
-                          exit={{ opacity: 0, height: 0 }}
-                          transition={{ duration: 0.3 }}
-                          className="grid grid-cols-1 sm:grid-cols-2 gap-4 overflow-hidden"
-                        >
-                          <div className="sm:col-span-2 flex flex-col gap-1.5">
-                            <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">
-                              Address *
-                            </label>
-                            <input
-                              type="text"
-                              value={info.address}
-                              onChange={(e) => setInfo({ ...info, address: e.target.value })}
-                              placeholder="Building, Street, Area"
-                              className={inputCls}
-                            />
-                          </div>
-                          {[
-                            { label: "City *", key: "city", placeholder: "Dubai" },
-                            { label: "Emirate", key: "emirate", placeholder: "Dubai" },
-                          ].map(({ label, key, placeholder }) => (
-                            <div key={key} className="flex flex-col gap-1.5">
-                              <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">
-                                {label}
-                              </label>
-                              <input
-                                type="text"
-                                value={info[key as keyof typeof info]}
-                                onChange={(e) => setInfo({ ...info, [key]: e.target.value })}
-                                placeholder={placeholder}
-                                className={inputCls}
-                              />
-                            </div>
-                          ))}
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-
+                    {/* Order notes */}
                     <div className="flex flex-col gap-1.5 mt-4">
                       <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">
                         Order Notes (optional)
                       </label>
                       <textarea
                         value={info.notes}
-                        onChange={(e) => setInfo({ ...info, notes: e.target.value })}
+                        onChange={(e) => handleInfoChange("notes", e.target.value)}
                         placeholder="Any special instructions for your order..."
                         rows={3}
                         className={`${inputCls} resize-none`}

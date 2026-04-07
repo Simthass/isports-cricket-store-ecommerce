@@ -1,4 +1,3 @@
-// src/components/admin/AdminHeader.tsx
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -36,6 +35,7 @@ const pageMeta: Record<string, { title: string; desc: string }> = {
   "/admin/orders": { title: "Orders", desc: "Track customer orders" },
   "/admin/customers": { title: "Customers", desc: "Manage customer accounts" },
   "/admin/settings": { title: "Settings", desc: "Configure store settings" },
+  "/admin/notifications": { title: "Notifications", desc: "Manage alerts and updates" },
 };
 
 const notifications = [
@@ -147,20 +147,7 @@ export default function AdminHeader({ session }: AdminHeaderProps) {
 
         <div className="w-px h-6 bg-gray-200" />
 
-        {/* NEW ORDERS BELL - Direct link to orders page */}
-        <Link
-          href="/admin/orders"
-          className="relative flex items-center justify-center w-9 h-9 rounded-xl hover:bg-gray-100 transition-colors text-gray-500"
-        >
-          <Bell size={20} />
-          {pendingCount > 0 && (
-            <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] rounded-full bg-red-500 text-white text-[10px] font-black flex items-center justify-center px-1 shadow-md animate-pulse">
-              {pendingCount > 99 ? "99+" : pendingCount}
-            </span>
-          )}
-        </Link>
-
-        {/* Existing Notifications Dropdown */}
+        {/* Notifications Dropdown */}
         <div className="relative">
           <button
             onClick={() => {
@@ -170,9 +157,6 @@ export default function AdminHeader({ session }: AdminHeaderProps) {
             className="relative w-9 h-9 flex items-center justify-center rounded-full text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors"
           >
             <Bell size={18} strokeWidth={1.75} />
-            {unreadCount > 0 && (
-              <span className="absolute top-1.5 right-2 w-2 h-2 bg-blue-600 rounded-full ring-2 ring-white" />
-            )}
           </button>
 
           <AnimatePresence>
@@ -193,14 +177,12 @@ export default function AdminHeader({ session }: AdminHeaderProps) {
                     <span className="text-[13px] font-semibold text-gray-900">
                       Notifications
                     </span>
-                    {totalNotificationCount > 0 && (
-                      <button 
-                        onClick={handleViewAllNotifications}
-                        className="text-[11px] font-medium text-blue-600 hover:text-blue-700 transition-colors"
-                      >
-                        View all
-                      </button>
-                    )}
+                    <button 
+                      onClick={handleViewAllNotifications}
+                      className="text-[11px] font-medium text-blue-600 hover:text-blue-700 transition-colors"
+                    >
+                      View all
+                    </button>
                   </div>
                   
                   <div className="max-h-[380px] overflow-y-auto">

@@ -5,15 +5,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { motion, useInView, AnimatePresence } from "framer-motion";
 import {
-  ShoppingCart,
-  Star,
-  ArrowRight,
-  Check,
-  Sparkles,
-  Flame,
-  Zap,
-  Loader2,
-  MessageCircle,
+  ShoppingCart, Star, ArrowRight, Check,
+  Sparkles, Flame, Zap, Loader2,
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useCart } from "@/context/CartContext";
@@ -115,17 +108,6 @@ export default function ProductCard({
     setAdding(false);
   };
 
-  const handleWhatsApp = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    const message = encodeURIComponent(
-      `Hi iSPORTS! I'm interested in the ${product.name} (AED ${product.price}). Can you help me with more details?`,
-    );
-    const whatsappLink = `https://wa.me/971526514666?text=${message}`;
-    window.open(whatsappLink, "_blank");
-  };
-
   if (!product) return null;
 
   const isLoggedIn = !!session?.user;
@@ -197,7 +179,7 @@ export default function ProductCard({
               </motion.div>
             </div>
 
-            {/* Hover Overlay Buttons */}
+            {/* Hover Overlay Button - Add to Cart Only */}
             <AnimatePresence>
               {hovered && product.inStock !== false && !product.hasRange && (
                 <motion.div
@@ -207,43 +189,32 @@ export default function ProductCard({
                   transition={{ duration: 0.2 }}
                   className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-white via-white/80 to-transparent"
                 >
-                  <div className="flex flex-col gap-2">
-                    {/* WhatsApp Button - Show for both logged in and logged out, but different behavior */}
-                    <button
-                      onClick={handleWhatsApp}
-                      className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl text-white text-xs font-bold tracking-wide uppercase transition-all duration-300 shadow-lg bg-[#25D366] hover:bg-[#1ebe5d]"
-                    >
-                      <MessageCircle size={14} />
-                      Inquire on WhatsApp
-                    </button>
-
-                    {/* Add to Cart / Quick Add Button */}
-                    <button
-                      onClick={handleCart}
-                      disabled={adding || added}
-                      className={`w-full flex items-center justify-center gap-2 py-3 rounded-2xl text-white text-xs font-bold tracking-wide uppercase transition-all duration-300 shadow-lg disabled:cursor-not-allowed ${
-                        added
-                          ? "bg-[#81bf42]"
-                          : adding
-                            ? "bg-[#004b9c] opacity-80"
-                            : "bg-[#004b9c] hover:bg-[#003d7e]"
-                      }`}
-                    >
-                      {adding ? (
-                        <Loader2 size={14} className="animate-spin" />
-                      ) : added ? (
-                        <>
-                          <Check size={14} strokeWidth={3} />
-                          Added to Cart
-                        </>
-                      ) : (
-                        <>
-                          <ShoppingCart size={14} />
-                          {isLoggedIn ? "Quick Add" : "Sign in to Add"}
-                        </>
-                      )}
-                    </button>
-                  </div>
+                  {/* Add to Cart / Quick Add Button Only */}
+                  <button
+                    onClick={handleCart}
+                    disabled={adding || added}
+                    className={`w-full flex items-center justify-center gap-2 py-3 rounded-2xl text-white text-xs font-bold tracking-wide uppercase transition-all duration-300 shadow-lg disabled:cursor-not-allowed ${
+                      added
+                        ? "bg-[#81bf42]"
+                        : adding
+                        ? "bg-[#004b9c] opacity-80"
+                        : "bg-[#004b9c] hover:bg-[#003d7e]"
+                    }`}
+                  >
+                    {adding ? (
+                      <Loader2 size={14} className="animate-spin" />
+                    ) : added ? (
+                      <>
+                        <Check size={14} strokeWidth={3} />
+                        Added to Cart
+                      </>
+                    ) : (
+                      <>
+                        <ShoppingCart size={14} />
+                        {isLoggedIn ? "Quick Add" : "Sign in to Add"}
+                      </>
+                    )}
+                  </button>
                 </motion.div>
               )}
             </AnimatePresence>
