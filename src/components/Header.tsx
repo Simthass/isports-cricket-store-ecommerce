@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useSession, signOut } from "next-auth/react";
+import SearchBar from "@/components/search/SearchBar";
 import {
   Search,
   ShoppingBasket,
@@ -476,27 +477,7 @@ export default function Header() {
             {/* Right Controls */}
             <div className="flex items-center gap-2 flex-shrink-0 ml-auto lg:ml-0">
               {/* Search */}
-              <div className="relative hidden lg:flex items-center group">
-                <Search
-                  className="absolute left-3.5 text-gray-400 group-focus-within:text-[#004b9c] transition-colors duration-200 pointer-events-none z-10"
-                  size={15}
-                />
-                <input
-                  type="text"
-                  value={searchValue}
-                  onChange={(e) => setSearchValue(e.target.value)}
-                  placeholder="Quickly search for products"
-                  className="w-[310px] xl:w-[360px] bg-gray-50 border border-gray-200 hover:border-gray-300 focus:border-[#004b9c] focus:bg-white focus:ring-2 focus:ring-[#004b9c]/10 rounded-xl pl-10 pr-4 py-[9px] text-[13px] text-gray-700 placeholder-gray-400 outline-none transition-all duration-200"
-                />
-                {searchValue && (
-                  <button
-                    onClick={() => setSearchValue("")}
-                    className="absolute right-3 text-gray-400 hover:text-gray-600"
-                  >
-                    <X size={13} />
-                  </button>
-                )}
-              </div>
+              <SearchBar className="hidden lg:block w-[310px] xl:w-[360px]" />
 
               <div className="hidden lg:block w-px h-8 bg-gray-200 mx-1" />
 

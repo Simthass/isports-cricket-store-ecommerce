@@ -161,7 +161,9 @@ export default function ShopPage() {
                         onClick={() =>
                           setFilters({
                             ...filters,
-                            categories: filters.categories.filter((x) => x !== c),
+                            categories: filters.categories.filter(
+                              (x) => x !== c,
+                            ),
                           })
                         }
                       >
@@ -288,12 +290,18 @@ export default function ShopPage() {
                         id: product._id,
                         name: product.name,
                         brand: product.brandId?.name ?? "iSPORTS",
+                        slug: product.slug,
                         price: product.price,
                         originalPrice: product.originalPrice,
-                        image: product.images?.[0] ?? "/placeholder-product.jpg",
+                        image:
+                          product.images?.[0] ?? "/placeholder-product.jpg",
                         isNew: product.isNew,
                         inStock: product.inStock,
-                        badge: product.isBestSeller ? "Best Seller" : product.isNew ? "New" : undefined,
+                        badge: product.isBestSeller
+                          ? "Best Seller"
+                          : product.isNew
+                            ? "New"
+                            : undefined,
                         rating: product.rating,
                         reviewCount: product.reviewCount,
                       }}
@@ -391,7 +399,7 @@ export default function ShopPage() {
           )}
         </AnimatePresence>
       </div>
-      
+
       <AuthModal
         isOpen={authModalOpen}
         onClose={() => setAuthModalOpen(false)}
