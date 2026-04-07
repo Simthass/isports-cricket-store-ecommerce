@@ -23,6 +23,7 @@ import {
 import { useSession } from "next-auth/react";
 import { useCart } from "@/context/CartContext";
 import AuthModal from "@/components/auth/AuthModal";
+import ReviewSection from "@/components/products/ReviewSection";
 
 interface SizeOption {
   label: string;
@@ -83,6 +84,8 @@ const COLOR_HEX: Record<string, string> = {
   Maroon: "#7F1D1D",
 };
 
+type TabType = "description" | "specs" | "reviews";
+
 export default function ProductDetailPage() {
   const { data: session } = useSession();
   const { addToCart } = useCart();
@@ -100,9 +103,7 @@ export default function ProductDetailPage() {
   const [qty, setQty] = useState(1);
   const [wishlist, setWishlist] = useState(false);
   const [addedToCart, setAddedToCart] = useState(false);
-  const [activeTab, setActiveTab] = useState<"description" | "specs">(
-    "description",
-  );
+  const [activeTab, setActiveTab] = useState<TabType>("description");
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<"login" | "register">("login");
 
@@ -533,7 +534,7 @@ export default function ProductDetailPage() {
                     </button>
                   </div>
 
-                  {/* UPDATED: Add to Cart button with auth check */}
+                  {/* Add to Cart button with auth check */}
                   <button
                     onClick={handleAddToCart}
                     disabled={!product.inStock}
@@ -610,11 +611,12 @@ export default function ProductDetailPage() {
           </div>
         </section>
 
-        {/* Description / Specs */}
+        {/* Description / Specs / Reviews Tabs */}
         <section className="bg-gray-50 border-t border-gray-100">
           <div className="max-w-[1400px] mx-auto px-6 lg:px-10 py-12 lg:py-16">
+            {/* Tab Buttons - Now with 3 tabs */}
             <div className="flex gap-1 bg-white rounded-2xl p-1.5 border border-gray-100 shadow-sm w-fit mb-10">
-              {(["description", "specs"] as const).map((tab) => (
+              {(["description", "specs", "reviews"] as const).map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
@@ -626,12 +628,15 @@ export default function ProductDetailPage() {
                 >
                   {tab === "description"
                     ? "Product Description"
-                    : "Specifications"}
+                    : tab === "specs"
+                    ? "Specifications"
+                    : "Reviews"}
                 </button>
               ))}
             </div>
 
             <AnimatePresence mode="wait">
+              {/* Description Tab */}
               {activeTab === "description" && (
                 <motion.div
                   key="desc"
@@ -646,6 +651,8 @@ export default function ProductDetailPage() {
                   </div>
                 </motion.div>
               )}
+
+              {/* Specifications Tab */}
               {activeTab === "specs" && (
                 <motion.div
                   key="specs"
@@ -708,6 +715,23 @@ export default function ProductDetailPage() {
                   </div>
                 </motion.div>
               )}
+
+              {/* Reviews Tab - NEW */}
+              {activeTab === "reviews" && (
+                <motion.div
+                  key="reviews"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                >
+                  <ReviewSection
+                    productId={product._id}
+                    productName={product.name}
+                    initialRating={product.rating}
+                    initialReviewCount={product.reviewCount}
+                  />
+                </motion.div>
+              )}
             </AnimatePresence>
           </div>
         </section>
@@ -735,7 +759,6 @@ export default function ProductDetailPage() {
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
               {related.map((r) => (
                 <Link key={r._id} href={`/shop/product/${r.slug}`}>
-                  {" "}
                   <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-[0_8px_32px_rgba(0,75,156,0.1)] hover:border-[#004b9c]/20 transition-all duration-300 group cursor-pointer">
                     <div className="relative aspect-square bg-gray-50">
                       <img

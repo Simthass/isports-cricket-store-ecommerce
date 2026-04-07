@@ -3,9 +3,10 @@
 import React, { useState, useEffect } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import {
-  User, Lock, MapPin, ShoppingBag, Bell, ChevronRight,
+  User, Lock, MapPin, ShoppingBag, Bell, MessageCircle, ChevronRight,
   Save, Eye, EyeOff, CheckCircle2, Package, Truck,
   LogOut, Loader2,
 } from "lucide-react";
@@ -17,11 +18,12 @@ const DUMMY_ORDERS = [
 ];
 
 const tabs = [
-  { id: "profile", label: "Profile", icon: User },
-  { id: "security", label: "Security", icon: Lock },
-  { id: "addresses", label: "Addresses", icon: MapPin },
-  { id: "orders", label: "My Orders", icon: ShoppingBag },
-  { id: "notifications", label: "Notifications", icon: Bell },
+  { id: "profile", label: "Profile", icon: User, href: "/account" },
+  { id: "security", label: "Security", icon: Lock, href: "/account?tab=security" },
+  { id: "addresses", label: "Addresses", icon: MapPin, href: "/account?tab=addresses" },
+  { id: "orders", label: "My Orders", icon: ShoppingBag, href: "/account/orders" },
+  { id: "reviews", label: "My Reviews", icon: MessageCircle, href: "/account/reviews" },
+  { id: "notifications", label: "Notifications", icon: Bell, href: "/account?tab=notifications" },
 ];
 
 const orderStatusIcon = (status: string) => {
@@ -279,8 +281,9 @@ export default function AccountPage() {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
               return (
-                <button
+                <Link
                   key={tab.id}
+                  href={tab.href}
                   onClick={() => {
                     setActiveTab(tab.id);
                     setSaveError("");
@@ -297,7 +300,7 @@ export default function AccountPage() {
                     {tab.label}
                   </span>
                   <ChevronRight size={14} className={isActive ? "text-white/60" : "text-gray-300"} />
-                </button>
+                </Link>
               );
             })}
 
@@ -547,6 +550,16 @@ export default function AccountPage() {
                     ))}
                   </div>
                 </>
+              )}
+
+              {/* ── REVIEWS TAB ── */}
+              {activeTab === "reviews" && (
+                <div className="text-center py-8">
+                  <p className="text-gray-500 mb-4">Manage your product reviews</p>
+                  <Link href="/account/reviews" className="inline-block px-6 py-3 bg-[#004b9c] text-white rounded-xl font-bold">
+                    View My Reviews →
+                  </Link>
+                </div>
               )}
 
               {/* ── NOTIFICATIONS TAB ── */}
