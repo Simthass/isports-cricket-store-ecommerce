@@ -1,11 +1,3 @@
-// src/app/api/products/[slug]/qr/route.ts
-/**
- * QR Code management for a single product.
- *
- * GET  /api/products/:slug/qr          → return QR stats + data-URL
- * POST /api/products/:slug/qr          → regenerate the QR code (new unique ID)
- * GET  /api/products/:slug/qr?dl=1     → download a print-ready 600px PNG
- */
 import { NextRequest, NextResponse } from "next/server";
 import connectDB from "@/lib/mongodb";
 import Product from "@/models/Product";
@@ -19,7 +11,7 @@ import {
 
 type RouteContext = { params: Promise<{ slug: string }> };
 
-// ── GET ──────────────────────────────────────────────────────────────────────
+// ── GET ───────────────────────────────────────────────────────────────────────
 export async function GET(req: NextRequest, context: RouteContext) {
   try {
     const session = await auth();
@@ -42,7 +34,7 @@ export async function GET(req: NextRequest, context: RouteContext) {
         { status: 404 },
       );
 
-    // ── Download mode: return raw PNG for printing ───────────────────────
+    // ── Download mode: stream a print-ready PNG ────────────────────────────
     const dl = req.nextUrl.searchParams.get("dl");
     if (dl === "1") {
       if (!product.qrCodeId)
@@ -55,6 +47,8 @@ export async function GET(req: NextRequest, context: RouteContext) {
         process.env.NEXT_PUBLIC_BASE_URL ||
         `https://${req.headers.get("host")}`;
       const qrUrl = buildProductQrUrl(baseUrl, product.qrCodeId);
+
+      // 800 px → prints cleanly at 5×5 cm @ 150 dpi with branded logo badge
       const buffer = await generateQrCodeBuffer({ url: qrUrl, size: 800 });
 
       return new NextResponse(buffer, {
@@ -67,7 +61,7 @@ export async function GET(req: NextRequest, context: RouteContext) {
       });
     }
 
-    // ── Normal JSON response ─────────────────────────────────────────────
+    // ── Normal JSON response ───────────────────────────────────────────────
     return NextResponse.json({
       success: true,
       data: {
@@ -86,7 +80,7 @@ export async function GET(req: NextRequest, context: RouteContext) {
   }
 }
 
-// ── POST — generate / regenerate QR code ─────────────────────────────────────
+// ── POST — generate / regenerate ──────────────────────────────────────────────
 export async function POST(req: NextRequest, context: RouteContext) {
   try {
     const session = await auth();
@@ -106,22 +100,25 @@ export async function POST(req: NextRequest, context: RouteContext) {
         { status: 404 },
       );
 
-    // Generate a guaranteed-unique qrCodeId
-    let qrCodeId: string;
+    // Guarantee uniqueness across the whole collection
+    let qrCodeId: string = "";
     let attempts = 0;
     do {
       qrCodeId = generateQrCodeId();
-      const existing = await Product.findOne({ qrCodeId }).select("_id").lean();
-      if (!existing) break;
+      const collision = await Product.findOne({ qrCodeId })
+        .select("_id")
+        .lean();
+      if (!collision) break;
       attempts++;
     } while (attempts < 10);
 
     const baseUrl =
       process.env.NEXT_PUBLIC_BASE_URL || `https://${req.headers.get("host")}`;
     const qrUrl = buildProductQrUrl(baseUrl, qrCodeId);
-    const qrCode = await generateQrCodeDataUrl({ url: qrUrl, size: 400 });
 
-    // If regenerating, reset the scan counter so analytics stay accurate
+    // 500 px for DB storage — good enough for the admin panel preview
+    const qrCode = await generateQrCodeDataUrl({ url: qrUrl, size: 500 });
+
     const body = await req.json().catch(() => ({}));
     const resetScans = body.resetScans === true;
 

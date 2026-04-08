@@ -24,7 +24,6 @@ import {
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useCart } from "@/context/CartContext";
-import AuthModal from "@/components/auth/AuthModal";
 import ReviewSection from "@/components/products/ReviewSection";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -678,8 +677,8 @@ export default function ProductDetailPage() {
                   {tab === "description"
                     ? "Product Description"
                     : tab === "specs"
-                    ? "Specifications"
-                    : "Reviews"}
+                      ? "Specifications"
+                      : "Reviews"}
                 </button>
               ))}
             </div>
@@ -839,12 +838,6 @@ export default function ProductDetailPage() {
           </section>
         )}
       </div>
-
-      <AuthModal
-        isOpen={authModalOpen}
-        onClose={() => setAuthModalOpen(false)}
-        defaultMode={authMode}
-      />
     </>
   );
 }

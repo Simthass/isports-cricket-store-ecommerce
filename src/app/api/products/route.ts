@@ -138,7 +138,8 @@ export async function POST(req: NextRequest) {
     const baseUrl =
       process.env.NEXT_PUBLIC_BASE_URL ?? "https://yourdomain.com";
     const qrUrl = buildProductQrUrl(baseUrl, qrCodeId!);
-    const qrCode = await generateQrCodeDataUrl({ url: qrUrl, size: 400 });
+    // 500 px for DB storage — branded logo badge included, good for the admin panel preview
+    const qrCode = await generateQrCodeDataUrl({ url: qrUrl, size: 500 });
 
     // ── Create the product ──────────────────────────────────────────────────
     const product = await Product.create({
