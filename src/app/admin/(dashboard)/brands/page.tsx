@@ -18,6 +18,16 @@ import {
   Award,
   ShieldCheck,
   Flag,
+  TrendingUp,
+  FolderOpen,
+  Sparkles,
+  Copy,
+  Check,
+  LayoutGrid,
+  List,
+  Filter,
+  Zap,
+  Star,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -135,14 +145,14 @@ function DeleteDialog({
           <button
             onClick={onConfirm}
             disabled={loading}
-            className="flex-1 px-4 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-[13px] font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+            className="flex-1 px-4 py-2.5 rounded-xl bg-gradient-to-r from-red-500 to-red-600 hover:shadow-lg text-white text-[13px] font-semibold transition-all disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {loading ? (
               <Loader2 size={14} className="animate-spin" />
             ) : (
               <Trash2 size={14} />
             )}
-            {loading ? "Deleting…" : "Delete"}
+            {loading ? "Deleting…" : "Delete Brand"}
           </button>
         </div>
       </motion.div>
@@ -169,6 +179,7 @@ function BrandModal({
   });
   const [errors, setErrors] = useState<Partial<FormState>>({});
   const [loading, setLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
   const nameRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -227,6 +238,14 @@ function BrandModal({
 
   const logoValid = form.logo && /^https?:\/\/.+/.test(form.logo);
 
+  const handleCopySlug = () => {
+    if (slugPreview) {
+      navigator.clipboard.writeText(slugPreview);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -243,68 +262,86 @@ function BrandModal({
         transition={{ duration: 0.24, ease: [0.25, 0.46, 0.45, 0.94] }}
         className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-md overflow-hidden"
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-5 border-b border-gray-50">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-[#e8f0fb] flex items-center justify-center">
-              <Award size={16} style={{ color: "#004b9c" }} />
+        {/* Header with gradient */}
+        <div className="relative overflow-hidden bg-gradient-to-r from-[#004b9c] to-[#0062cc] px-6 py-5">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16" />
+          <div className="relative z-10 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                <Award size={18} className="text-white" />
+              </div>
+              <div>
+                <h2 className="text-[16px] font-bold text-white">
+                  {mode === "add" ? "Add New Brand" : "Edit Brand"}
+                </h2>
+                <p className="text-[11px] text-blue-100">
+                  {mode === "add"
+                    ? "Register a new cricket brand"
+                    : "Update brand details"}
+                </p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-[14px] font-bold text-gray-900">
-                {mode === "add" ? "Add Brand" : "Edit Brand"}
-              </h2>
-              <p className="text-[11px] text-gray-400">
-                {mode === "add"
-                  ? "Register a new cricket brand"
-                  : "Update brand details"}
-              </p>
-            </div>
+            <button
+              onClick={onClose}
+              className="w-8 h-8 rounded-lg flex items-center justify-center text-white/80 hover:text-white hover:bg-white/20 transition-all"
+            >
+              <X size={16} />
+            </button>
           </div>
-          <button
-            onClick={onClose}
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all"
-          >
-            <X size={16} />
-          </button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
           {/* Logo preview strip */}
-          <div className="flex items-center gap-4 p-3.5 bg-gray-50 rounded-xl border border-gray-100">
-            <div className="w-14 h-14 rounded-xl border border-gray-200 bg-white flex items-center justify-center overflow-hidden flex-shrink-0 shadow-sm">
+          <div className="flex items-center gap-4 p-4 bg-gradient-to-br from-gray-50 to-white rounded-xl border border-gray-100 shadow-sm">
+            <div className="w-16 h-16 rounded-xl border-2 border-gray-100 bg-white flex items-center justify-center overflow-hidden flex-shrink-0 shadow-sm">
               {logoValid ? (
                 <img
                   src={form.logo}
                   alt="logo preview"
-                  className="w-full h-full object-contain p-1"
+                  className="w-full h-full object-contain p-1.5"
                 />
               ) : (
                 <div className="flex flex-col items-center gap-0.5">
-                  <ImageIcon size={18} className="text-gray-300" />
+                  <ImageIcon size={20} className="text-gray-300" />
                   <span className="text-[8px] text-gray-300 font-medium">
                     LOGO
                   </span>
                 </div>
               )}
             </div>
-            <div className="min-w-0">
-              <p className="text-[13px] font-bold text-gray-800 truncate">
+            <div className="min-w-0 flex-1">
+              <p className="text-[14px] font-bold text-gray-800 truncate">
                 {form.name.trim() || "Brand Name"}
               </p>
               {form.country && (
                 <p className="text-[11px] text-gray-400 flex items-center gap-1 mt-0.5">
-                  <Flag size={9} /> {form.country}
+                  <Flag size={10} /> {form.country}
                 </p>
               )}
-              <p className="text-[10px] text-gray-400 font-mono mt-0.5">
-                {slugPreview ? `/${slugPreview}` : "/brand-slug"}
-              </p>
+              <div className="flex items-center gap-1 mt-1">
+                <code className="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">
+                  /{slugPreview || "brand-slug"}
+                </code>
+                {slugPreview && (
+                  <button
+                    type="button"
+                    onClick={handleCopySlug}
+                    className="p-0.5 rounded hover:bg-gray-100 transition-colors"
+                  >
+                    {copied ? (
+                      <Check size={10} className="text-green-500" />
+                    ) : (
+                      <Copy size={10} className="text-gray-400" />
+                    )}
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 
           {/* Brand Name */}
           <div>
-            <label className="block text-[12px] font-semibold text-gray-700 mb-1.5">
+            <label className="block text-[12px] font-bold text-gray-700 mb-1.5">
               Brand Name <span className="text-red-500">*</span>
             </label>
             <input
@@ -316,12 +353,12 @@ function BrandModal({
                 if (errors.name)
                   setErrors((er) => ({ ...er, name: undefined }));
               }}
-              placeholder="e.g. Gray-Nicolls"
+              placeholder="e.g. Gray-Nicolls, SS, Kookaburra"
               className={cn(
                 "w-full px-4 py-3 rounded-xl border text-[13.5px] text-gray-900 placeholder-gray-400 bg-gray-50 focus:bg-white transition-all outline-none",
                 errors.name
                   ? "border-red-300 focus:border-red-400 focus:ring-2 focus:ring-red-100"
-                  : "border-gray-200 focus:border-[#004b9c] focus:ring-2 focus:ring-[#004b9c]/10",
+                  : "border-gray-200 focus:border-[#004b9c] focus:ring-2 focus:ring-blue-100",
               )}
             />
             {errors.name && (
@@ -329,20 +366,13 @@ function BrandModal({
                 <AlertCircle size={10} /> {errors.name}
               </p>
             )}
-            {slugPreview && !errors.name && (
-              <p className="text-[11px] text-gray-400 mt-1.5 flex items-center gap-1">
-                <Hash size={10} />
-                Slug:{" "}
-                <span className="font-mono text-[#004b9c]">{slugPreview}</span>
-              </p>
-            )}
           </div>
 
           {/* Country */}
           <div>
-            <label className="block text-[12px] font-semibold text-gray-700 mb-1.5">
-              Country of Origin{" "}
-              <span className="text-gray-400 font-normal">(optional)</span>
+            <label className="block text-[12px] font-bold text-gray-700 mb-1.5">
+              Country of Origin
+              <span className="text-gray-400 font-normal ml-1">(optional)</span>
             </label>
             <div className="relative">
               <Globe
@@ -355,17 +385,17 @@ function BrandModal({
                 onChange={(e) =>
                   setForm((f) => ({ ...f, country: e.target.value }))
                 }
-                placeholder="e.g. England, Australia, India"
-                className="w-full pl-9 pr-4 py-3 rounded-xl border border-gray-200 text-[13.5px] text-gray-900 placeholder-gray-400 bg-gray-50 focus:bg-white focus:border-[#004b9c] focus:ring-2 focus:ring-[#004b9c]/10 transition-all outline-none"
+                placeholder="e.g. England, Australia, India, Pakistan"
+                className="w-full pl-9 pr-4 py-3 rounded-xl border border-gray-200 text-[13.5px] text-gray-900 placeholder-gray-400 bg-gray-50 focus:bg-white focus:border-[#004b9c] focus:ring-2 focus:ring-blue-100 transition-all outline-none"
               />
             </div>
           </div>
 
           {/* Logo URL */}
           <div>
-            <label className="block text-[12px] font-semibold text-gray-700 mb-1.5">
-              Logo URL{" "}
-              <span className="text-gray-400 font-normal">(optional)</span>
+            <label className="block text-[12px] font-bold text-gray-700 mb-1.5">
+              Logo URL
+              <span className="text-gray-400 font-normal ml-1">(optional)</span>
             </label>
             <input
               type="url"
@@ -375,12 +405,12 @@ function BrandModal({
                 if (errors.logo)
                   setErrors((er) => ({ ...er, logo: undefined }));
               }}
-              placeholder="https://…"
+              placeholder="https://example.com/logo.png"
               className={cn(
                 "w-full px-4 py-3 rounded-xl border text-[13.5px] text-gray-900 placeholder-gray-400 bg-gray-50 focus:bg-white transition-all outline-none",
                 errors.logo
                   ? "border-red-300 focus:border-red-400 focus:ring-2 focus:ring-red-100"
-                  : "border-gray-200 focus:border-[#004b9c] focus:ring-2 focus:ring-[#004b9c]/10",
+                  : "border-gray-200 focus:border-[#004b9c] focus:ring-2 focus:ring-blue-100",
               )}
             />
             {errors.logo && (
@@ -395,20 +425,29 @@ function BrandModal({
             )}
           </div>
 
+          {/* Info note */}
+          <div className="p-3 bg-blue-50 rounded-xl border border-blue-100">
+            <p className="text-[10px] text-blue-700 flex items-center gap-1.5">
+              <Sparkles size={11} />
+              Slug will be auto-generated from brand name. Products will use
+              this for filtering.
+            </p>
+          </div>
+
           {/* Actions */}
-          <div className="flex gap-3 pt-1">
+          <div className="flex gap-3 pt-2">
             <button
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-[13px] font-semibold text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+              className="flex-1 px-4 py-3 rounded-xl border-2 border-gray-200 text-[13px] font-semibold text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 px-4 py-2.5 rounded-xl text-white text-[13px] font-bold transition-all disabled:opacity-60 flex items-center justify-center gap-2 shadow-[0_4px_12px_rgba(0,75,156,0.22)]"
+              className="flex-1 px-4 py-3 rounded-xl text-white text-[13px] font-bold transition-all disabled:opacity-60 flex items-center justify-center gap-2 shadow-lg"
               style={{
                 background: "linear-gradient(135deg, #004b9c, #0062cc)",
               }}
@@ -422,8 +461,8 @@ function BrandModal({
               )}
               {loading
                 ? mode === "add"
-                  ? "Creating…"
-                  : "Saving…"
+                  ? "Creating..."
+                  : "Saving..."
                 : mode === "add"
                   ? "Create Brand"
                   : "Save Changes"}
@@ -435,7 +474,52 @@ function BrandModal({
   );
 }
 
-// ── Brand Card ────────────────────────────────────────────────
+// ── Stats Card Component ──────────────────────────────────────
+function StatsCard({
+  title,
+  value,
+  icon,
+  color,
+  trend,
+}: {
+  title: string;
+  value: number;
+  icon: React.ReactNode;
+  color: string;
+  trend?: string;
+}) {
+  return (
+    <motion.div
+      whileHover={{ y: -2, transition: { duration: 0.2 } }}
+      className="relative overflow-hidden bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-300"
+    >
+      <div
+        className={`absolute top-0 right-0 w-20 h-20 -mr-8 -mt-8 rounded-full bg-gradient-to-br ${color} opacity-10`}
+      />
+      <div className="p-5">
+        <div className="flex items-center justify-between mb-3">
+          <div
+            className={`w-10 h-10 rounded-xl bg-gradient-to-br ${color} flex items-center justify-center shadow-lg`}
+          >
+            {icon}
+          </div>
+          {trend && (
+            <span className="text-[11px] font-semibold text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
+              {trend}
+            </span>
+          )}
+        </div>
+        <h3 className="text-[13px] font-medium text-gray-500 mb-1">{title}</h3>
+        <p className="text-[28px] font-black text-gray-900 tracking-tight">
+          {value}
+        </p>
+      </div>
+    </motion.div>
+  );
+}
+
+// ── Brand Card (Modern UI) ────────────────────────────────────
+// ── Brand Card (Modern UI with Top Actions) ────────────────────
 function BrandCard({
   brand,
   index,
@@ -449,113 +533,93 @@ function BrandCard({
 }) {
   const initials = brand.name.slice(0, 2).toUpperCase();
 
-  // Deterministic accent color per brand
   const accentColors = [
-    "#004b9c",
-    "#81bf42",
-    "#f59e0b",
-    "#8b5cf6",
-    "#06b6d4",
-    "#ef4444",
-    "#10b981",
-    "#f97316",
+    "from-blue-500 to-cyan-500",
+    "from-green-500 to-emerald-500",
+    "from-orange-500 to-amber-500",
+    "from-purple-500 to-pink-500",
+    "from-red-500 to-rose-500",
+    "from-teal-500 to-emerald-500",
+    "from-indigo-500 to-blue-500",
   ];
   const colorIndex =
     brand.name.split("").reduce((a, c) => a + c.charCodeAt(0), 0) %
     accentColors.length;
-  const accent = accentColors[colorIndex];
+  const gradient = accentColors[colorIndex];
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 16 }}
+      initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
+      whileHover={{ y: -4 }}
       transition={{
-        delay: index * 0.04,
-        duration: 0.35,
+        delay: index * 0.03,
+        duration: 0.3,
         ease: [0.25, 0.46, 0.45, 0.94],
       }}
-      className="group bg-white rounded-2xl border border-gray-100 hover:border-gray-200 hover:shadow-[0_4px_24px_rgba(0,0,0,0.06)] transition-all duration-200 overflow-hidden"
+      className="group relative bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300"
     >
-      {/* Logo area */}
-      <div
-        className="relative h-32 overflow-hidden flex items-center justify-center"
-        style={{
-          background: `linear-gradient(135deg, ${accent}08, ${accent}14)`,
-        }}
-      >
-        {/* Subtle geometric bg */}
-        <div
-          className="absolute top-0 right-0 w-20 h-20 rounded-full opacity-[0.06] pointer-events-none"
-          style={{ background: accent, transform: "translate(30%, -30%)" }}
-        />
-        <div
-          className="absolute bottom-0 left-0 w-16 h-16 rounded-full opacity-[0.06] pointer-events-none"
-          style={{ background: accent, transform: "translate(-30%, 30%)" }}
-        />
+      {/* Gradient top bar */}
+      <div className={`h-1 bg-gradient-to-r ${gradient}`} />
 
+      {/* Action Buttons - Top Right Corner */}
+      <div className="absolute top-3 right-3 z-20 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+        <button
+          onClick={() => onEdit(brand)}
+          className="w-8 h-8 rounded-xl bg-white shadow-lg flex items-center justify-center text-[#004b9c] hover:bg-[#004b9c] hover:text-white transition-all duration-200"
+          title="Edit brand"
+        >
+          <Pencil size={13} />
+        </button>
+        <button
+          onClick={() => onDelete(brand)}
+          className="w-8 h-8 rounded-xl bg-white shadow-lg flex items-center justify-center text-red-500 hover:bg-red-500 hover:text-white transition-all duration-200"
+          title="Delete brand"
+        >
+          <Trash2 size={13} />
+        </button>
+      </div>
+
+      {/* Logo area */}
+      <div className="relative h-32 overflow-hidden flex items-center justify-center p-4 bg-gradient-to-br from-gray-50 to-white">
         {brand.logo ? (
           <img
             src={brand.logo}
             alt={brand.name}
-            className="relative z-10 max-h-16 max-w-[70%] object-contain group-hover:scale-105 transition-transform duration-500"
+            className="relative z-10 max-h-16 max-w-full object-contain group-hover:scale-105 transition-transform duration-500"
           />
         ) : (
           <div
-            className="relative z-10 w-16 h-16 rounded-2xl flex items-center justify-center text-[22px] font-black text-white shadow-lg"
-            style={{
-              background: `linear-gradient(135deg, ${accent}, ${accent}cc)`,
-            }}
+            className={`relative z-10 w-16 h-16 rounded-2xl flex items-center justify-center text-[22px] font-black text-white shadow-lg bg-gradient-to-r ${gradient}`}
           >
             {initials}
           </div>
         )}
-
-        {/* Hover actions */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
-        <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-          <button
-            onClick={() => onEdit(brand)}
-            className="w-8 h-8 rounded-lg bg-white shadow-md flex items-center justify-center text-[#004b9c] hover:bg-[#004b9c] hover:text-white transition-all"
-          >
-            <Pencil size={13} />
-          </button>
-          <button
-            onClick={() => onDelete(brand)}
-            className="w-8 h-8 rounded-lg bg-white shadow-md flex items-center justify-center text-red-500 hover:bg-red-500 hover:text-white transition-all"
-          >
-            <Trash2 size={13} />
-          </button>
-        </div>
       </div>
 
       {/* Info */}
       <div className="px-4 py-3.5">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <h3 className="text-[14px] font-bold text-gray-900 truncate">
-              {brand.name}
-            </h3>
-            <p className="text-[11px] text-gray-400 font-mono mt-0.5 truncate">
-              /{brand.slug}
-            </p>
-          </div>
-          <ChevronRight
-            size={14}
-            className="text-gray-300 mt-0.5 flex-shrink-0"
-          />
+        <h3 className="text-[14px] font-bold text-gray-900 truncate pr-8">
+          {brand.name}
+        </h3>
+        <div className="flex items-center gap-1 mt-0.5">
+          <Hash size={10} className="text-gray-300" />
+          <p className="text-[10px] text-gray-400 font-mono truncate">
+            {brand.slug}
+          </p>
         </div>
 
         {/* Country badge */}
         {brand.country && (
-          <div className="flex items-center gap-1 mt-2">
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-gray-50 border border-gray-100 text-[10.5px] font-medium text-gray-500">
+          <div className="flex items-center gap-1 mt-2.5">
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-gray-50 border border-gray-100 text-[10px] font-medium text-gray-500">
               <Flag size={9} />
               {brand.country}
             </span>
           </div>
         )}
 
-        <p className="text-[10.5px] text-gray-400 mt-2">
+        <p className="text-[10px] text-gray-400 mt-2.5">
           Added{" "}
           {new Date(brand.createdAt).toLocaleDateString("en-AE", {
             day: "numeric",
@@ -574,6 +638,7 @@ export default function AdminBrandsPage() {
   const [filtered, setFiltered] = useState<IBrand[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
   const [modalMode, setModalMode] = useState<ModalMode>(null);
   const [editTarget, setEditTarget] = useState<IBrand | undefined>();
@@ -656,239 +721,274 @@ export default function AdminBrandsPage() {
     }
   }
 
-  // ── Unique countries for quick filter pill ─────────────────
   const countries = Array.from(
     new Set(brands.map((b) => b.country).filter(Boolean)),
   ) as string[];
 
-  // ── Render ─────────────────────────────────────────────────
+  const stats = {
+    total: brands.length,
+    withLogo: brands.filter((b) => b.logo).length,
+    countries: countries.length,
+  };
+
   return (
-    <div className="space-y-5 max-w-[1380px]">
-      {/* ── Page Header ── */}
-      <motion.div
-        initial={{ opacity: 0, y: -8 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex items-center justify-between flex-wrap gap-3"
-      >
-        <div>
-          <p className="text-[11px] font-semibold text-[#81bf42] tracking-[0.15em] uppercase mb-1">
-            Product Catalogue
-          </p>
-          <h2
-            className="text-[22px] font-black text-gray-900 tracking-tight leading-tight"
-            style={{ fontFamily: "'Barlow Condensed', sans-serif" }}
-          >
-            Brand Management
-          </h2>
-        </div>
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.97 }}
-          onClick={() => {
-            setEditTarget(undefined);
-            setModalMode("add");
-          }}
-          className="flex items-center gap-2 px-4 py-2.5 text-white text-[12px] font-bold rounded-xl transition-all shadow-[0_4px_12px_rgba(0,75,156,0.25)]"
-          style={{ background: "linear-gradient(135deg, #004b9c, #0062cc)" }}
-        >
-          <Plus size={14} />
-          Add Brand
-        </motion.button>
-      </motion.div>
-
-      {/* ── Stats Bar ── */}
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.08 }}
-        className="flex items-center gap-4 p-4 bg-white rounded-2xl border border-gray-100 flex-wrap"
-      >
-        <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-[#e8f0fb] flex items-center justify-center">
-            <Award size={16} style={{ color: "#004b9c" }} />
-          </div>
-          <div>
-            <p className="text-[20px] font-black text-gray-900 leading-none">
-              {brands.length}
-            </p>
-            <p className="text-[11px] text-gray-500 font-medium">
-              Total Brands
-            </p>
-          </div>
-        </div>
-        <div className="w-px h-10 bg-gray-100" />
-        <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-[#eef7e0] flex items-center justify-center">
-            <ShieldCheck size={16} style={{ color: "#81bf42" }} />
-          </div>
-          <div>
-            <p className="text-[20px] font-black text-gray-900 leading-none">
-              {brands.filter((b) => b.logo).length}
-            </p>
-            <p className="text-[11px] text-gray-500 font-medium">With Logo</p>
-          </div>
-        </div>
-        <div className="w-px h-10 bg-gray-100" />
-        <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-gray-100 flex items-center justify-center">
-            <Globe size={16} className="text-gray-500" />
-          </div>
-          <div>
-            <p className="text-[20px] font-black text-gray-900 leading-none">
-              {countries.length}
-            </p>
-            <p className="text-[11px] text-gray-500 font-medium">Countries</p>
-          </div>
-        </div>
-
-        {/* Country quick-filter pills */}
-        {countries.length > 0 && (
-          <>
-            <div className="w-px h-10 bg-gray-100 hidden sm:block" />
-            <div className="flex items-center gap-1.5 flex-wrap">
-              {countries.slice(0, 4).map((c) => (
-                <button
-                  key={c}
-                  onClick={() => setSearch(c)}
-                  className={cn(
-                    "px-2.5 py-1 rounded-lg text-[10.5px] font-semibold border transition-all",
-                    search === c
-                      ? "bg-[#004b9c] text-white border-[#004b9c]"
-                      : "bg-gray-50 text-gray-500 border-gray-100 hover:border-gray-300",
-                  )}
-                >
-                  {c}
-                </button>
-              ))}
-            </div>
-          </>
-        )}
-
-        {/* Search — pushed right */}
-        <div className="ml-auto relative">
-          <Search
-            size={14}
-            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-          />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search brands…"
-            className="pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:border-[#004b9c] focus:ring-2 focus:ring-[#004b9c]/10 text-[13px] text-gray-700 placeholder-gray-400 outline-none transition-all w-52"
-          />
-          {search && (
-            <button
-              onClick={() => setSearch("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-            >
-              <X size={13} />
-            </button>
-          )}
-        </div>
-      </motion.div>
-
-      {/* ── Grid ── */}
-      {loading ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-          {Array.from({ length: 10 }).map((_, i) => (
-            <div
-              key={i}
-              className="bg-white rounded-2xl border border-gray-100 overflow-hidden animate-pulse"
-            >
-              <div className="h-32 bg-gray-100" />
-              <div className="p-4 space-y-2">
-                <div className="h-3.5 bg-gray-100 rounded-md w-3/4" />
-                <div className="h-2.5 bg-gray-100 rounded-md w-1/2" />
-                <div className="h-2 bg-gray-100 rounded-md w-1/3 mt-1" />
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : filtered.length === 0 ? (
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
+      <div className="space-y-6 max-w-[1600px] mx-auto p-6">
+        {/* Header with Gradient */}
         <motion.div
-          initial={{ opacity: 0, y: 12 }}
+          initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col items-center justify-center py-20 text-center"
+          className="relative overflow-hidden bg-gradient-to-r from-[#004b9c] to-[#0062cc] rounded-2xl p-6 text-white shadow-xl"
         >
-          <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mb-4">
-            <Award size={28} className="text-gray-300" />
-          </div>
-          <p className="text-[15px] font-bold text-gray-600 mb-1">
-            {search ? "No brands match your search" : "No brands yet"}
-          </p>
-          <p className="text-[13px] text-gray-400 mb-5">
-            {search
-              ? "Try a different keyword or clear the search"
-              : "Add your first cricket brand to get started"}
-          </p>
-          {!search && (
+          <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-32 -mt-32" />
+          <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full -ml-24 -mb-24" />
+
+          <div className="relative z-10 flex items-center justify-between flex-wrap gap-4">
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-8 h-[3px] bg-[#81bf42] rounded-full" />
+                <span className="text-[#81bf42] text-[11px] font-black tracking-[0.2em] uppercase">
+                  Product Catalogue
+                </span>
+              </div>
+              <h1 className="text-[28px] font-black tracking-tight">
+                Brand Management
+              </h1>
+              <p className="text-blue-100 text-[13px] mt-1">
+                Manage cricket equipment brands and their details
+              </p>
+            </div>
             <button
               onClick={() => {
                 setEditTarget(undefined);
                 setModalMode("add");
               }}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-white text-[12.5px] font-bold shadow-[0_4px_12px_rgba(0,75,156,0.22)] transition-all hover:opacity-90"
-              style={{
-                background: "linear-gradient(135deg, #004b9c, #0062cc)",
-              }}
+              className="flex items-center gap-2 px-5 py-3 rounded-xl text-white text-[13px] font-bold bg-gradient-to-r from-[#25D366] to-[#20b859] hover:shadow-lg transition-all"
             >
-              <Plus size={14} /> Add First Brand
+              <Plus size={16} /> Add New Brand
             </button>
+          </div>
+        </motion.div>
+
+        {/* Stats Row */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <StatsCard
+            title="Total Brands"
+            value={stats.total}
+            icon={<Award size={18} className="text-white" />}
+            color="from-blue-500 to-cyan-500"
+            trend={stats.total > 0 ? "+12% this month" : undefined}
+          />
+          <StatsCard
+            title="With Logo"
+            value={stats.withLogo}
+            icon={<ImageIcon size={18} className="text-white" />}
+            color="from-emerald-500 to-teal-500"
+          />
+          <StatsCard
+            title="Countries"
+            value={stats.countries}
+            icon={<Globe size={18} className="text-white" />}
+            color="from-purple-500 to-pink-500"
+          />
+          <StatsCard
+            title="Active Brands"
+            value={stats.total}
+            icon={<Star size={18} className="text-white" />}
+            color="from-orange-500 to-amber-500"
+          />
+        </div>
+
+        {/* Filters Bar */}
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm"
+        >
+          <div className="flex flex-col sm:flex-row gap-3">
+            {/* Search */}
+            <div className="relative flex-1">
+              <Search
+                size={14}
+                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"
+              />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search brands by name, slug, or country..."
+                className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 text-[13px] focus:border-[#004b9c] focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+              />
+              {search && (
+                <button
+                  onClick={() => setSearch("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  <X size={13} />
+                </button>
+              )}
+            </div>
+
+            {/* View Toggle */}
+            <div className="flex items-center gap-1 bg-gray-100 rounded-xl p-1">
+              <button
+                onClick={() => setViewMode("grid")}
+                className={`p-2 rounded-lg transition-all ${viewMode === "grid" ? "bg-white shadow-sm text-[#004b9c]" : "text-gray-500"}`}
+              >
+                <LayoutGrid size={16} />
+              </button>
+              <button
+                onClick={() => setViewMode("list")}
+                className={`p-2 rounded-lg transition-all ${viewMode === "list" ? "bg-white shadow-sm text-[#004b9c]" : "text-gray-500"}`}
+              >
+                <List size={16} />
+              </button>
+            </div>
+          </div>
+
+          {/* Country Filter Chips */}
+          {countries.length > 0 && (
+            <div className="flex gap-2 flex-wrap mt-4">
+              <button
+                onClick={() => setSearch("")}
+                className={`px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all ${
+                  !search
+                    ? "bg-[#004b9c] text-white shadow-md"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
+              >
+                All ({brands.length})
+              </button>
+              {countries.slice(0, 8).map((c) => (
+                <button
+                  key={c}
+                  onClick={() => setSearch(c)}
+                  className={`px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all flex items-center gap-1 ${
+                    search === c
+                      ? "bg-gradient-to-r from-[#004b9c] to-[#0062cc] text-white shadow-md"
+                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  }`}
+                >
+                  <Flag size={10} />
+                  {c}
+                </button>
+              ))}
+            </div>
           )}
         </motion.div>
-      ) : (
-        <motion.div
-          layout
-          className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4"
-        >
-          <AnimatePresence mode="popLayout">
-            {filtered.map((brand, i) => (
-              <BrandCard
-                key={brand._id}
-                brand={brand}
-                index={i}
-                onEdit={(b) => {
-                  setEditTarget(b);
-                  setModalMode("edit");
-                }}
-                onDelete={setDeleteTarget}
-              />
+
+        {/* Brands Display */}
+        {loading ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            {Array.from({ length: 10 }).map((_, i) => (
+              <div
+                key={i}
+                className="bg-white rounded-2xl border border-gray-100 overflow-hidden animate-pulse"
+              >
+                <div className="h-32 bg-gray-100" />
+                <div className="p-4 space-y-2">
+                  <div className="h-3.5 bg-gray-100 rounded-md w-3/4" />
+                  <div className="h-2.5 bg-gray-100 rounded-md w-1/2" />
+                  <div className="h-2 bg-gray-100 rounded-md w-1/3 mt-1" />
+                </div>
+              </div>
             ))}
-          </AnimatePresence>
-        </motion.div>
-      )}
-
-      {/* ── Modals ── */}
-      <AnimatePresence>
-        {modalMode && (
-          <BrandModal
-            mode={modalMode}
-            initial={editTarget}
-            onClose={() => {
-              setModalMode(null);
-              setEditTarget(undefined);
-            }}
-            onSuccess={handleModalSuccess}
-          />
+          </div>
+        ) : filtered.length === 0 ? (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex flex-col items-center justify-center py-20 text-center bg-white rounded-2xl border border-gray-100"
+          >
+            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center mb-4">
+              <Award size={32} className="text-gray-400" />
+            </div>
+            <p className="text-[16px] font-bold text-gray-700 mb-1">
+              {search ? "No brands match your search" : "No brands yet"}
+            </p>
+            <p className="text-[13px] text-gray-400 mb-5 max-w-sm">
+              {search
+                ? "Try a different keyword or clear the search filter"
+                : "Add your first cricket brand to get started"}
+            </p>
+            {!search ? (
+              <button
+                onClick={() => {
+                  setEditTarget(undefined);
+                  setModalMode("add");
+                }}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-white text-[12px] font-bold bg-gradient-to-r from-[#004b9c] to-[#0062cc] shadow-md"
+              >
+                <Plus size={14} /> Add First Brand
+              </button>
+            ) : (
+              <button
+                onClick={() => setSearch("")}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gray-100 text-gray-700 text-[12px] font-bold"
+              >
+                <Filter size={14} /> Clear Filters
+              </button>
+            )}
+          </motion.div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            <AnimatePresence mode="popLayout">
+              {filtered.map((brand, i) => (
+                <BrandCard
+                  key={brand._id}
+                  brand={brand}
+                  index={i}
+                  onEdit={(b) => {
+                    setEditTarget(b);
+                    setModalMode("edit");
+                  }}
+                  onDelete={setDeleteTarget}
+                />
+              ))}
+            </AnimatePresence>
+          </div>
         )}
-      </AnimatePresence>
 
-      <AnimatePresence>
-        {deleteTarget && (
-          <DeleteDialog
-            brand={deleteTarget}
-            onConfirm={handleDelete}
-            onCancel={() => setDeleteTarget(null)}
-            loading={deleteLoading}
-          />
+        {/* Result count */}
+        {!loading && filtered.length > 0 && (
+          <div className="flex justify-between items-center text-[12px] text-gray-400 pt-2">
+            <p>
+              Showing {filtered.length} of {brands.length} brands
+            </p>
+          </div>
         )}
-      </AnimatePresence>
 
-      {/* ── Toast ── */}
-      <AnimatePresence>
-        {toast && <Toast toast={toast} onClose={() => setToast(null)} />}
-      </AnimatePresence>
+        {/* Modals */}
+        <AnimatePresence>
+          {modalMode && (
+            <BrandModal
+              mode={modalMode}
+              initial={editTarget}
+              onClose={() => {
+                setModalMode(null);
+                setEditTarget(undefined);
+              }}
+              onSuccess={handleModalSuccess}
+            />
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {deleteTarget && (
+            <DeleteDialog
+              brand={deleteTarget}
+              onConfirm={handleDelete}
+              onCancel={() => setDeleteTarget(null)}
+              loading={deleteLoading}
+            />
+          )}
+        </AnimatePresence>
+
+        {/* Toast */}
+        <AnimatePresence>
+          {toast && <Toast toast={toast} onClose={() => setToast(null)} />}
+        </AnimatePresence>
+      </div>
     </div>
   );
 }
