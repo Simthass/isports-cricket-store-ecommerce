@@ -10,33 +10,38 @@ import {
   User,
   Lock,
   MapPin,
-  ShoppingBag,
   Bell,
   Save,
   Eye,
   EyeOff,
   CheckCircle2,
-  Package,
-  Truck,
   LogOut,
   Loader2,
+  ChevronRight,
 } from "lucide-react";
 
-// ── Tab config ────────────────────────────────────────────────────────────────
+// ── Tab config (Removed orders and reviews tabs) ─────────────────────────────
 const tabs = [
   { id: "profile", label: "Profile", icon: User, href: "/account" },
-  { id: "security", label: "Security", icon: Lock, href: "/account?tab=security" },
-  { id: "addresses", label: "Addresses", icon: MapPin, href: "/account?tab=addresses" },
-  { id: "orders", label: "My Orders", icon: ShoppingBag, href: "/account/orders" },
-  { id: "reviews", label: "My Reviews", icon: MessageCircle, href: "/account/reviews" },
-  { id: "notifications", label: "Notifications", icon: Bell, href: "/account?tab=notifications" },
+  {
+    id: "security",
+    label: "Security",
+    icon: Lock,
+    href: "/account?tab=security",
+  },
+  {
+    id: "addresses",
+    label: "Addresses",
+    icon: MapPin,
+    href: "/account?tab=addresses",
+  },
+  {
+    id: "notifications",
+    label: "Notifications",
+    icon: Bell,
+    href: "/account?tab=notifications",
+  },
 ];
-
-const orderStatusIcon = (status: string) => {
-  if (status === "Delivered") return <CheckCircle2 size={14} />;
-  if (status === "Shipped") return <Truck size={14} />;
-  return <Package size={14} />;
-};
 
 // ── Notification toggle row ───────────────────────────────────────────────────
 function NotifRow({
@@ -77,8 +82,13 @@ function NotifRow({
 export default function AccountPage() {
   const { data: session, status, update } = useSession();
   const router = useRouter();
+  const searchParams =
+    typeof window !== "undefined"
+      ? new URLSearchParams(window.location.search)
+      : null;
+  const tabParam = searchParams?.get("tab");
 
-  const [activeTab, setActiveTab] = useState("profile");
+  const [activeTab, setActiveTab] = useState(tabParam || "profile");
   const [showPass, setShowPass] = useState(false);
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState("");
@@ -110,18 +120,21 @@ export default function AccountPage() {
     smsAlerts: false,
   });
 
-  // ── Orders ────────────────────────────────────────────────────────────────
-  const [orders, setOrders] = useState<any[]>([]);
+  // Update active tab when URL param changes
+  useEffect(() => {
+    if (tabParam && tabs.some((t) => t.id === tabParam)) {
+      setActiveTab(tabParam);
+    }
+  }, [tabParam]);
 
-  // ── Load all user data from DB ────────────────────────────────────────────
+  // ── Load user profile data from DB ─────────────────────────────────────────
   const loadUserData = useCallback(async () => {
     if (!session?.user) return;
     setLoadingData(true);
     try {
-      const [profileRes, notifRes, ordersRes] = await Promise.all([
+      const [profileRes, notifRes] = await Promise.all([
         fetch("/api/users/profile"),
         fetch("/api/users/notifications"),
-        fetch("/api/orders?limit=10"),
       ]);
 
       if (profileRes.ok) {
@@ -139,11 +152,6 @@ export default function AccountPage() {
       if (notifRes.ok) {
         const data = await notifRes.json();
         if (data.notifications) setNotifications(data.notifications);
-      }
-
-      if (ordersRes.ok) {
-        const data = await ordersRes.json();
-        setOrders(data.orders ?? []);
       }
     } catch (err) {
       console.error("Failed to load user data:", err);
@@ -214,7 +222,6 @@ export default function AccountPage() {
       if (!res.ok) {
         setSaveError(data.error ?? "Failed to save. Please try again.");
       } else {
-        // Keep the session's display name in sync
         await update({ name: profile.name });
         flashSaved();
       }
@@ -347,28 +354,31 @@ export default function AccountPage() {
             <p className="text-[11px] font-bold text-gray-400 tracking-widest uppercase px-2 mb-1">
               Settings
             </p>
-            {tabs.map(({ id, label, icon: Icon }) => {
-              const isActive = activeTab === id;
+            {tabs.map((tab) => {
+              const isActive = activeTab === tab.id;
               return (
                 <Link
                   key={tab.id}
                   href={tab.href}
                   onClick={() => {
-                    setActiveTab(id);
+                    setActiveTab(tab.id);
                     setSaveError("");
                     setSaved(false);
                   }}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-xl text-[13px] font-semibold transition-all duration-150 text-left ${
+                  className={`flex items-center justify-between gap-3 px-4 py-3 rounded-xl text-[13px] font-semibold transition-all duration-150 text-left ${
                     isActive
                       ? "bg-[#004b9c] text-white shadow-[0_4px_16px_rgba(0,75,156,0.25)]"
                       : "text-gray-600 hover:bg-white hover:text-[#004b9c] hover:shadow-sm"
                   }`}
                 >
                   <span className="flex items-center gap-3">
-                    <Icon size={16} strokeWidth={isActive ? 2.2 : 1.8} />
+                    <tab.icon size={16} strokeWidth={isActive ? 2.2 : 1.8} />
                     {tab.label}
                   </span>
-                  <ChevronRight size={14} className={isActive ? "text-white/60" : "text-gray-300"} />
+                  <ChevronRight
+                    size={14}
+                    className={isActive ? "text-white/60" : "text-gray-300"}
+                  />
                 </Link>
               );
             })}
@@ -390,7 +400,6 @@ export default function AccountPage() {
                     Personal Information
                   </h2>
                   <div className="grid grid-cols-1 gap-5">
-                    {/* Full Name (single field) */}
                     <div>
                       <label className="block text-[12px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">
                         Full Name
@@ -406,7 +415,6 @@ export default function AccountPage() {
                       />
                     </div>
 
-                    {/* Email */}
                     <div>
                       <label className="block text-[12px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">
                         Email Address
@@ -421,7 +429,6 @@ export default function AccountPage() {
                       />
                     </div>
 
-                    {/* Phone */}
                     <div>
                       <label className="block text-[12px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">
                         Phone Number
@@ -619,78 +626,6 @@ export default function AccountPage() {
                     )}
                     {saving ? "Saving…" : "Save Address"}
                   </button>
-                </div>
-              )}
-
-              {/* ── Orders tab ── */}
-              {activeTab === "orders" && (
-                <div className="p-8">
-                  <h2 className="text-[18px] font-black text-gray-900 mb-6">
-                    My Orders
-                  </h2>
-                  {orders.length === 0 ? (
-                    <p className="text-[14px] text-gray-400">
-                      No orders found.
-                    </p>
-                  ) : (
-                    <div className="flex flex-col gap-3">
-                      {orders.map((order: any) => (
-                        <div
-                          key={order._id}
-                          className="flex items-center justify-between p-4 rounded-xl border border-gray-100 hover:border-[#004b9c]/20 hover:bg-blue-50/30 transition-all duration-150"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-xl bg-[#004b9c]/8 flex items-center justify-center text-[#004b9c]">
-                              {orderStatusIcon(order.status)}
-                            </div>
-                            <div>
-                              <p className="text-[13px] font-bold text-gray-900">
-                                #{order.orderNumber}
-                              </p>
-                              <p className="text-[11px] text-gray-400">
-                                {new Date(order.createdAt).toLocaleDateString(
-                                  "en-AE",
-                                  {
-                                    day: "numeric",
-                                    month: "short",
-                                    year: "numeric",
-                                  },
-                                )}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-4">
-                            <p className="text-[13px] font-semibold text-gray-700">
-                              AED {order.totalAmount?.toLocaleString()}
-                            </p>
-                            <span
-                              className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${
-                                order.status === "DELIVERED"
-                                  ? "text-green-600 bg-green-50"
-                                  : order.status === "PAID"
-                                    ? "text-blue-600 bg-blue-50"
-                                    : order.status === "PENDING"
-                                      ? "text-amber-600 bg-amber-50"
-                                      : "text-gray-600 bg-gray-100"
-                              }`}
-                            >
-                              {order.status}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* ── REVIEWS TAB ── */}
-              {activeTab === "reviews" && (
-                <div className="text-center py-8">
-                  <p className="text-gray-500 mb-4">Manage your product reviews</p>
-                  <Link href="/account/reviews" className="inline-block px-6 py-3 bg-[#004b9c] text-white rounded-xl font-bold">
-                    View My Reviews →
-                  </Link>
                 </div>
               )}
 
