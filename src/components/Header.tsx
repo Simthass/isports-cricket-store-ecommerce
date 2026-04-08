@@ -25,7 +25,6 @@ import {
   Layers,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import AuthModal from "@/components/auth/AuthModal";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/context/CartContext";
 
@@ -926,11 +925,6 @@ export default function Header() {
 
       {/* Page Spacer */}
       <div className="h-[103px] lg:h-[139px]" />
-      <AuthModal
-        isOpen={authOpen}
-        onClose={() => setAuthOpen(false)}
-        defaultMode={authMode}
-      />
     </>
   );
 }

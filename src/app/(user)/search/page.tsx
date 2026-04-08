@@ -313,6 +313,8 @@ export default function SearchPage() {
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
   const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 });
   const [categories, setCategories] = useState<NavCategory[]>([]);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<"login" | "register">("login");
   const isFirstRender = useRef(true);
 
   // Fetch categories for sidebar
@@ -391,283 +393,95 @@ export default function SearchPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* ── Page Header ── */}
-      <div className="bg-[#f8f9fc] border-b border-gray-100">
-        <div className="max-w-[1400px] mx-auto px-5 lg:px-10 py-8">
-          {/* Breadcrumb */}
-          <div className="flex items-center gap-2 text-[12px] text-gray-400 mb-4">
-            <Link href="/" className="hover:text-[#004b9c] transition-colors">
-              Home
-            </Link>
-            <ChevronRight size={12} />
-            <span className="text-gray-700 font-medium">Search</span>
-          </div>
-
-          <div className="flex items-end justify-between flex-wrap gap-4">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <Search size={18} className="text-[#004b9c]" />
-                <span className="text-[11px] font-black text-gray-400 uppercase tracking-[0.18em]">
-                  Search Results
-                </span>
-              </div>
-              <h1
-                className="text-[28px] lg:text-[36px] font-black text-gray-900 leading-tight tracking-tight"
-                style={{ fontFamily: "'Barlow Condensed', sans-serif" }}
-              >
-                Results for <span className="text-[#004b9c]">"{validQ}"</span>
-              </h1>
-              {!loading && (
-                <p className="text-gray-500 text-[14px] mt-1">
-                  {showResults
-                    ? `${pagination.total} product${pagination.total !== 1 ? "s" : ""} found`
-                    : showRelated
-                      ? relatedLabel
-                      : "No products found"}
-                </p>
-              )}
+    <>
+      <div className="min-h-screen bg-white">
+        {/* ── Page Header ── */}
+        <div className="bg-[#f8f9fc] border-b border-gray-100">
+          <div className="max-w-[1400px] mx-auto px-5 lg:px-10 py-8">
+            {/* Breadcrumb */}
+            <div className="flex items-center gap-2 text-[12px] text-gray-400 mb-4">
+              <Link href="/" className="hover:text-[#004b9c] transition-colors">
+                Home
+              </Link>
+              <ChevronRight size={12} />
+              <span className="text-gray-700 font-medium">Search</span>
             </div>
 
-            {/* Active filter pills */}
-            {activeFilterCount > 0 && (
-              <div className="flex items-center gap-2 flex-wrap">
-                {filters.categories.map((c) => (
-                  <span
-                    key={c}
-                    className="flex items-center gap-1.5 bg-[#004b9c]/10 text-[#004b9c] text-[11px] font-semibold px-3 py-1.5 rounded-full capitalize"
-                  >
-                    {c}
-                    <button
-                      onClick={() =>
-                        handleFiltersChange({
-                          ...filters,
-                          categories: filters.categories.filter((x) => x !== c),
-                        })
-                      }
-                    >
-                      <X size={10} />
-                    </button>
+            <div className="flex items-end justify-between flex-wrap gap-4">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <Search size={18} className="text-[#004b9c]" />
+                  <span className="text-[11px] font-black text-gray-400 uppercase tracking-[0.18em]">
+                    Search Results
                   </span>
-                ))}
-                {filters.inStockOnly && (
-                  <span className="flex items-center gap-1.5 bg-green-100 text-green-700 text-[11px] font-semibold px-3 py-1.5 rounded-full">
-                    In Stock
-                    <button
-                      onClick={() =>
-                        handleFiltersChange({ ...filters, inStockOnly: false })
-                      }
-                    >
-                      <X size={10} />
-                    </button>
-                  </span>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* ── Main Layout ── */}
-      <div className="max-w-[1400px] mx-auto px-5 lg:px-10 py-8">
-        <div className="flex gap-8">
-          {/* Desktop Sidebar */}
-          <aside className="hidden lg:block w-[240px] xl:w-[260px] flex-shrink-0">
-            <div className="sticky top-[120px]">
-              <SearchFilterSidebar
-                filters={filters}
-                onChange={handleFiltersChange}
-                totalResults={pagination.total}
-                categories={categories}
-              />
-            </div>
-          </aside>
-
-          {/* Results Area */}
-          <div className="flex-1 min-w-0">
-            {/* Sort + mobile filters bar */}
-            <div className="flex items-center gap-3 mb-0">
-              <button
-                onClick={() => setMobileFilterOpen(true)}
-                className="lg:hidden flex items-center gap-2 px-4 py-2.5 border border-gray-200 rounded-xl text-[13px] font-semibold text-gray-700 hover:border-[#004b9c] hover:text-[#004b9c] transition-all bg-white"
-              >
-                <SlidersHorizontal size={14} />
-                Filters
-                {activeFilterCount > 0 && (
-                  <span className="w-4 h-4 bg-[#004b9c] text-white text-[9px] font-black rounded-full flex items-center justify-center">
-                    {activeFilterCount}
-                  </span>
-                )}
-              </button>
-              <div className="flex-1">
-                <ShopHeader
-                  total={pagination.total}
-                  sort={sort}
-                  onSort={setSort}
-                  view={view}
-                  onView={setView}
-                />
-              </div>
-            </div>
-
-            {/* Loading */}
-            {loading ? (
-              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-5">
-                {[...Array(8)].map((_, i) => (
-                  <div key={i} className="animate-pulse">
-                    <div className="bg-gray-100 rounded-2xl aspect-square mb-3" />
-                    <div className="h-4 bg-gray-100 rounded w-3/4 mb-2" />
-                    <div className="h-3 bg-gray-100 rounded w-1/2" />
-                  </div>
-                ))}
-              </div>
-            ) : showResults ? (
-              <>
-                <div
-                  className={
-                    view === "grid"
-                      ? "grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-5"
-                      : "flex flex-col gap-4"
-                  }
+                </div>
+                <h1
+                  className="text-[28px] lg:text-[36px] font-black text-gray-900 leading-tight tracking-tight"
+                  style={{ fontFamily: "'Barlow Condensed', sans-serif" }}
                 >
-                  {products.map((product, i) => (
-                    <ProductCard
-                      key={product._id}
-                      product={product}
-                      index={i}
-                    />
-                  ))}
-                </div>
-
-                {/* Pagination */}
-                {pagination.pages > 1 && (
-                  <div className="flex items-center justify-between mt-8 pt-4 border-t border-gray-100">
-                    <p className="text-[12px] text-gray-400">
-                      Page {pagination.page} of {pagination.pages}
-                    </p>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() =>
-                          setPagination({
-                            ...pagination,
-                            page: pagination.page - 1,
-                          })
-                        }
-                        disabled={pagination.page === 1}
-                        className="px-4 py-2 rounded-xl border border-gray-200 text-[12px] font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-                      >
-                        Previous
-                      </button>
-                      <button
-                        onClick={() =>
-                          setPagination({
-                            ...pagination,
-                            page: pagination.page + 1,
-                          })
-                        }
-                        disabled={pagination.page === pagination.pages}
-                        className="px-4 py-2 rounded-xl border border-gray-200 text-[12px] font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-                      >
-                        Next
-                      </button>
-                    </div>
-                  </div>
+                  Results for <span className="text-[#004b9c]">"{validQ}"</span>
+                </h1>
+                {!loading && (
+                  <p className="text-gray-500 text-[14px] mt-1">
+                    {showResults
+                      ? `${pagination.total} product${pagination.total !== 1 ? "s" : ""} found`
+                      : showRelated
+                        ? relatedLabel
+                        : "No products found"}
+                  </p>
                 )}
-              </>
-            ) : showRelated ? (
-              <>
-                {/* Related results banner */}
-                <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4 mb-6">
-                  <AlertCircle
-                    size={18}
-                    className="text-amber-500 flex-shrink-0 mt-0.5"
-                  />
-                  <div>
-                    <p className="text-[13px] font-bold text-amber-700">
-                      {relatedLabel}
-                    </p>
-                    <p className="text-[12px] text-amber-600 mt-0.5">
-                      Here are some related products you might like.
-                    </p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-5">
-                  {relatedProducts.map((product, i) => (
-                    <ProductCard
-                      key={product._id}
-                      product={product}
-                      index={i}
-                    />
-                  ))}
-                </div>
-              </>
-            ) : (
-              /* Absolutely nothing found */
-              <div className="flex flex-col items-center justify-center py-24 text-center">
-                <div className="text-6xl mb-4">🔍</div>
-                <h3 className="text-[20px] font-bold text-gray-700 mb-2">
-                  No results for "{validQ}"
-                </h3>
-                <p className="text-gray-400 text-[14px] mb-2">
-                  Try a different search term or browse our shop
-                </p>
-                <div className="flex flex-wrap gap-2 justify-center mt-4 mb-6">
-                  {["Cricket Bat", "Batting Gloves", "Helmet", "Shoes"].map(
-                    (s) => (
+              </div>
+
+              {/* Active filter pills */}
+              {activeFilterCount > 0 && (
+                <div className="flex items-center gap-2 flex-wrap">
+                  {filters.categories.map((c) => (
+                    <span
+                      key={c}
+                      className="flex items-center gap-1.5 bg-[#004b9c]/10 text-[#004b9c] text-[11px] font-semibold px-3 py-1.5 rounded-full capitalize"
+                    >
+                      {c}
                       <button
-                        key={s}
                         onClick={() =>
-                          router.push(`/search?q=${encodeURIComponent(s)}`)
+                          handleFiltersChange({
+                            ...filters,
+                            categories: filters.categories.filter(
+                              (x) => x !== c,
+                            ),
+                          })
                         }
-                        className="text-[12px] text-[#004b9c] bg-blue-50 hover:bg-blue-100 px-4 py-2 rounded-full font-semibold transition-colors"
                       >
-                        {s}
+                        <X size={10} />
                       </button>
-                    ),
+                    </span>
+                  ))}
+                  {filters.inStockOnly && (
+                    <span className="flex items-center gap-1.5 bg-green-100 text-green-700 text-[11px] font-semibold px-3 py-1.5 rounded-full">
+                      In Stock
+                      <button
+                        onClick={() =>
+                          handleFiltersChange({
+                            ...filters,
+                            inStockOnly: false,
+                          })
+                        }
+                      >
+                        <X size={10} />
+                      </button>
+                    </span>
                   )}
                 </div>
-                <Link
-                  href="/shop"
-                  className="px-6 py-3 bg-[#004b9c] text-white text-[13px] font-bold rounded-xl hover:bg-[#003d82] transition-colors"
-                >
-                  Browse All Products
-                </Link>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Mobile Filter Drawer */}
-      <AnimatePresence>
-        {mobileFilterOpen && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setMobileFilterOpen(false)}
-              className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm lg:hidden"
-            />
-            <motion.div
-              initial={{ x: "-100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "-100%" }}
-              transition={{ type: "tween", duration: 0.3 }}
-              className="fixed top-0 left-0 z-50 w-[300px] h-full bg-white shadow-2xl overflow-y-auto lg:hidden"
-            >
-              <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 sticky top-0 bg-white z-10">
-                <span className="text-[15px] font-bold text-gray-900">
-                  Filters
-                </span>
-                <button
-                  onClick={() => setMobileFilterOpen(false)}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100"
-                >
-                  <X size={16} />
-                </button>
-              </div>
-              <div className="p-5">
+        {/* ── Main Layout ── */}
+        <div className="max-w-[1400px] mx-auto px-5 lg:px-10 py-8">
+          <div className="flex gap-8">
+            {/* Desktop Sidebar */}
+            <aside className="hidden lg:block w-[240px] xl:w-[260px] flex-shrink-0">
+              <div className="sticky top-[120px]">
                 <SearchFilterSidebar
                   filters={filters}
                   onChange={handleFiltersChange}
@@ -675,18 +489,257 @@ export default function SearchPage() {
                   categories={categories}
                 />
               </div>
-              <div className="sticky bottom-0 p-4 bg-white border-t border-gray-100">
+            </aside>
+
+            {/* Results Area */}
+            <div className="flex-1 min-w-0">
+              {/* Sort + mobile filters bar */}
+              <div className="flex items-center gap-3 mb-0">
                 <button
-                  onClick={() => setMobileFilterOpen(false)}
-                  className="w-full py-3 bg-[#004b9c] text-white text-[13px] font-bold rounded-xl hover:bg-[#003d82] transition-colors"
+                  onClick={() => setMobileFilterOpen(true)}
+                  className="lg:hidden flex items-center gap-2 px-4 py-2.5 border border-gray-200 rounded-xl text-[13px] font-semibold text-gray-700 hover:border-[#004b9c] hover:text-[#004b9c] transition-all bg-white"
                 >
-                  Show {pagination.total} Results
+                  <SlidersHorizontal size={14} />
+                  Filters
+                  {activeFilterCount > 0 && (
+                    <span className="w-4 h-4 bg-[#004b9c] text-white text-[9px] font-black rounded-full flex items-center justify-center">
+                      {activeFilterCount}
+                    </span>
+                  )}
                 </button>
+                <div className="flex-1">
+                  <ShopHeader
+                    total={pagination.total}
+                    sort={sort}
+                    onSort={setSort}
+                    view={view}
+                    onView={setView}
+                  />
+                </div>
               </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-    </div>
+
+              {/* Loading */}
+              {loading ? (
+                <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-5">
+                  {[...Array(8)].map((_, i) => (
+                    <div key={i} className="animate-pulse">
+                      <div className="bg-gray-100 rounded-2xl aspect-square mb-3" />
+                      <div className="h-4 bg-gray-100 rounded w-3/4 mb-2" />
+                      <div className="h-3 bg-gray-100 rounded w-1/2" />
+                    </div>
+                  ))}
+                </div>
+              ) : showResults ? (
+                <>
+                  <div
+                    className={
+                      view === "grid"
+                        ? "grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-5"
+                        : "flex flex-col gap-4"
+                    }
+                  >
+                    {products.map((product, i) => (
+                      <ProductCard
+                        key={product._id}
+                        product={{
+                          id: product._id,
+                          name: product.name,
+                          brand: product.brandId?.name ?? "iSPORTS",
+                          slug: product.slug,
+                          price: product.price,
+                          originalPrice: product.originalPrice,
+                          image:
+                            product.images?.[0] ?? "/placeholder-product.jpg",
+                          isNew: product.isNewArrival,
+                          inStock: product.inStock,
+                          badge: product.isBestSeller
+                            ? "Best Seller"
+                            : product.isNewArrival
+                              ? "New"
+                              : undefined,
+                          rating: product.rating,
+                          reviewCount: product.reviewCount,
+                        }}
+                        index={i}
+                        onAuthRequired={() => {
+                          setAuthMode("login");
+                          setAuthModalOpen(true);
+                        }}
+                      />
+                    ))}
+                  </div>
+
+                  {/* Pagination */}
+                  {pagination.pages > 1 && (
+                    <div className="flex items-center justify-between mt-8 pt-4 border-t border-gray-100">
+                      <p className="text-[12px] text-gray-400">
+                        Page {pagination.page} of {pagination.pages}
+                      </p>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() =>
+                            setPagination({
+                              ...pagination,
+                              page: pagination.page - 1,
+                            })
+                          }
+                          disabled={pagination.page === 1}
+                          className="px-4 py-2 rounded-xl border border-gray-200 text-[12px] font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                        >
+                          Previous
+                        </button>
+                        <button
+                          onClick={() =>
+                            setPagination({
+                              ...pagination,
+                              page: pagination.page + 1,
+                            })
+                          }
+                          disabled={pagination.page === pagination.pages}
+                          className="px-4 py-2 rounded-xl border border-gray-200 text-[12px] font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                        >
+                          Next
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : showRelated ? (
+                <>
+                  {/* Related results banner */}
+                  <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4 mb-6">
+                    <AlertCircle
+                      size={18}
+                      className="text-amber-500 flex-shrink-0 mt-0.5"
+                    />
+                    <div>
+                      <p className="text-[13px] font-bold text-amber-700">
+                        {relatedLabel}
+                      </p>
+                      <p className="text-[12px] text-amber-600 mt-0.5">
+                        Here are some related products you might like.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-5">
+                    {relatedProducts.map((product, i) => (
+                      <ProductCard
+                        key={product._id}
+                        product={{
+                          id: product._id,
+                          name: product.name,
+                          brand: product.brandId?.name ?? "iSPORTS",
+                          slug: product.slug,
+                          price: product.price,
+                          originalPrice: product.originalPrice,
+                          image:
+                            product.images?.[0] ?? "/placeholder-product.jpg",
+                          isNew: product.isNewArrival,
+                          inStock: product.inStock,
+                          badge: product.isBestSeller
+                            ? "Best Seller"
+                            : product.isNewArrival
+                              ? "New"
+                              : undefined,
+                          rating: product.rating,
+                          reviewCount: product.reviewCount,
+                        }}
+                        index={i}
+                        onAuthRequired={() => {
+                          setAuthMode("login");
+                          setAuthModalOpen(true);
+                        }}
+                      />
+                    ))}
+                  </div>
+                </>
+              ) : (
+                /* Absolutely nothing found */
+                <div className="flex flex-col items-center justify-center py-24 text-center">
+                  <div className="text-6xl mb-4">🔍</div>
+                  <h3 className="text-[20px] font-bold text-gray-700 mb-2">
+                    No results for "{validQ}"
+                  </h3>
+                  <p className="text-gray-400 text-[14px] mb-2">
+                    Try a different search term or browse our shop
+                  </p>
+                  <div className="flex flex-wrap gap-2 justify-center mt-4 mb-6">
+                    {["Cricket Bat", "Batting Gloves", "Helmet", "Shoes"].map(
+                      (s) => (
+                        <button
+                          key={s}
+                          onClick={() =>
+                            router.push(`/search?q=${encodeURIComponent(s)}`)
+                          }
+                          className="text-[12px] text-[#004b9c] bg-blue-50 hover:bg-blue-100 px-4 py-2 rounded-full font-semibold transition-colors"
+                        >
+                          {s}
+                        </button>
+                      ),
+                    )}
+                  </div>
+                  <Link
+                    href="/shop"
+                    className="px-6 py-3 bg-[#004b9c] text-white text-[13px] font-bold rounded-xl hover:bg-[#003d82] transition-colors"
+                  >
+                    Browse All Products
+                  </Link>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile Filter Drawer */}
+        <AnimatePresence>
+          {mobileFilterOpen && (
+            <>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setMobileFilterOpen(false)}
+                className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm lg:hidden"
+              />
+              <motion.div
+                initial={{ x: "-100%" }}
+                animate={{ x: 0 }}
+                exit={{ x: "-100%" }}
+                transition={{ type: "tween", duration: 0.3 }}
+                className="fixed top-0 left-0 z-50 w-[300px] h-full bg-white shadow-2xl overflow-y-auto lg:hidden"
+              >
+                <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 sticky top-0 bg-white z-10">
+                  <span className="text-[15px] font-bold text-gray-900">
+                    Filters
+                  </span>
+                  <button
+                    onClick={() => setMobileFilterOpen(false)}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+                <div className="p-5">
+                  <SearchFilterSidebar
+                    filters={filters}
+                    onChange={handleFiltersChange}
+                    totalResults={pagination.total}
+                    categories={categories}
+                  />
+                </div>
+                <div className="sticky bottom-0 p-4 bg-white border-t border-gray-100">
+                  <button
+                    onClick={() => setMobileFilterOpen(false)}
+                    className="w-full py-3 bg-[#004b9c] text-white text-[13px] font-bold rounded-xl hover:bg-[#003d82] transition-colors"
+                  >
+                    Show {pagination.total} Results
+                  </button>
+                </div>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
+      </div>
+    </>
   );
 }
