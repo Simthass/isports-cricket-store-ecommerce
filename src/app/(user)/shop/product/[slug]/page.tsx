@@ -1,7 +1,8 @@
+// src/app/shop/products/[slug]/page.tsx
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { useParams } from "next/navigation";
+import React, { useState, useEffect, useRef } from "react";
+import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -19,12 +20,14 @@ import {
   ArrowRight,
   Heart,
   Loader2,
+  QrCode,
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useCart } from "@/context/CartContext";
 import AuthModal from "@/components/auth/AuthModal";
 import ReviewSection from "@/components/products/ReviewSection";
 
+// ── Types ─────────────────────────────────────────────────────────────────────
 interface SizeOption {
   label: string;
   price: number;
@@ -40,7 +43,7 @@ interface Product {
   images: string[];
   inStock: boolean;
   stockQty: number;
-  isNew: boolean;
+  isNewArrival: boolean;
   isBestSeller: boolean;
   isFeatured: boolean;
   rating: number;
@@ -51,6 +54,7 @@ interface Product {
   colors: string[];
   categoryId: { name: string; slug: string };
   brandId: { name: string; slug: string; logo?: string };
+  qrCodeId?: string;
   createdAt: string;
 }
 
@@ -64,6 +68,7 @@ interface RelatedProduct {
   brandId: { name: string; slug: string };
 }
 
+// ── Static data ────────────────────────────────────────────────────────────────
 const TRUST_BADGES = [
   { icon: Truck, title: "Free Delivery", desc: "Orders over AED 500" },
   { icon: Shield, title: "100% Authentic", desc: "Genuine products only" },
@@ -90,7 +95,11 @@ export default function ProductDetailPage() {
   const { data: session } = useSession();
   const { addToCart } = useCart();
   const params = useParams();
+  const searchParams = useSearchParams();
   const slug = params.slug as string;
+
+  // Detect if visitor arrived via QR scan (the redirect sets ?via=qr)
+  const viaQr = searchParams.get("via") === "qr";
 
   const [product, setProduct] = useState<Product | null>(null);
   const [related, setRelated] = useState<RelatedProduct[]>([]);
@@ -106,7 +115,16 @@ export default function ProductDetailPage() {
   const [activeTab, setActiveTab] = useState<TabType>("description");
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<"login" | "register">("login");
+  const [qrBannerVisible, setQrBannerVisible] = useState(viaQr);
 
+  // Auto-hide QR banner after 5 s
+  useEffect(() => {
+    if (!qrBannerVisible) return;
+    const t = setTimeout(() => setQrBannerVisible(false), 5000);
+    return () => clearTimeout(t);
+  }, [qrBannerVisible]);
+
+  // Fetch product
   useEffect(() => {
     if (!slug) return;
     setLoading(true);
@@ -117,43 +135,30 @@ export default function ProductDetailPage() {
           const p: Product = json.data.product;
           setProduct(p);
           setRelated(json.data.relatedProducts ?? []);
-          console.log("Product slug:", p.slug);
-          console.log("Related products:", json.data.relatedProducts);
-          if (p.enableSizePrice && p.sizeOptions?.length > 0) {
+          if (p.enableSizePrice && p.sizeOptions?.length > 0)
             setSelectedSize(p.sizeOptions[0]);
-          } else if (p.sizes?.length > 0) {
-            setSelectedSize(p.sizes[0]);
-          }
+          else if (p.sizes?.length > 0) setSelectedSize(p.sizes[0]);
           if (p.colors?.length > 0) setSelectedColor(p.colors[0]);
         }
       })
-      .catch((error) => {
-        console.error("Error fetching product:", error);
-      })
+      .catch(console.error)
       .finally(() => setLoading(false));
   }, [slug]);
 
   const handleAddToCart = () => {
-    // Check if user is logged in
     if (!session?.user) {
       setAuthMode("login");
       setAuthModalOpen(true);
       return;
     }
-
     if (!product) return;
 
-    // Get the size value safely
     let sizeValue = "Standard";
     if (selectedSize) {
-      if (typeof selectedSize === "object") {
-        sizeValue = selectedSize.label;
-      } else {
-        sizeValue = selectedSize;
-      }
+      sizeValue =
+        typeof selectedSize === "object" ? selectedSize.label : selectedSize;
     }
 
-    // Add to cart using the context
     addToCart({
       productId: product._id,
       name: product.name,
@@ -168,6 +173,7 @@ export default function ProductDetailPage() {
     setTimeout(() => setAddedToCart(false), 2500);
   };
 
+  // ── Loading / error states ─────────────────────────────────────────────────
   if (loading)
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
@@ -188,6 +194,7 @@ export default function ProductDetailPage() {
       </div>
     );
 
+  // ── Derived values ─────────────────────────────────────────────────────────
   const images =
     product.images?.length > 0 ? product.images : ["/placeholder-product.jpg"];
 
@@ -206,6 +213,12 @@ export default function ProductDetailPage() {
       ? Math.round((1 - displayPrice / product.originalPrice) * 100)
       : 0;
 
+  const hasSizeOptions =
+    product.enableSizePrice && product.sizeOptions?.length > 0;
+  const hasSimpleSizes = !hasSizeOptions && product.sizes?.length > 0;
+  const hasSizes = hasSizeOptions || hasSimpleSizes;
+  const hasColors = product.colors?.length > 0;
+
   const waMsg = encodeURIComponent(
     `Hi iSPORTS! I'm interested in the ${product.name}` +
       (selectedSize
@@ -214,18 +227,46 @@ export default function ProductDetailPage() {
       (selectedColor ? `, Colour: ${selectedColor}` : "") +
       `. Can you help me?`,
   );
-
-  const hasSizeOptions =
-    product.enableSizePrice && product.sizeOptions?.length > 0;
-  const hasSimpleSizes = !hasSizeOptions && product.sizes?.length > 0;
-  const hasSizes = hasSizeOptions || hasSimpleSizes;
-  const hasColors = product.colors?.length > 0;
-
   const whatsappLink = `https://wa.me/971526514666?text=${waMsg}`;
 
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <>
       <div className="min-h-screen bg-white font-poppins">
+        {/* ── QR Scan Banner ────────────────────────────────────────────── */}
+        <AnimatePresence>
+          {qrBannerVisible && (
+            <motion.div
+              initial={{ opacity: 0, y: -48 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -48 }}
+              transition={{ type: "spring", stiffness: 400, damping: 32 }}
+              className="fixed top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-[0_8px_32px_rgba(0,75,156,0.22)] border border-[#004b9c]/20"
+              style={{
+                background: "linear-gradient(135deg, #004b9c 0%, #0062cc 100%)",
+              }}
+            >
+              <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
+                <QrCode size={16} className="text-white" />
+              </div>
+              <div>
+                <p className="text-white text-[13px] font-black leading-none">
+                  Scanned Successfully!
+                </p>
+                <p className="text-blue-200 text-[11px] mt-0.5">
+                  You scanned the QR label for this product.
+                </p>
+              </div>
+              <button
+                onClick={() => setQrBannerVisible(false)}
+                className="ml-2 w-6 h-6 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors flex-shrink-0"
+              >
+                <span className="text-white text-[10px] font-bold">✕</span>
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Breadcrumb */}
         <div className="max-w-[1400px] mx-auto px-6 lg:px-10 pt-6">
           <div className="flex items-center gap-1.5 text-[12px] text-gray-400">
@@ -264,6 +305,7 @@ export default function ProductDetailPage() {
               className="flex flex-col gap-4"
             >
               <div className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 aspect-square border border-gray-100">
+                {/* Badges */}
                 <div className="absolute top-4 left-4 z-10 flex flex-col gap-2">
                   {discountPct > 0 && (
                     <span className="bg-red-500 text-white text-[10px] font-black tracking-[0.12em] px-3 py-1.5 rounded-full uppercase">
@@ -275,13 +317,20 @@ export default function ProductDetailPage() {
                       BEST SELLER
                     </span>
                   )}
-                  {product.isNew && (
+                  {product.isNewArrival && (
                     <span className="bg-[#004b9c] text-white text-[10px] font-black tracking-[0.12em] px-3 py-1.5 rounded-full uppercase">
                       NEW ARRIVAL
                     </span>
                   )}
+                  {/* QR scanned pill */}
+                  {viaQr && (
+                    <span className="flex items-center gap-1 bg-white/90 backdrop-blur-sm text-[#004b9c] text-[10px] font-black tracking-[0.08em] px-2.5 py-1.5 rounded-full border border-[#004b9c]/20 uppercase shadow-sm">
+                      <QrCode size={10} /> QR Scan
+                    </span>
+                  )}
                 </div>
 
+                {/* Wishlist */}
                 <button
                   onClick={() => setWishlist(!wishlist)}
                   className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full bg-white shadow-md flex items-center justify-center hover:scale-110 transition-all"
@@ -566,7 +615,7 @@ export default function ProductDetailPage() {
                   </button>
                 </div>
 
-                {/* WhatsApp button */}
+                {/* WhatsApp */}
                 <a
                   href={whatsappLink}
                   target="_blank"
@@ -791,7 +840,6 @@ export default function ProductDetailPage() {
         )}
       </div>
 
-      {/* Auth Modal */}
       <AuthModal
         isOpen={authModalOpen}
         onClose={() => setAuthModalOpen(false)}

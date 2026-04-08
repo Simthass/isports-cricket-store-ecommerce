@@ -1,4 +1,4 @@
-// src/app/api/products/route.ts - Complete updated file
+// src/app/api/products/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import slugify from "slugify";
@@ -6,6 +6,11 @@ import mongoose from "mongoose";
 import connectDB from "@/lib/mongodb";
 import Product from "@/models/Product";
 import { auth } from "@/lib/auth";
+import {
+  generateQrCodeId,
+  generateQrCodeDataUrl,
+  buildProductQrUrl,
+} from "@/lib/qrcode";
 
 const SizeOptionSchema = z.object({
   label: z.string().min(1).trim(),
@@ -34,12 +39,10 @@ const CreateProductSchema = z.object({
   colors: z.array(z.string().trim()).default([]),
 });
 
-// ── GET /api/products ─────────────────────────────────────────
+// ── GET /api/products ─────────────────────────────────────────────────────────
 export async function GET(req: NextRequest) {
   try {
     await connectDB();
-
-    // Ensure models are registered
     await import("@/models/Category");
     await import("@/models/Brand");
 
@@ -85,7 +88,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// ── POST /api/products ────────────────────────────────────────
+// ── POST /api/products ────────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
   try {
     const session = await auth();
@@ -108,18 +111,36 @@ export async function POST(req: NextRequest) {
     await connectDB();
     const { name, ...rest } = parsed.data;
 
+    // ── Slug ────────────────────────────────────────────────────────────────
     let slug = slugify(name, { lower: true, strict: true });
     if (await Product.findOne({ slug })) slug = `${slug}-${Date.now()}`;
 
-    // When size-based pricing is on, base price = first size's price
     const basePrice =
       rest.enableSizePrice && rest.sizeOptions.length > 0
         ? rest.sizeOptions[0].price
         : rest.price;
 
-    // If hero product, ensure heroOrder is set
     const heroOrderValue = rest.isHeroProduct ? rest.heroOrder : 0;
 
+    // ── Generate a unique QR code ID ────────────────────────────────────────
+    let qrCodeId: string;
+    let attempts = 0;
+    do {
+      qrCodeId = generateQrCodeId();
+      const collision = await Product.findOne({ qrCodeId })
+        .select("_id")
+        .lean();
+      if (!collision) break;
+      attempts++;
+    } while (attempts < 10);
+
+    // Derive base URL from env (set NEXT_PUBLIC_BASE_URL in .env)
+    const baseUrl =
+      process.env.NEXT_PUBLIC_BASE_URL ?? "https://yourdomain.com";
+    const qrUrl = buildProductQrUrl(baseUrl, qrCodeId!);
+    const qrCode = await generateQrCodeDataUrl({ url: qrUrl, size: 400 });
+
+    // ── Create the product ──────────────────────────────────────────────────
     const product = await Product.create({
       name,
       slug,
@@ -130,6 +151,9 @@ export async function POST(req: NextRequest) {
       brandId: new mongoose.Types.ObjectId(rest.brandId),
       rating: 0,
       reviewCount: 0,
+      qrCodeId,
+      qrCode,
+      qrScans: 0,
     });
 
     const populated = await Product.findById(product._id)

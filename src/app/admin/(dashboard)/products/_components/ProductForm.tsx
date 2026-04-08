@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
+import QrCodePanel from "./QrCodePanel";
 
 // ── Types ─────────────────────────────────────────────────────
 interface ICategory {
@@ -462,6 +463,9 @@ export default function ProductForm({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [categories, setCategories] = useState<ICategory[]>([]);
   const [brands, setBrands] = useState<IBrand[]>([]);
+  const [savedSlug, setSavedSlug] = useState<string | null>(
+    mode === "edit" ? (productId ?? null) : null, // productId is the slug in edit mode
+  );
   const [saving, setSaving] = useState(false);
   const [pageLoading, setPageLoading] = useState(mode === "edit");
   const [toast, setToast] = useState<{
@@ -755,13 +759,23 @@ export default function ProductForm({
               ? json.error
               : "Failed to save product",
         });
+        setSaving(false);
         return;
       }
+
+      // Capture the slug for QR code display
+      const returnedSlug = json.data?.slug ?? null;
+      if (mode === "new" && returnedSlug) {
+        setSavedSlug(returnedSlug);
+      }
+
       setToast({
         type: "success",
         message: mode === "new" ? "Product created!" : "Product updated!",
       });
-      setTimeout(() => router.push("/admin/products"), 1100);
+
+      // Wait 4 seconds before redirecting to allow QR panel to be seen
+      setTimeout(() => router.push("/admin/products"), 4000);
     } catch {
       setToast({ type: "error", message: "Network error. Please try again." });
     } finally {
@@ -1444,7 +1458,7 @@ export default function ProductForm({
               </Section>
             </motion.div>
 
-            {/* Save */}
+            {/* Save Button */}
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -1474,6 +1488,21 @@ export default function ProductForm({
                   <AlertCircle size={10} /> Fix the errors above before saving
                 </p>
               )}
+            </motion.div>
+
+            {/* QR Code Panel */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.22 }}
+            >
+              <QrCodePanel
+                productSlug={savedSlug}
+                onGenerated={(qrCode) => {
+                  // Optionally surface the generated QR data-URL if you need it in the form
+                  console.log("QR generated for", savedSlug);
+                }}
+              />
             </motion.div>
           </div>
         </div>

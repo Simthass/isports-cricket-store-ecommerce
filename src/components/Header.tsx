@@ -20,7 +20,6 @@ import {
   Phone,
   LogOut,
   Package,
-  Settings,
   LayoutDashboard,
   Tag,
   Layers,
@@ -561,14 +560,6 @@ export default function Header() {
                             <Package size={15} className="text-gray-400" />
                             My Orders
                           </Link>
-                          <Link
-                            href="/account/settings"
-                            onClick={() => setAccountOpen(false)}
-                            className="flex items-center gap-3 px-4 py-2.5 text-[13px] font-medium text-gray-700 hover:bg-blue-50 hover:text-[#004b9c] transition-colors duration-100"
-                          >
-                            <Settings size={15} className="text-gray-400" />
-                            Settings
-                          </Link>
                         </div>
                         <div className="border-t border-gray-100 py-2">
                           <button
@@ -897,13 +888,6 @@ export default function Header() {
                       className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-[13px] font-medium text-gray-700 hover:bg-blue-50 hover:text-[#004b9c]"
                     >
                       <Package size={15} className="text-gray-400" /> My Orders
-                    </Link>
-                    <Link
-                      href="/account/settings"
-                      onClick={() => setMobileOpen(false)}
-                      className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-[13px] font-medium text-gray-700 hover:bg-blue-50 hover:text-[#004b9c]"
-                    >
-                      <Settings size={15} className="text-gray-400" /> Settings
                     </Link>
                   </div>
                 )}

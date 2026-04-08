@@ -1,3 +1,4 @@
+// src/app/api/products/[slug]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import slugify from "slugify";
@@ -35,12 +36,11 @@ const UpdateProductSchema = z.object({
 
 type RouteContext = { params: Promise<{ slug: string }> };
 
-// ── GET /api/products/[slug] ────────────────────────────────────
+// ── GET /api/products/[slug] ─────────────────────────────────────────────────
 export async function GET(_req: NextRequest, context: RouteContext) {
   try {
     const { slug } = await context.params;
     await connectDB();
-
     await import("@/models/Category");
     await import("@/models/Brand");
 
@@ -65,7 +65,7 @@ export async function GET(_req: NextRequest, context: RouteContext) {
   }
 }
 
-// ── PUT /api/products/[slug] ────────────────────────────────────
+// ── PUT /api/products/[slug] ─────────────────────────────────────────────────
 export async function PUT(req: NextRequest, context: RouteContext) {
   try {
     const session = await auth();
@@ -78,39 +78,37 @@ export async function PUT(req: NextRequest, context: RouteContext) {
     const { slug: urlSlug } = await context.params;
     await connectDB();
 
-    // Find existing product first to get its ID
     const existingProduct = await Product.findOne({ slug: urlSlug });
-    if (!existingProduct) {
+    if (!existingProduct)
       return NextResponse.json(
         { success: false, error: "Product not found" },
         { status: 404 },
       );
-    }
 
     const body = await req.json();
     const parsed = UpdateProductSchema.safeParse(body);
-    if (!parsed.success) {
+    if (!parsed.success)
       return NextResponse.json(
         { success: false, error: parsed.error.flatten().fieldErrors },
         { status: 400 },
       );
-    }
 
     const updateData: Record<string, any> = { ...parsed.data };
 
+    // Re-slug only if the name changed
     if (parsed.data.name) {
       let newSlug = slugify(parsed.data.name, { lower: true, strict: true });
-      // Check if new slug is taken by a DIFFERENT product
-      if (
-        await Product.findOne({
-          slug: newSlug,
-          _id: { $ne: existingProduct._id },
-        })
-      ) {
-        newSlug = `${newSlug}-${Date.now()}`;
-      }
+      const taken = await Product.findOne({
+        slug: newSlug,
+        _id: { $ne: existingProduct._id },
+      });
+      if (taken) newSlug = `${newSlug}-${Date.now()}`;
       updateData.slug = newSlug;
     }
+
+    // NOTE: QR code is intentionally NOT updated here — the product's QR always
+    // points to /qr/<qrCodeId> which then resolves the slug at scan time,
+    // so renaming a product never breaks printed labels. ✅
 
     const updated = await Product.findByIdAndUpdate(
       existingProduct._id,
@@ -131,7 +129,7 @@ export async function PUT(req: NextRequest, context: RouteContext) {
   }
 }
 
-// ── DELETE /api/products/[slug] ─────────────────────────────────
+// ── DELETE /api/products/[slug] ──────────────────────────────────────────────
 export async function DELETE(_req: NextRequest, context: RouteContext) {
   try {
     const session = await auth();
