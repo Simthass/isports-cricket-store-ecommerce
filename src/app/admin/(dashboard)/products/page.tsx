@@ -1,3 +1,4 @@
+// src/app/admin/products/page.tsx
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
@@ -22,6 +23,7 @@ import {
   ToggleRight,
   TrendingUp,
   Crown,
+  QrCode,
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -42,6 +44,7 @@ interface IProduct {
   isTrending: boolean;
   isHeroProduct: boolean;
   heroOrder: number;
+  qrScans?: number;
   categoryId?: { _id: string; name: string };
   brandId?: { _id: string; name: string; logo?: string };
   createdAt: string;
@@ -471,6 +474,9 @@ export default function AdminProductsPage() {
                 <th className="text-left px-4 py-3.5 text-[11px] font-bold text-gray-400 uppercase tracking-wider min-w-[200px]">
                   Tags
                 </th>
+                <th className="text-left px-4 py-3.5 text-[11px] font-bold text-gray-400 uppercase tracking-wider hidden lg:table-cell">
+                  QR Scans
+                </th>
                 <th className="text-right px-5 py-3.5 text-[11px] font-bold text-gray-400 uppercase tracking-wider">
                   Actions
                 </th>
@@ -501,6 +507,9 @@ export default function AdminProductsPage() {
                     <td className="px-4 py-4">
                       <div className="h-5 bg-gray-100 rounded-lg w-32" />
                     </td>
+                    <td className="px-4 py-4 hidden lg:table-cell">
+                      <div className="h-5 bg-gray-100 rounded-lg w-16" />
+                    </td>
                     <td className="px-5 py-4">
                       <div className="h-8 bg-gray-100 rounded-xl w-20 ml-auto" />
                     </td>
@@ -508,7 +517,7 @@ export default function AdminProductsPage() {
                 ))
               ) : products.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-5 py-16 text-center">
+                  <td colSpan={7} className="px-5 py-16 text-center">
                     <div className="flex flex-col items-center gap-3">
                       <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center">
                         <ShoppingBag size={24} className="text-gray-300" />
@@ -647,9 +656,28 @@ export default function AdminProductsPage() {
                           )}
                         </div>
                       </td>
+                      {/* QR Scans Count */}
+                      <td className="px-4 py-3.5 hidden lg:table-cell">
+                        <div className="flex items-center gap-1.5">
+                          <QrCode size={11} className="text-gray-300" />
+                          <span className="text-[12px] font-semibold text-gray-500">
+                            {(product.qrScans ?? 0).toLocaleString()}
+                          </span>
+                        </div>
+                      </td>
                       {/* Actions */}
                       <td className="px-5 py-3.5">
                         <div className="flex items-center justify-end gap-2">
+                          <Link
+                            href={`/admin/products/${product.slug}/qr-analytics`}
+                          >
+                            <button
+                              title="QR Code & Analytics"
+                              className="w-8 h-8 rounded-lg border border-gray-200 flex items-center justify-center text-gray-500 hover:text-[#004b9c] hover:border-[#004b9c]/30 hover:bg-[#e8f0fb] transition-all"
+                            >
+                              <QrCode size={13} />
+                            </button>
+                          </Link>
                           <Link href={`/admin/products/${product.slug}`}>
                             <button className="w-8 h-8 rounded-lg border border-gray-200 flex items-center justify-center text-gray-500 hover:text-[#004b9c] hover:border-[#004b9c]/30 hover:bg-[#e8f0fb] transition-all">
                               <Pencil size={13} />
