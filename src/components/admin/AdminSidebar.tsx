@@ -20,6 +20,7 @@ import {
   MessageCircle,
   BarChart3,
   ExternalLink,
+  Star,
 } from "lucide-react";
 
 const navGroups = [
@@ -40,6 +41,7 @@ const navGroups = [
         icon: ClipboardList,
       },
       { label: "Customers", href: "/admin/customers", icon: Users },
+      { label: "Reviews", href: "/admin/reviews", icon: Star }, // ✅ ADDED Reviews menu
     ],
   },
   {

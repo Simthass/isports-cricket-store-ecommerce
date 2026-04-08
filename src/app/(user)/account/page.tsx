@@ -4,6 +4,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import {
   User,
@@ -23,11 +24,12 @@ import {
 
 // ── Tab config ────────────────────────────────────────────────────────────────
 const tabs = [
-  { id: "profile", label: "Profile", icon: User },
-  { id: "security", label: "Security", icon: Lock },
-  { id: "addresses", label: "Addresses", icon: MapPin },
-  { id: "orders", label: "My Orders", icon: ShoppingBag },
-  { id: "notifications", label: "Notifications", icon: Bell },
+  { id: "profile", label: "Profile", icon: User, href: "/account" },
+  { id: "security", label: "Security", icon: Lock, href: "/account?tab=security" },
+  { id: "addresses", label: "Addresses", icon: MapPin, href: "/account?tab=addresses" },
+  { id: "orders", label: "My Orders", icon: ShoppingBag, href: "/account/orders" },
+  { id: "reviews", label: "My Reviews", icon: MessageCircle, href: "/account/reviews" },
+  { id: "notifications", label: "Notifications", icon: Bell, href: "/account?tab=notifications" },
 ];
 
 const orderStatusIcon = (status: string) => {
@@ -348,8 +350,9 @@ export default function AccountPage() {
             {tabs.map(({ id, label, icon: Icon }) => {
               const isActive = activeTab === id;
               return (
-                <button
-                  key={id}
+                <Link
+                  key={tab.id}
+                  href={tab.href}
                   onClick={() => {
                     setActiveTab(id);
                     setSaveError("");
@@ -361,12 +364,12 @@ export default function AccountPage() {
                       : "text-gray-600 hover:bg-white hover:text-[#004b9c] hover:shadow-sm"
                   }`}
                 >
-                  <Icon
-                    size={15}
-                    className={isActive ? "text-white" : "text-gray-400"}
-                  />
-                  {label}
-                </button>
+                  <span className="flex items-center gap-3">
+                    <Icon size={16} strokeWidth={isActive ? 2.2 : 1.8} />
+                    {tab.label}
+                  </span>
+                  <ChevronRight size={14} className={isActive ? "text-white/60" : "text-gray-300"} />
+                </Link>
               );
             })}
           </div>
@@ -681,7 +684,17 @@ export default function AccountPage() {
                 </div>
               )}
 
-              {/* ── Notifications tab ── */}
+              {/* ── REVIEWS TAB ── */}
+              {activeTab === "reviews" && (
+                <div className="text-center py-8">
+                  <p className="text-gray-500 mb-4">Manage your product reviews</p>
+                  <Link href="/account/reviews" className="inline-block px-6 py-3 bg-[#004b9c] text-white rounded-xl font-bold">
+                    View My Reviews →
+                  </Link>
+                </div>
+              )}
+
+              {/* ── NOTIFICATIONS TAB ── */}
               {activeTab === "notifications" && (
                 <div className="p-8">
                   <h2 className="text-[18px] font-black text-gray-900 mb-1">
