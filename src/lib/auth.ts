@@ -3,6 +3,12 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import connectDB from "./dbConnect";
 import User from "@/models/User";
+import { randomBytes } from "crypto";
+
+// Generate unique session token
+function generateSessionToken() {
+  return randomBytes(32).toString("hex");
+}
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
@@ -18,41 +24,54 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         }
 
         await connectDB();
-        
-        const user = await User.findOne({ email: credentials.email });
-        
+
+        const user = await User.findOne({ email: credentials.email }).select(
+          "+password",
+        );
+
         if (!user) {
           throw new Error("Invalid credentials");
         }
 
-        // Fix: Cast both values to string
-        const inputPassword = String(credentials.password);
-        const hashedPassword = String(user.password);
-        
-        if (!hashedPassword) {
-          throw new Error("Invalid credentials");
-        }
-
         const isValid = bcrypt.compareSync(
-          inputPassword,
-          hashedPassword
+          String(credentials.password),
+          String(user.password),
         );
 
         if (!isValid) {
           throw new Error("Invalid credentials");
         }
 
+        // Generate new session token
+        const sessionToken = generateSessionToken();
+
+        // Check if single device mode is enabled
+        const SiteSettings = await import("@/models/SiteSettings").then(
+          (m) => m.default,
+        );
+        const settings = await SiteSettings.findOne();
+
+        if (
+          settings?.singleDeviceOnly &&
+          user.currentSessionToken &&
+          user.currentSessionToken !== sessionToken
+        ) {
+          throw new Error(
+            "Another session is active. Logout from other device first or use 'Logout All Devices'",
+          );
+        }
+
+        // Update user with new session token
+        user.currentSessionToken = sessionToken;
+        user.lastActiveAt = new Date();
+        await user.save();
+
         return {
           id: user._id.toString(),
-          firstName: user.firstName || "",
-          lastName: user.lastName || "",
-          name: user.name || "",
+          name: user.name,
           email: user.email,
-          phone: user.phone || "",
-          address: user.address || "",
-          city: user.city || "",
-          emirate: user.emirate || "",
-          role: user.role || "CUSTOMER",
+          role: user.role,
+          sessionToken: sessionToken,
         };
       },
     }),
@@ -61,36 +80,23 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
-        token.firstName = user.firstName;
-        token.lastName = user.lastName;
-        token.name = user.name;
-        token.email = user.email;
-        token.phone = user.phone;
-        token.address = user.address;
-        token.city = user.city;
-        token.emirate = user.emirate;
         token.role = user.role;
+        token.sessionToken = (user as any).sessionToken;
       }
       return token;
     },
     async session({ session, token }) {
       if (token) {
         session.user.id = token.id as string;
-        session.user.firstName = token.firstName as string;
-        session.user.lastName = token.lastName as string;
-        session.user.name = token.name as string;
-        session.user.email = token.email as string;
-        session.user.phone = token.phone as string;
-        session.user.address = token.address as string;
-        session.user.city = token.city as string;
-        session.user.emirate = token.emirate as string;
-        session.user.role = token.role as string;
+        session.user.role = token.role as "ADMIN" | "CUSTOMER";
+        session.sessionToken = token.sessionToken as string;
       }
       return session;
     },
   },
   session: {
     strategy: "jwt",
+    maxAge: 60 * 60, // Default 1 hour (will be overridden by settings)
   },
   secret: process.env.NEXTAUTH_SECRET,
   pages: {

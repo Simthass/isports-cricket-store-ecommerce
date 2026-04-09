@@ -1,4 +1,3 @@
-// models/User.ts
 import mongoose, { Schema, Document, Model } from "mongoose";
 
 // ── Notification preferences sub-document ────────────────────────────────────
@@ -29,6 +28,9 @@ export interface IUser extends Document {
   notificationSettings?: INotificationSettings;
   createdAt: Date;
   updatedAt: Date;
+  // Session tracking for single device
+  currentSessionToken?: string;
+  lastActiveAt?: Date;
 }
 
 // ── Schema ────────────────────────────────────────────────────────────────────
@@ -49,7 +51,6 @@ const UserSchema = new Schema<IUser>(
       required: [true, "Name is required"],
       trim: true,
     },
-    // Kept for backward-compat / migration purposes — no longer used in new code
     firstName: { type: String, default: "", trim: true },
     lastName: { type: String, default: "", trim: true },
 
@@ -64,7 +65,6 @@ const UserSchema = new Schema<IUser>(
       type: String,
       required: [true, "Password is required"],
       minlength: 6,
-      // NOTE: exclude from default queries so it is never accidentally leaked
       select: false,
     },
     phone: { type: String, default: "", trim: true },
@@ -76,15 +76,16 @@ const UserSchema = new Schema<IUser>(
     emirate: { type: String, default: "" },
     notificationSettings: {
       type: NotificationSettingsSchema,
-      default: () => ({}), // Mongoose fills missing booleans from sub-schema defaults
+      default: () => ({}),
     },
+    // Session tracking
+    currentSessionToken: { type: String, default: null },
+    lastActiveAt: { type: Date, default: Date.now },
   },
   { timestamps: true },
 );
 
-// ── Pre-save hook: keep legacy firstName / lastName in sync (optional) ────────
 UserSchema.pre("save", function (next) {
-  // If someone still passes firstName/lastName, keep `name` consistent
   if (
     (this.isModified("firstName") || this.isModified("lastName")) &&
     !this.isModified("name")
@@ -96,7 +97,6 @@ UserSchema.pre("save", function (next) {
   next();
 });
 
-// ── Model ─────────────────────────────────────────────────────────────────────
 const User: Model<IUser> =
   mongoose.models.User ?? mongoose.model<IUser>("User", UserSchema);
 

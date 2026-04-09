@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useSession, signOut } from "next-auth/react";
+import { useSiteSettings } from "@/components/providers/SiteSettingsProvider";
 import SearchBar from "@/components/search/SearchBar";
 import {
   Search,
@@ -287,6 +288,7 @@ export default function Header() {
   const { cartCount } = useCart(); // ✅ Get real cart count from context
   const isLoggedIn = status === "authenticated";
   const isAdmin = session?.user?.role === "ADMIN";
+  const settings = useSiteSettings();
 
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -357,9 +359,9 @@ export default function Header() {
         <div className="max-w-[1400px] mx-auto px-10 flex items-center justify-between h-9">
           <div className="flex items-center gap-1.5 text-white text-[11px] font-medium tracking-wide">
             <Phone size={11} className="text-[#81bf42]" />
-            <span>+971 52 6514 666</span>
+            <span>{settings.phone || "+971 52 6514 666"}</span>{" "}
             <span className="mx-3 text-white">|</span>
-            <span>info@isportscricket.com</span>
+            <span>{settings.email || "info@isportscricket.com"}</span>{" "}
           </div>
           <div className="flex items-center gap-6 text-[11px] font-medium tracking-wide">
             <Link
@@ -406,8 +408,8 @@ export default function Header() {
             <Link href="/" className="flex-shrink-0 flex items-center">
               <div className="relative w-[155px] h-[52px]">
                 <Image
-                  src="/ISportsCricket-Logo.png"
-                  alt="iSPORTS Cricket"
+                  src={settings.logo || "/ISportsCricket-Logo.png"}
+                  alt={settings.siteTitle}
                   fill
                   sizes="155px"
                   className="object-contain object-left"
