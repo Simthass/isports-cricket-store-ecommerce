@@ -37,7 +37,7 @@ export async function proxy(req: NextRequest) {
     return NextResponse.redirect(new URL("/admin/login", req.url));
   }
 
-  // Check session timeout and single device
+  // ✅ Session timeout and single device check - ONLY FOR ADMIN
   try {
     await connectDB();
 
@@ -51,19 +51,20 @@ export async function proxy(req: NextRequest) {
       return NextResponse.redirect(new URL("/admin/login", req.url));
     }
 
-    // Check single device
-    if (
-      singleDeviceOnly &&
-      user.currentSessionToken &&
-      user.currentSessionToken !== token.sessionToken
-    ) {
-      return NextResponse.redirect(
-        new URL("/admin/login?error=session_conflict", req.url),
-      );
+    // ✅ Single device check - ONLY FOR ADMIN (role check already done above)
+    if (singleDeviceOnly && user.role === "ADMIN") {
+      if (
+        user.currentSessionToken &&
+        user.currentSessionToken !== token.sessionToken
+      ) {
+        return NextResponse.redirect(
+          new URL("/admin/login?error=session_conflict", req.url),
+        );
+      }
     }
 
-    // Check session timeout
-    if (user.lastActiveAt) {
+    // ✅ Session timeout check - ONLY FOR ADMIN
+    if (user.role === "ADMIN" && user.lastActiveAt) {
       const lastActive = new Date(user.lastActiveAt);
       const now = new Date();
       const hoursSinceActive =
@@ -79,9 +80,11 @@ export async function proxy(req: NextRequest) {
       }
     }
 
-    // Update last active
-    user.lastActiveAt = new Date();
-    await user.save();
+    // Update last active for admin only
+    if (user.role === "ADMIN") {
+      user.lastActiveAt = new Date();
+      await user.save();
+    }
   } catch (error) {
     console.error("[Proxy Error]", error);
   }

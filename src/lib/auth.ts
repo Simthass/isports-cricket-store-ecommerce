@@ -45,20 +45,23 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         // Generate new session token
         const sessionToken = generateSessionToken();
 
-        // Check if single device mode is enabled
-        const SiteSettings = await import("@/models/SiteSettings").then(
-          (m) => m.default,
-        );
-        const settings = await SiteSettings.findOne();
-
-        if (
-          settings?.singleDeviceOnly &&
-          user.currentSessionToken &&
-          user.currentSessionToken !== sessionToken
-        ) {
-          throw new Error(
-            "Another session is active. Logout from other device first or use 'Logout All Devices'",
+        // ✅ SINGLE DEVICE MODE - ONLY FOR ADMIN USERS
+        // Customers can log in from multiple devices freely
+        if (user.role === "ADMIN") {
+          const SiteSettings = await import("@/models/SiteSettings").then(
+            (m) => m.default,
           );
+          const settings = await SiteSettings.findOne();
+
+          if (
+            settings?.singleDeviceOnly &&
+            user.currentSessionToken &&
+            user.currentSessionToken !== sessionToken
+          ) {
+            throw new Error(
+              "Another session is active. Logout from other device first or use 'Logout All Devices'",
+            );
+          }
         }
 
         // Update user with new session token
