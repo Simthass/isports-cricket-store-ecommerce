@@ -8,7 +8,6 @@ import Link from "next/link";
 import ProductCard from "@/components/products/ProductCard";
 import FilterSidebar from "@/components/products/FilterSidebar";
 import ShopHeader from "@/components/products/ShopHeader";
-import AuthModal from "@/components/auth/AuthModal";
 
 interface Product {
   _id: string;
@@ -399,12 +398,6 @@ export default function ShopPage() {
           )}
         </AnimatePresence>
       </div>
-
-      <AuthModal
-        isOpen={authModalOpen}
-        onClose={() => setAuthModalOpen(false)}
-        defaultMode={authMode}
-      />
     </>
   );
 }

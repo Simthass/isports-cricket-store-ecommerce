@@ -15,7 +15,6 @@ import {
 } from "lucide-react";
 import ProductCard from "@/components/products/ProductCard";
 import ShopHeader from "@/components/products/ShopHeader";
-import { SORT_OPTIONS } from "@/constants/products";
 
 // ── Types ─────────────────────────────────────────────────────
 interface Brand {
@@ -300,6 +299,8 @@ export default function BrandPage() {
   const [view, setView] = useState<"grid" | "list">("grid");
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
   const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 });
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<"login" | "register">("login");
 
   const isFirstRender = useRef(true);
 
@@ -383,264 +384,84 @@ export default function BrandPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* ── Brand Hero ── */}
-      <div className="bg-gradient-to-br from-[#f0f5ff] via-white to-[#f5faf0] border-b border-gray-100">
-        <div className="max-w-[1400px] mx-auto px-5 lg:px-10 py-10 lg:py-14">
-          {/* Breadcrumb */}
-          <div className="flex items-center gap-2 text-[12px] text-gray-400 mb-6">
-            <Link href="/" className="hover:text-[#004b9c] transition-colors">
-              Home
-            </Link>
-            <ChevronRight size={12} />
-            <Link
-              href="/shop"
-              className="hover:text-[#004b9c] transition-colors"
-            >
-              Shop
-            </Link>
-            <ChevronRight size={12} />
-            <span className="text-gray-700 font-medium">{brand.name}</span>
-          </div>
-
-          {/* Brand Identity */}
-          <div className="flex flex-col sm:flex-row items-center sm:items-end gap-6">
-            {/* Logo */}
-            <div className="w-[140px] h-[140px] bg-white rounded-2xl border border-gray-200 shadow-[0_8px_32px_rgba(0,75,156,0.1)] flex items-center justify-center p-4 flex-shrink-0">
-              {brand.logo ? (
-                <Image
-                  src={brand.logo}
-                  alt={brand.name}
-                  width={110}
-                  height={110}
-                  className="object-contain w-full h-full"
-                />
-              ) : (
-                <div className="flex flex-col items-center gap-2">
-                  <div className="w-14 h-14 rounded-xl bg-[#004b9c]/10 flex items-center justify-center">
-                    <Layers size={28} className="text-[#004b9c]" />
-                  </div>
-                  <span className="text-[11px] font-black text-gray-400 uppercase tracking-widest">
-                    No Logo
-                  </span>
-                </div>
-              )}
+    <>
+      <div className="min-h-screen bg-white">
+        {/* ── Brand Hero ── */}
+        <div className="bg-gradient-to-br from-[#f0f5ff] via-white to-[#f5faf0] border-b border-gray-100">
+          <div className="max-w-[1400px] mx-auto px-5 lg:px-10 py-10 lg:py-14">
+            {/* Breadcrumb */}
+            <div className="flex items-center gap-2 text-[12px] text-gray-400 mb-6">
+              <Link href="/" className="hover:text-[#004b9c] transition-colors">
+                Home
+              </Link>
+              <ChevronRight size={12} />
+              <Link
+                href="/shop"
+                className="hover:text-[#004b9c] transition-colors"
+              >
+                Shop
+              </Link>
+              <ChevronRight size={12} />
+              <span className="text-gray-700 font-medium">{brand.name}</span>
             </div>
 
-            {/* Brand Info */}
-            <div className="text-center sm:text-left">
-              <div className="flex items-center gap-2 mb-2 justify-center sm:justify-start">
-                <div className="w-5 h-[3px] bg-[#81bf42] rounded-full" />
-                <span className="text-[#81bf42] text-[11px] font-black tracking-[0.18em] uppercase">
-                  Official Brand Store
-                  {brand.country ? ` · ${brand.country}` : ""}
-                </span>
+            {/* Brand Identity */}
+            <div className="flex flex-col sm:flex-row items-center sm:items-end gap-6">
+              {/* Logo */}
+              <div className="w-[140px] h-[140px] bg-white rounded-2xl border border-gray-200 shadow-[0_8px_32px_rgba(0,75,156,0.1)] flex items-center justify-center p-4 flex-shrink-0">
+                {brand.logo ? (
+                  <Image
+                    src={brand.logo}
+                    alt={brand.name}
+                    width={110}
+                    height={110}
+                    className="object-contain w-full h-full"
+                  />
+                ) : (
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="w-14 h-14 rounded-xl bg-[#004b9c]/10 flex items-center justify-center">
+                      <Layers size={28} className="text-[#004b9c]" />
+                    </div>
+                    <span className="text-[11px] font-black text-gray-400 uppercase tracking-widest">
+                      No Logo
+                    </span>
+                  </div>
+                )}
               </div>
-              <h1
-                className="text-[36px] lg:text-[48px] font-black text-gray-900 leading-none tracking-tight mb-2"
-                style={{ fontFamily: "'Barlow Condensed', sans-serif" }}
-              >
-                {brand.name}
-              </h1>
-              <p className="text-gray-500 text-[14px]">
-                Browse all{" "}
-                <span className="font-semibold text-gray-700">
-                  {pagination.total} products
-                </span>{" "}
-                from {brand.name}
-              </p>
+
+              {/* Brand Info */}
+              <div className="text-center sm:text-left">
+                <div className="flex items-center gap-2 mb-2 justify-center sm:justify-start">
+                  <div className="w-5 h-[3px] bg-[#81bf42] rounded-full" />
+                  <span className="text-[#81bf42] text-[11px] font-black tracking-[0.18em] uppercase">
+                    Official Brand Store
+                    {brand.country ? ` · ${brand.country}` : ""}
+                  </span>
+                </div>
+                <h1
+                  className="text-[36px] lg:text-[48px] font-black text-gray-900 leading-none tracking-tight mb-2"
+                  style={{ fontFamily: "'Barlow Condensed', sans-serif" }}
+                >
+                  {brand.name}
+                </h1>
+                <p className="text-gray-500 text-[14px]">
+                  Browse all{" "}
+                  <span className="font-semibold text-gray-700">
+                    {pagination.total} products
+                  </span>{" "}
+                  from {brand.name}
+                </p>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* ── Main Layout ── */}
-      <div className="max-w-[1400px] mx-auto px-5 lg:px-10 py-8">
-        <div className="flex gap-8">
-          {/* Desktop Sidebar */}
-          <aside className="hidden lg:block w-[240px] xl:w-[260px] flex-shrink-0">
-            <div className="sticky top-[120px]">
-              <BrandFilterSidebar
-                filters={filters}
-                onChange={handleFiltersChange}
-                totalResults={pagination.total}
-                categories={categories}
-              />
-            </div>
-          </aside>
-
-          {/* Products Area */}
-          <div className="flex-1 min-w-0">
-            {/* Header bar */}
-            <div className="flex items-center gap-3 mb-0">
-              <button
-                onClick={() => setMobileFilterOpen(true)}
-                className="lg:hidden flex items-center gap-2 px-4 py-2.5 border border-gray-200 rounded-xl text-[13px] font-semibold text-gray-700 hover:border-[#004b9c] hover:text-[#004b9c] transition-all bg-white"
-              >
-                <SlidersHorizontal size={14} />
-                Filters
-                {activeFilterCount > 0 && (
-                  <span className="w-4 h-4 bg-[#004b9c] text-white text-[9px] font-black rounded-full flex items-center justify-center">
-                    {activeFilterCount}
-                  </span>
-                )}
-              </button>
-              <div className="flex-1">
-                <ShopHeader
-                  total={pagination.total}
-                  sort={sort}
-                  onSort={setSort}
-                  view={view}
-                  onView={setView}
-                />
-              </div>
-            </div>
-
-            {/* Active filter pills */}
-            {activeFilterCount > 0 && (
-              <div className="flex items-center gap-2 flex-wrap mb-4">
-                {filters.categories.map((c) => (
-                  <span
-                    key={c}
-                    className="flex items-center gap-1.5 bg-[#004b9c]/10 text-[#004b9c] text-[11px] font-semibold px-3 py-1.5 rounded-full capitalize"
-                  >
-                    {c}
-                    <button
-                      onClick={() =>
-                        handleFiltersChange({
-                          ...filters,
-                          categories: filters.categories.filter((x) => x !== c),
-                        })
-                      }
-                    >
-                      <X size={10} />
-                    </button>
-                  </span>
-                ))}
-                {filters.inStockOnly && (
-                  <span className="flex items-center gap-1.5 bg-green-100 text-green-700 text-[11px] font-semibold px-3 py-1.5 rounded-full">
-                    In Stock
-                    <button
-                      onClick={() =>
-                        handleFiltersChange({ ...filters, inStockOnly: false })
-                      }
-                    >
-                      <X size={10} />
-                    </button>
-                  </span>
-                )}
-              </div>
-            )}
-
-            {/* Product Grid */}
-            {productsLoading ? (
-              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-5">
-                {[...Array(8)].map((_, i) => (
-                  <div key={i} className="animate-pulse">
-                    <div className="bg-gray-100 rounded-2xl aspect-square mb-3" />
-                    <div className="h-4 bg-gray-100 rounded w-3/4 mb-2" />
-                    <div className="h-3 bg-gray-100 rounded w-1/2" />
-                  </div>
-                ))}
-              </div>
-            ) : products.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-24 text-center">
-                <div className="text-6xl mb-4">🏏</div>
-                <h3 className="text-[18px] font-bold text-gray-700 mb-2">
-                  No products found
-                </h3>
-                <p className="text-gray-400 text-[14px] mb-6">
-                  Try adjusting your filters
-                </p>
-                <button
-                  onClick={() => handleFiltersChange(DEFAULT_FILTERS)}
-                  className="px-6 py-3 bg-[#004b9c] text-white text-[13px] font-bold rounded-xl hover:bg-[#003d82] transition-colors"
-                >
-                  Clear Filters
-                </button>
-              </div>
-            ) : (
-              <div
-                className={
-                  view === "grid"
-                    ? "grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-5"
-                    : "flex flex-col gap-4"
-                }
-              >
-                {products.map((product, i) => (
-                  <ProductCard key={product._id} product={product} index={i} />
-                ))}
-              </div>
-            )}
-
-            {/* Pagination */}
-            {pagination.pages > 1 && (
-              <div className="flex items-center justify-between mt-8 pt-4 border-t border-gray-100">
-                <p className="text-[12px] text-gray-400">
-                  Page {pagination.page} of {pagination.pages}
-                </p>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() =>
-                      setPagination({
-                        ...pagination,
-                        page: pagination.page - 1,
-                      })
-                    }
-                    disabled={pagination.page === 1}
-                    className="px-4 py-2 rounded-xl border border-gray-200 text-[12px] font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-                  >
-                    Previous
-                  </button>
-                  <button
-                    onClick={() =>
-                      setPagination({
-                        ...pagination,
-                        page: pagination.page + 1,
-                      })
-                    }
-                    disabled={pagination.page === pagination.pages}
-                    className="px-4 py-2 rounded-xl border border-gray-200 text-[12px] font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-                  >
-                    Next
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Mobile Filter Drawer */}
-      <AnimatePresence>
-        {mobileFilterOpen && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setMobileFilterOpen(false)}
-              className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm lg:hidden"
-            />
-            <motion.div
-              initial={{ x: "-100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "-100%" }}
-              transition={{ type: "tween", duration: 0.3 }}
-              className="fixed top-0 left-0 z-50 w-[300px] h-full bg-white shadow-2xl overflow-y-auto lg:hidden"
-            >
-              <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 sticky top-0 bg-white z-10">
-                <span className="text-[15px] font-bold text-gray-900">
-                  Filters
-                </span>
-                <button
-                  onClick={() => setMobileFilterOpen(false)}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100"
-                >
-                  <X size={16} />
-                </button>
-              </div>
-              <div className="p-5">
+        {/* ── Main Layout ── */}
+        <div className="max-w-[1400px] mx-auto px-5 lg:px-10 py-8">
+          <div className="flex gap-8">
+            {/* Desktop Sidebar */}
+            <aside className="hidden lg:block w-[240px] xl:w-[260px] flex-shrink-0">
+              <div className="sticky top-[120px]">
                 <BrandFilterSidebar
                   filters={filters}
                   onChange={handleFiltersChange}
@@ -648,18 +469,231 @@ export default function BrandPage() {
                   categories={categories}
                 />
               </div>
-              <div className="sticky bottom-0 p-4 bg-white border-t border-gray-100">
+            </aside>
+
+            {/* Products Area */}
+            <div className="flex-1 min-w-0">
+              {/* Header bar */}
+              <div className="flex items-center gap-3 mb-0">
                 <button
-                  onClick={() => setMobileFilterOpen(false)}
-                  className="w-full py-3 bg-[#004b9c] text-white text-[13px] font-bold rounded-xl hover:bg-[#003d82] transition-colors"
+                  onClick={() => setMobileFilterOpen(true)}
+                  className="lg:hidden flex items-center gap-2 px-4 py-2.5 border border-gray-200 rounded-xl text-[13px] font-semibold text-gray-700 hover:border-[#004b9c] hover:text-[#004b9c] transition-all bg-white"
                 >
-                  Show {pagination.total} Products
+                  <SlidersHorizontal size={14} />
+                  Filters
+                  {activeFilterCount > 0 && (
+                    <span className="w-4 h-4 bg-[#004b9c] text-white text-[9px] font-black rounded-full flex items-center justify-center">
+                      {activeFilterCount}
+                    </span>
+                  )}
                 </button>
+                <div className="flex-1">
+                  <ShopHeader
+                    total={pagination.total}
+                    sort={sort}
+                    onSort={setSort}
+                    view={view}
+                    onView={setView}
+                  />
+                </div>
               </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-    </div>
+
+              {/* Active filter pills */}
+              {activeFilterCount > 0 && (
+                <div className="flex items-center gap-2 flex-wrap mb-4">
+                  {filters.categories.map((c) => (
+                    <span
+                      key={c}
+                      className="flex items-center gap-1.5 bg-[#004b9c]/10 text-[#004b9c] text-[11px] font-semibold px-3 py-1.5 rounded-full capitalize"
+                    >
+                      {c}
+                      <button
+                        onClick={() =>
+                          handleFiltersChange({
+                            ...filters,
+                            categories: filters.categories.filter(
+                              (x) => x !== c,
+                            ),
+                          })
+                        }
+                      >
+                        <X size={10} />
+                      </button>
+                    </span>
+                  ))}
+                  {filters.inStockOnly && (
+                    <span className="flex items-center gap-1.5 bg-green-100 text-green-700 text-[11px] font-semibold px-3 py-1.5 rounded-full">
+                      In Stock
+                      <button
+                        onClick={() =>
+                          handleFiltersChange({
+                            ...filters,
+                            inStockOnly: false,
+                          })
+                        }
+                      >
+                        <X size={10} />
+                      </button>
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {/* Product Grid */}
+              {productsLoading ? (
+                <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-5">
+                  {[...Array(8)].map((_, i) => (
+                    <div key={i} className="animate-pulse">
+                      <div className="bg-gray-100 rounded-2xl aspect-square mb-3" />
+                      <div className="h-4 bg-gray-100 rounded w-3/4 mb-2" />
+                      <div className="h-3 bg-gray-100 rounded w-1/2" />
+                    </div>
+                  ))}
+                </div>
+              ) : products.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-24 text-center">
+                  <div className="text-6xl mb-4">🏏</div>
+                  <h3 className="text-[18px] font-bold text-gray-700 mb-2">
+                    No products found
+                  </h3>
+                  <p className="text-gray-400 text-[14px] mb-6">
+                    Try adjusting your filters
+                  </p>
+                  <button
+                    onClick={() => handleFiltersChange(DEFAULT_FILTERS)}
+                    className="px-6 py-3 bg-[#004b9c] text-white text-[13px] font-bold rounded-xl hover:bg-[#003d82] transition-colors"
+                  >
+                    Clear Filters
+                  </button>
+                </div>
+              ) : (
+                <div
+                  className={
+                    view === "grid"
+                      ? "grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-5"
+                      : "flex flex-col gap-4"
+                  }
+                >
+                  {products.map((product, i) => (
+                    <ProductCard
+                      key={product._id}
+                      product={{
+                        id: product._id,
+                        name: product.name,
+                        brand: product.brandId?.name ?? brand.name ?? "iSPORTS",
+                        slug: product.slug,
+                        price: product.price,
+                        originalPrice: product.originalPrice,
+                        image:
+                          product.images?.[0] ?? "/placeholder-product.jpg",
+                        isNew: product.isNew,
+                        inStock: product.inStock,
+                        badge: product.isBestSeller
+                          ? "Best Seller"
+                          : product.isNew
+                            ? "New"
+                            : undefined,
+                        rating: product.rating,
+                        reviewCount: product.reviewCount,
+                      }}
+                      index={i}
+                      onAuthRequired={() => {
+                        setAuthMode("login");
+                        setAuthModalOpen(true);
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {/* Pagination */}
+              {pagination.pages > 1 && (
+                <div className="flex items-center justify-between mt-8 pt-4 border-t border-gray-100">
+                  <p className="text-[12px] text-gray-400">
+                    Page {pagination.page} of {pagination.pages}
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() =>
+                        setPagination({
+                          ...pagination,
+                          page: pagination.page - 1,
+                        })
+                      }
+                      disabled={pagination.page === 1}
+                      className="px-4 py-2 rounded-xl border border-gray-200 text-[12px] font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                    >
+                      Previous
+                    </button>
+                    <button
+                      onClick={() =>
+                        setPagination({
+                          ...pagination,
+                          page: pagination.page + 1,
+                        })
+                      }
+                      disabled={pagination.page === pagination.pages}
+                      className="px-4 py-2 rounded-xl border border-gray-200 text-[12px] font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile Filter Drawer */}
+        <AnimatePresence>
+          {mobileFilterOpen && (
+            <>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setMobileFilterOpen(false)}
+                className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm lg:hidden"
+              />
+              <motion.div
+                initial={{ x: "-100%" }}
+                animate={{ x: 0 }}
+                exit={{ x: "-100%" }}
+                transition={{ type: "tween", duration: 0.3 }}
+                className="fixed top-0 left-0 z-50 w-[300px] h-full bg-white shadow-2xl overflow-y-auto lg:hidden"
+              >
+                <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 sticky top-0 bg-white z-10">
+                  <span className="text-[15px] font-bold text-gray-900">
+                    Filters
+                  </span>
+                  <button
+                    onClick={() => setMobileFilterOpen(false)}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+                <div className="p-5">
+                  <BrandFilterSidebar
+                    filters={filters}
+                    onChange={handleFiltersChange}
+                    totalResults={pagination.total}
+                    categories={categories}
+                  />
+                </div>
+                <div className="sticky bottom-0 p-4 bg-white border-t border-gray-100">
+                  <button
+                    onClick={() => setMobileFilterOpen(false)}
+                    className="w-full py-3 bg-[#004b9c] text-white text-[13px] font-bold rounded-xl hover:bg-[#003d82] transition-colors"
+                  >
+                    Show {pagination.total} Products
+                  </button>
+                </div>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
+      </div>
+    </>
   );
 }

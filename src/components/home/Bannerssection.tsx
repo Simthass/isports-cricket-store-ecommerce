@@ -12,10 +12,10 @@ const BANNERS = [
   {
     id: 1,
     eyebrow: "Special Edition",
-    title: ["New Season", "Cricket", "Bats 2026"],
-    cta: { label: "Shop Now", href: "/category/bats" },
+    title: ["New Season", "Cricket", "Shoes 2026"],
+    cta: { label: "Shop Now", href: "/shop?category=shoes" },
     image: "/banner1.jpg", // ← your image path
-    imageAlt: "Cricket Bats 2026 Collection",
+    imageAlt: "Cricket Shoes 2026 Collection",
     imageSide: "left", // image on left, text on right
     overlayFrom: "from-transparent",
     overlayTo: "to-[#004b9c]/80",
@@ -26,10 +26,10 @@ const BANNERS = [
   {
     id: 2,
     eyebrow: "Best Quality",
-    title: ["Premium", "Cricket", "Helmets"],
-    cta: { label: "Shop Now", href: "/category/helmets" },
-    image: "/banner2.jpg", // ← your image path
-    imageAlt: "Premium Cricket Helmets",
+    title: ["Premium", "Cricket", "Balls"],
+    cta: { label: "Shop Now", href: "/shop?category=balls" },
+    image: "/banner2.png", // ← your image path
+    imageAlt: "Premium Cricket balls",
     imageSide: "left",
     overlayFrom: "from-transparent",
     overlayTo: "to-[#1a3a1a]/75",
@@ -110,7 +110,7 @@ function Banner({ banner, index }) {
                       <span
                         className="text-transparent"
                         style={{
-                          WebkitTextStroke: "2px #81bf42",
+                          WebkitTextStroke: "2px #004b9c",
                           paintOrder: "stroke fill",
                         }}
                       >

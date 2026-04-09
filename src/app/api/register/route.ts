@@ -1,3 +1,4 @@
+// src/app/api/register/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import connectDB from "@/lib/mongodb";
@@ -5,10 +6,13 @@ import User from "@/models/User";
 
 // ── In-memory rate limiter ──────────────────────────────────────────
 const registerAttempts = new Map<string, { count: number; resetAt: number }>();
-const RATE_LIMIT = 5;          // max attempts
+const RATE_LIMIT = 5; // max attempts
 const WINDOW_MS = 15 * 60 * 1000; // 15 minutes
 
-function checkRateLimit(ip: string): { allowed: boolean; retryAfterSeconds: number } {
+function checkRateLimit(ip: string): {
+  allowed: boolean;
+  retryAfterSeconds: number;
+} {
   const now = Date.now();
   const record = registerAttempts.get(ip);
 
@@ -28,26 +32,43 @@ function checkRateLimit(ip: string): { allowed: boolean; retryAfterSeconds: numb
 
 // ── Validation helpers ──────────────────────────────────────────────
 const EMAIL_REGEX = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
-const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]).{8,}$/;
+const PASSWORD_REGEX =
+  /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]).{8,}$/;
 
-function validateRegisterInput(firstName: string, lastName: string, email: string, password: string) {
+function validateRegisterInput(
+  firstName: string | undefined,
+  lastName: string | undefined,
+  email: string | undefined,
+  password: string | undefined,
+) {
   const errors: string[] = [];
 
-  if (!firstName || firstName.trim().length < 2)
-    errors.push("First name must be at least 2 characters.");
-  if (firstName.trim().length > 60)
-    errors.push("First name must be under 60 characters.");
-  if (lastName && lastName.trim().length > 60)
+  // Check if firstName exists before calling trim()
+  if (!firstName || typeof firstName !== "string") {
+    errors.push("First name is required.");
+  } else {
+    if (firstName.trim().length < 2)
+      errors.push("First name must be at least 2 characters.");
+    if (firstName.trim().length > 60)
+      errors.push("First name must be under 60 characters.");
+  }
+
+  // Check lastName if provided
+  if (lastName && typeof lastName === "string" && lastName.trim().length > 60)
     errors.push("Last name must be under 60 characters.");
 
-  if (!email || !EMAIL_REGEX.test(email.trim()))
+  // Email validation
+  if (!email || typeof email !== "string") {
+    errors.push("Email is required.");
+  } else if (!EMAIL_REGEX.test(email.trim()))
     errors.push("Please enter a valid email address.");
 
-  if (!password)
+  // Password validation
+  if (!password || typeof password !== "string") {
     errors.push("Password is required.");
-  else if (!PASSWORD_REGEX.test(password))
+  } else if (!PASSWORD_REGEX.test(password))
     errors.push(
-      "Password must be at least 8 characters and include an uppercase letter, a number, and a special character."
+      "Password must be at least 8 characters and include an uppercase letter, a number, and a special character.",
     );
 
   return errors;
@@ -71,31 +92,63 @@ export async function POST(req: NextRequest) {
         {
           status: 429,
           headers: { "Retry-After": String(retryAfterSeconds) },
-        }
+        },
       );
     }
 
-    const body = await req.json();
-    const { firstName, lastName, email, password, phone, address, city, emirate } = body;
+    // Parse and validate request body
+    let body;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json(
+        { error: "Invalid request body. Please provide valid JSON." },
+        { status: 400 },
+      );
+    }
 
-    // Validate inputs
-    const validationErrors = validateRegisterInput(firstName, lastName, email, password);
+    const {
+      firstName,
+      lastName,
+      email,
+      password,
+      phone,
+      address,
+      city,
+      emirate,
+    } = body;
+
+    // Validate inputs with proper error handling
+    const validationErrors = validateRegisterInput(
+      firstName,
+      lastName,
+      email,
+      password,
+    );
     if (validationErrors.length > 0) {
-      return NextResponse.json({ error: validationErrors[0] }, { status: 400 });
+      return NextResponse.json(
+        { error: validationErrors[0], details: validationErrors },
+        { status: 400 },
+      );
     }
 
     await connectDB();
 
-    const existingUser = await User.findOne({ email: email.toLowerCase().trim() });
+    // Check for existing user
+    const existingUser = await User.findOne({
+      email: email.toLowerCase().trim(),
+    });
     if (existingUser) {
       return NextResponse.json(
         { error: "An account with this email already exists." },
-        { status: 409 }
+        { status: 409 },
       );
     }
 
+    // Hash password and create user
     const hashedPassword = await bcrypt.hash(password, 12);
-    const fullName = `${firstName.trim()} ${lastName ? lastName.trim() : ""}`.trim();
+    const fullName =
+      `${firstName.trim()} ${lastName ? lastName.trim() : ""}`.trim();
 
     const user = await User.create({
       firstName: firstName.trim(),
@@ -110,18 +163,24 @@ export async function POST(req: NextRequest) {
       role: "CUSTOMER",
     });
 
+    // Return success response without sensitive data
     return NextResponse.json(
       {
         message: "Account created successfully",
-        user: { id: user._id.toString(), firstName: user.firstName, lastName: user.lastName, email: user.email },
+        user: {
+          id: user._id.toString(),
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+        },
       },
-      { status: 201 }
+      { status: 201 },
     );
   } catch (error) {
     console.error("Register error:", error);
     return NextResponse.json(
       { error: "Something went wrong. Please try again." },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

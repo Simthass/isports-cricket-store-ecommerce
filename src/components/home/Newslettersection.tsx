@@ -13,20 +13,49 @@ export default function NewsletterSection() {
   const [status, setStatus] = useState("idle"); // idle | loading | success | error
   const [errorMsg, setErrorMsg] = useState("");
 
-  const validate = (val) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
+  const validate = (val: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
     if (!validate(email)) {
       setErrorMsg("Please enter a valid email address.");
       setStatus("error");
       return;
     }
+
     setStatus("loading");
     setErrorMsg("");
-    // Simulate API call — replace with your actual newsletter API
-    await new Promise((res) => setTimeout(res, 1600));
-    setStatus("success");
+
+    try {
+      const response = await fetch("/api/home/newsletter", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, source: "homepage" }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setStatus("success");
+        setEmail("");
+      } else {
+        setErrorMsg(data.error || "Failed to subscribe. Please try again.");
+        setStatus("error");
+      }
+    } catch (error) {
+      console.error("Newsletter subscription error:", error);
+      setErrorMsg("Something went wrong. Please try again later.");
+      setStatus("error");
+    }
+  };
+
+  const handleReset = () => {
+    setStatus("idle");
+    setEmail("");
+    setErrorMsg("");
   };
 
   return (
@@ -127,8 +156,14 @@ export default function NewsletterSection() {
                   You're on the list! 🏏
                 </p>
                 <p className="text-white/55 text-[13px] font-normal">
-                  Welcome aboard. Check your inbox for a confirmation.
+                  Welcome aboard. Check your inbox for updates.
                 </p>
+                <button
+                  onClick={handleReset}
+                  className="mt-2 text-white/50 text-[11px] font-medium hover:text-white/80 transition-colors"
+                >
+                  Subscribe another email →
+                </button>
               </motion.div>
             ) : (
               /* ── Form State ── */
@@ -194,7 +229,7 @@ export default function NewsletterSection() {
 
                 {/* Error message */}
                 <AnimatePresence>
-                  {status === "error" && (
+                  {status === "error" && errorMsg && (
                     <motion.p
                       initial={{ opacity: 0, y: -6 }}
                       animate={{ opacity: 1, y: 0 }}

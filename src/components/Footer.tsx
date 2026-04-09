@@ -3,6 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useSiteSettings } from "@/components/providers/SiteSettingsProvider";
 import {
   Circle,
   Home,
@@ -12,11 +13,31 @@ import {
   MessageSquareText,
   PhoneCall,
   MapPin,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 
 const Footer = () => {
   const primaryBlue = "#004b9c";
-  const footerBg = "#131b2b"; // Dark slate/navy from your design
+  const footerBg = "#131b2b";
+  const settings = useSiteSettings();
+  const [hoursExpanded, setHoursExpanded] = React.useState(false);
+
+  // Opening hours data
+  const openingHours = [
+    { day: "Monday", hours: "9:30 AM – 2:00 PM & 4:30 – 10:00 PM" },
+    { day: "Tuesday", hours: "9:30 AM – 2:30 PM & 4:30 – 10:00 PM" },
+    { day: "Wednesday", hours: "9:30 AM – 2:00 PM & 4:30 – 10:00 PM" },
+    { day: "Thursday", hours: "9:30 AM – 2:00 PM & 4:30 – 10:00 PM" },
+    { day: "Friday", hours: "9:30 AM – 2:00 PM & 4:30 – 10:00 PM" },
+    { day: "Saturday", hours: "9:30 AM – 2:00 PM & 4:30 – 10:00 PM" },
+    { day: "Sunday", hours: "9:30 AM – 2:00 PM & 4:30 – 10:00 PM" },
+  ];
+
+  // Get today's hours
+  const today = new Date().toLocaleDateString("en-US", { weekday: "long" });
+  const todayHours =
+    openingHours.find((h) => h.day === today)?.hours || "9:30 AM – 10:00 PM";
 
   const categories = ["Balls", "Helmets", "Clothing", "Bats", "Shoes"];
   const brands = ["Adidas", "Nike", "Shrey", "MoonWalkr", "Morrant"];
@@ -122,7 +143,7 @@ const Footer = () => {
             </ul>
           </div>
 
-          {/* Column 4: CONTACT US */}
+          {/* Column 4: CONTACT US & HOURS */}
           <div>
             <h3 className="text-white font-semibold text-[16px] mb-6 tracking-wide">
               CONTACT US
@@ -133,23 +154,86 @@ const Footer = () => {
                   size={18}
                   className="mr-4 mt-0.5 flex-shrink-0 text-gray-300"
                 />
-                <span>13 B Street, Karama Dubai</span>
+                <span>{settings.address || "13 B Street, Karama Dubai"}</span>
               </li>
               <li className="flex items-center text-[14px]">
                 <Phone size={18} className="mr-4 flex-shrink-0 text-gray-300" />
-                <span>+971 4 353 3323</span>
+                <span>{settings.phone || "+971 52 6514 666"}</span>
               </li>
-              <li className="flex items-center text-[14px]">
-                <Clock size={18} className="mr-4 flex-shrink-0 text-gray-300" />
-                <span>10.00PM - 19.00 (Mon - Sat)</span>
+
+              {/* Opening Hours - Today's Hours */}
+              <li className="flex flex-col text-[14px]">
+                <div className="flex items-start">
+                  <Clock
+                    size={18}
+                    className="mr-4 mt-0.5 flex-shrink-0 text-gray-300"
+                  />
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <span className="font-semibold text-white">
+                        Today ({today})
+                      </span>
+                      <span className="text-gray-300 text-[12px]">
+                        {todayHours}
+                      </span>
+                    </div>
+
+                    {/* Expandable Full Schedule */}
+                    <button
+                      onClick={() => setHoursExpanded(!hoursExpanded)}
+                      className="flex items-center gap-1 mt-2 text-[11px] text-gray-400 hover:text-white transition-colors"
+                    >
+                      {hoursExpanded ? (
+                        <>
+                          <ChevronUp size={12} /> Show less
+                        </>
+                      ) : (
+                        <>
+                          <ChevronDown size={12} /> View full weekly schedule
+                        </>
+                      )}
+                    </button>
+
+                    {hoursExpanded && (
+                      <div className="mt-3 pt-2 border-t border-gray-700 space-y-1.5">
+                        {openingHours.map((item) => (
+                          <div
+                            key={item.day}
+                            className="flex justify-between text-[11px]"
+                          >
+                            <span
+                              className={
+                                item.day === today
+                                  ? "text-white font-semibold"
+                                  : "text-gray-400"
+                              }
+                            >
+                              {item.day}
+                            </span>
+                            <span
+                              className={
+                                item.day === today
+                                  ? "text-white"
+                                  : "text-gray-500"
+                              }
+                            >
+                              {item.hours}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
               </li>
+
               <li className="flex items-center text-[14px]">
                 <Mail size={18} className="mr-4 flex-shrink-0 text-gray-300" />
                 <a
-                  href="mailto:info@isportscricket.com"
+                  href={`mailto:${settings.email}`}
                   className="underline hover:text-white transition-colors"
                 >
-                  info@isportscricket.com
+                  {settings.email || "info@isportscricket.com"}
                 </a>
               </li>
             </ul>
@@ -174,12 +258,15 @@ const Footer = () => {
             <p className="text-[13px] text-gray-300 mb-6">
               Chat with one of our customer service reps
             </p>
-            <button
-              className="text-white font-semibold text-[13px] py-2.5 px-8 rounded hover:brightness-110 transition-all shadow-md"
+            <a
+              href={`https://wa.me/${settings.whatsappNumber?.replace(/[^0-9]/g, "") || "971526514666"}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-white font-semibold text-[13px] py-2.5 px-8 rounded hover:brightness-110 transition-all shadow-md inline-block"
               style={{ backgroundColor: primaryBlue }}
             >
               CHAT NOW
-            </button>
+            </a>
           </div>
 
           {/* Action 2: Call & Socials */}
@@ -190,7 +277,7 @@ const Footer = () => {
               className="mb-4 text-white"
             />
             <h4 className="text-white text-[20px] font-bold italic mb-2">
-              Call Us +971 52 6514 666
+              Call Us {settings.phone || "+971 52 6514 666"}
             </h4>
             <p className="text-[13px] text-gray-300 mb-6">
               We're here to answer your questions
@@ -199,58 +286,71 @@ const Footer = () => {
             {/* Social Icons */}
             <div className="flex items-center gap-4">
               {/* Facebook */}
-              <Link
-                href="#"
-                className="w-9 h-9 rounded-full flex items-center justify-center text-white hover:scale-110 transition-transform"
-                style={{ backgroundColor: primaryBlue }}
-              >
-                <svg
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
+              {settings.facebook && (
+                <Link
+                  href={settings.facebook}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-9 h-9 rounded-full flex items-center justify-center text-white hover:scale-110 transition-transform"
+                  style={{ backgroundColor: primaryBlue }}
                 >
-                  <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
-                </svg>
-              </Link>
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                  >
+                    <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
+                  </svg>
+                </Link>
+              )}
 
               {/* Instagram */}
-              <Link
-                href="#"
-                className="w-9 h-9 rounded-full flex items-center justify-center text-white hover:scale-110 transition-transform"
-                style={{ backgroundColor: primaryBlue }}
-              >
-                <svg
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
+              {settings.instagram && (
+                <Link
+                  href={settings.instagram}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-9 h-9 rounded-full flex items-center justify-center text-white hover:scale-110 transition-transform"
+                  style={{ backgroundColor: primaryBlue }}
                 >
-                  <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
-                  <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
-                  <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
-                </svg>
-              </Link>
-              <Link
-                href="#"
-                className="w-9 h-9 rounded-full flex items-center justify-center text-white hover:scale-110 transition-transform"
-                style={{ backgroundColor: primaryBlue }}
-              >
-                {/* Custom SVG for Pinterest since Lucide doesn't include it natively */}
-                <svg
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                  xmlns="http://www.w3.org/2000/svg"
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
+                    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+                    <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
+                  </svg>
+                </Link>
+              )}
+
+              {/* TikTok */}
+              {settings.tiktok && (
+                <Link
+                  href={settings.tiktok}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-9 h-9 rounded-full flex items-center justify-center text-white hover:scale-110 transition-transform"
+                  style={{ backgroundColor: primaryBlue }}
                 >
-                  <path d="M12.017 0C5.396 0 .029 5.367.029 11.987c0 5.079 3.158 9.417 7.618 11.162-.105-.949-.199-2.403.041-3.439.219-.937 1.406-5.957 1.406-5.957s-.359-.72-.359-1.781c0-1.663.967-2.911 2.168-2.911 1.024 0 1.518.769 1.518 1.688 0 1.029-.653 2.567-.992 3.992-.285 1.193.6 2.165 1.775 2.165 2.128 0 3.768-2.245 3.768-5.487 0-2.861-2.063-4.869-5.008-4.869-3.41 0-5.409 2.562-5.409 5.199 0 1.033.394 2.143.889 2.741.099.12.112.225.085.345-.09.375-.293 1.199-.334 1.363-.053.225-.172.271-.401.165-1.495-.69-2.433-2.878-2.433-4.646 0-3.776 2.748-7.252 7.951-7.252 4.168 0 7.41 2.967 7.41 6.923 0 4.135-2.607 7.462-6.233 7.462-1.214 0-2.354-.629-2.758-1.379l-.749 2.848c-.269 1.045-1.004 2.352-1.498 3.146 1.123.345 2.306.535 3.55.535 6.607 0 11.985-5.365 11.985-11.987C23.97 5.367 18.624 0 12.017 0z" />
-                </svg>
-              </Link>
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 15.58a6.34 6.34 0 0 0 8.88 5.3 6.34 6.34 0 0 0 3.73-5.3V8.42a7.32 7.32 0 0 0 4.28 1.42V6.33a4.57 4.57 0 0 1-2.3-.64z" />
+                  </svg>
+                </Link>
+              )}
             </div>
           </div>
 
@@ -263,12 +363,13 @@ const Footer = () => {
             <p className="text-[13px] text-gray-300 mb-6">
               Explore a retail store or outlet near you.
             </p>
-            <button
-              className="text-white font-semibold text-[13px] py-2.5 px-8 rounded hover:brightness-110 transition-all shadow-md"
+            <Link
+              href="/store-locator"
+              className="text-white font-semibold text-[13px] py-2.5 px-8 rounded hover:brightness-110 transition-all shadow-md inline-block"
               style={{ backgroundColor: primaryBlue }}
             >
               FIND STORE
-            </button>
+            </Link>
           </div>
         </div>
       </div>

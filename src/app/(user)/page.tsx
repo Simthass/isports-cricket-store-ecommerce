@@ -11,26 +11,17 @@ import Featuredbrands from "@/components/home/Featuredbrands";
 import Truststrip from "@/components/home/Truststrip";
 import FeaturedProducts from "@/components/home/FeaturedProducts";
 import Testimonialssection from "@/components/home/Testimonialssection";
-import AuthModal from "@/components/auth/AuthModal";
 
 export default function HomePage() {
-  const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [authMode, setAuthMode] = useState<"login" | "register">("login");
-
-  const handleAuthRequired = () => {
-    setAuthMode("login");
-    setAuthModalOpen(true);
-  };
-
   return (
     <main>
       <HeroSection />
       <CategoriesSection />
+      <Featuredbrands />
       <TrendingProducts />
       <Bannerssection />
       <Newslettersection />
       <NewArrivals />
-      <Featuredbrands />
       <Truststrip />
       <FeaturedProducts />
       <Testimonialssection />

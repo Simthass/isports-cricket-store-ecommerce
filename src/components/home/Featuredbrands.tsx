@@ -100,7 +100,7 @@ export default function FeaturedBrands() {
   }, []);
 
   const handleBrandClick = (slug: string) => {
-    router.push(`/shop?brand=${slug}`);
+    router.push(`/brand/${slug}`);
   };
 
   // Triple the brands for seamless marquee loop (same as original MARQUEE_BRANDS logic)

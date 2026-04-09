@@ -16,6 +16,13 @@ import {
   FolderOpen,
   ChevronRight,
   Hash,
+  Sparkles,
+  LayoutGrid,
+  List,
+  Filter,
+  TrendingUp,
+  Globe,
+  Zap,
 } from "lucide-react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
@@ -39,6 +46,50 @@ interface FormState {
 interface ToastState {
   type: "success" | "error";
   message: string;
+}
+
+// ── Stats Card Component ──────────────────────────────────────
+function StatsCard({
+  title,
+  value,
+  icon,
+  color,
+  trend,
+}: {
+  title: string;
+  value: number;
+  icon: React.ReactNode;
+  color: string;
+  trend?: string;
+}) {
+  return (
+    <motion.div
+      whileHover={{ y: -2, transition: { duration: 0.2 } }}
+      className="relative overflow-hidden bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-300"
+    >
+      <div
+        className={`absolute top-0 right-0 w-20 h-20 -mr-8 -mt-8 rounded-full bg-gradient-to-br ${color} opacity-10`}
+      />
+      <div className="p-5">
+        <div className="flex items-center justify-between mb-3">
+          <div
+            className={`w-10 h-10 rounded-xl bg-gradient-to-br ${color} flex items-center justify-center shadow-lg`}
+          >
+            {icon}
+          </div>
+          {trend && (
+            <span className="text-[11px] font-semibold text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
+              {trend}
+            </span>
+          )}
+        </div>
+        <h3 className="text-[13px] font-medium text-gray-500 mb-1">{title}</h3>
+        <p className="text-[28px] font-black text-gray-900 tracking-tight">
+          {value}
+        </p>
+      </div>
+    </motion.div>
+  );
 }
 
 // ── Toast Component ───────────────────────────────────────────
@@ -105,8 +156,8 @@ function DeleteDialog({
         className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-md p-6"
       >
         <div className="flex items-start gap-4">
-          <div className="w-11 h-11 rounded-xl bg-red-50 flex items-center justify-center flex-shrink-0">
-            <Trash2 size={20} className="text-red-500" />
+          <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-red-500 to-rose-500 flex items-center justify-center flex-shrink-0 shadow-md">
+            <Trash2 size={20} className="text-white" />
           </div>
           <div className="flex-1">
             <h3 className="text-[15px] font-bold text-gray-900 mb-1">
@@ -125,21 +176,21 @@ function DeleteDialog({
           <button
             onClick={onCancel}
             disabled={loading}
-            className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-[13px] font-semibold text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+            className="flex-1 px-4 py-2.5 rounded-xl border-2 border-gray-200 text-[13px] font-semibold text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
           >
             Cancel
           </button>
           <button
             onClick={onConfirm}
             disabled={loading}
-            className="flex-1 px-4 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-[13px] font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+            className="flex-1 px-4 py-2.5 rounded-xl bg-gradient-to-r from-red-500 to-red-600 hover:shadow-lg text-white text-[13px] font-semibold transition-all disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {loading ? (
               <Loader2 size={14} className="animate-spin" />
             ) : (
               <Trash2 size={14} />
             )}
-            {loading ? "Deleting…" : "Delete"}
+            {loading ? "Deleting…" : "Delete Category"}
           </button>
         </div>
       </motion.div>
@@ -220,6 +271,8 @@ function CategoryModal({
         .replace(/^-|-$/g, "")
     : "";
 
+  const imageValid = form.image && /^https?:\/\/.+/.test(form.image);
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -236,36 +289,39 @@ function CategoryModal({
         transition={{ duration: 0.24, ease: [0.25, 0.46, 0.45, 0.94] }}
         className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-md overflow-hidden"
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-5 border-b border-gray-50">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-[#e8f0fb] flex items-center justify-center">
-              <Tag size={16} style={{ color: "#004b9c" }} />
+        {/* Header with gradient */}
+        <div className="relative overflow-hidden bg-gradient-to-r from-[#004b9c] to-[#0062cc] px-6 py-5">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16" />
+          <div className="relative z-10 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                <Tag size={18} className="text-white" />
+              </div>
+              <div>
+                <h2 className="text-[16px] font-bold text-white">
+                  {mode === "add" ? "Add New Category" : "Edit Category"}
+                </h2>
+                <p className="text-[11px] text-blue-100">
+                  {mode === "add"
+                    ? "Create a new product category"
+                    : "Update category details"}
+                </p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-[14px] font-bold text-gray-900">
-                {mode === "add" ? "Add Category" : "Edit Category"}
-              </h2>
-              <p className="text-[11px] text-gray-400">
-                {mode === "add"
-                  ? "Create a new product category"
-                  : "Update category details"}
-              </p>
-            </div>
+            <button
+              onClick={onClose}
+              className="w-8 h-8 rounded-lg flex items-center justify-center text-white/80 hover:text-white hover:bg-white/20 transition-all"
+            >
+              <X size={16} />
+            </button>
           </div>
-          <button
-            onClick={onClose}
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all"
-          >
-            <X size={16} />
-          </button>
         </div>
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
           {/* Name */}
           <div>
-            <label className="block text-[12px] font-semibold text-gray-700 mb-1.5">
+            <label className="block text-[12px] font-bold text-gray-700 mb-1.5">
               Category Name <span className="text-red-500">*</span>
             </label>
             <input
@@ -277,12 +333,12 @@ function CategoryModal({
                 if (errors.name)
                   setErrors((er) => ({ ...er, name: undefined }));
               }}
-              placeholder="e.g. Cricket Bats"
+              placeholder="e.g. Cricket Bats, Helmets, Shoes"
               className={cn(
                 "w-full px-4 py-3 rounded-xl border text-[13.5px] text-gray-900 placeholder-gray-400 bg-gray-50 focus:bg-white transition-all outline-none",
                 errors.name
                   ? "border-red-300 focus:border-red-400 focus:ring-2 focus:ring-red-100"
-                  : "border-gray-200 focus:border-[#004b9c] focus:ring-2 focus:ring-[#004b9c]/10",
+                  : "border-gray-200 focus:border-[#004b9c] focus:ring-2 focus:ring-blue-100",
               )}
             />
             {errors.name && (
@@ -290,23 +346,26 @@ function CategoryModal({
                 <AlertCircle size={10} /> {errors.name}
               </p>
             )}
-            {/* Slug preview */}
             {slugPreview && !errors.name && (
-              <p className="text-[11px] text-gray-400 mt-1.5 flex items-center gap-1">
-                <Hash size={10} />
-                Slug:{" "}
-                <span className="font-mono text-[#004b9c]">{slugPreview}</span>
-              </p>
+              <div className="mt-2 p-2 bg-blue-50 rounded-lg border border-blue-100">
+                <p className="text-[10px] text-blue-700 flex items-center gap-1.5">
+                  <Hash size={10} />
+                  Slug:{" "}
+                  <code className="bg-white px-1.5 py-0.5 rounded text-blue-600">
+                    /{slugPreview}
+                  </code>
+                </p>
+              </div>
             )}
           </div>
 
           {/* Image URL */}
           <div>
-            <label className="block text-[12px] font-semibold text-gray-700 mb-1.5">
-              Image URL{" "}
-              <span className="text-gray-400 font-normal">(optional)</span>
+            <label className="block text-[12px] font-bold text-gray-700 mb-1.5">
+              Image URL
+              <span className="text-gray-400 font-normal ml-1">(optional)</span>
             </label>
-            <div className="flex gap-2">
+            <div className="flex gap-3">
               <input
                 type="url"
                 value={form.image}
@@ -315,55 +374,69 @@ function CategoryModal({
                   if (errors.image)
                     setErrors((er) => ({ ...er, image: undefined }));
                 }}
-                placeholder="https://…"
+                placeholder="https://example.com/category-image.jpg"
                 className={cn(
                   "flex-1 px-4 py-3 rounded-xl border text-[13.5px] text-gray-900 placeholder-gray-400 bg-gray-50 focus:bg-white transition-all outline-none",
                   errors.image
                     ? "border-red-300 focus:border-red-400 focus:ring-2 focus:ring-red-100"
-                    : "border-gray-200 focus:border-[#004b9c] focus:ring-2 focus:ring-[#004b9c]/10",
+                    : "border-gray-200 focus:border-[#004b9c] focus:ring-2 focus:ring-blue-100",
                 )}
               />
               {/* Image preview */}
-              {form.image && /^https?:\/\/.+/.test(form.image) ? (
-                <div className="w-12 h-12 rounded-xl border border-gray-200 overflow-hidden flex-shrink-0 bg-gray-50">
+              <div className="w-14 h-14 rounded-xl border-2 border-gray-100 overflow-hidden flex-shrink-0 bg-gradient-to-br from-gray-50 to-white shadow-sm">
+                {imageValid ? (
                   <Image
                     src={form.image}
                     alt="preview"
-                    width={48}
-                    height={48}
+                    width={56}
+                    height={56}
                     className="w-full h-full object-cover"
                     onError={(e) => {
                       (e.target as HTMLImageElement).style.display = "none";
                     }}
                   />
-                </div>
-              ) : (
-                <div className="w-12 h-12 rounded-xl border border-dashed border-gray-200 flex items-center justify-center flex-shrink-0 bg-gray-50">
-                  <ImageIcon size={16} className="text-gray-300" />
-                </div>
-              )}
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <ImageIcon size={18} className="text-gray-300" />
+                  </div>
+                )}
+              </div>
             </div>
             {errors.image && (
               <p className="text-[11px] text-red-500 mt-1.5 flex items-center gap-1">
                 <AlertCircle size={10} /> {errors.image}
               </p>
             )}
+            {imageValid && !errors.image && (
+              <p className="text-[11px] text-green-600 mt-1.5 flex items-center gap-1">
+                <CheckCircle2 size={10} /> Image URL looks valid
+              </p>
+            )}
+          </div>
+
+          {/* Info note */}
+          <div className="p-3 bg-amber-50 rounded-xl border border-amber-100">
+            <p className="text-[10px] text-amber-700 flex items-center gap-1.5">
+              <Sparkles size={11} />
+              Category image will appear on category pages and product
+              filtering.
+            </p>
           </div>
 
           {/* Actions */}
-          <div className="flex gap-3 pt-1">
+          <div className="flex gap-3 pt-2">
             <button
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-[13px] font-semibold text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+              className="flex-1 px-4 py-3 rounded-xl border-2 border-gray-200 text-[13px] font-semibold text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 px-4 py-2.5 rounded-xl text-white text-[13px] font-bold transition-all disabled:opacity-60 flex items-center justify-center gap-2 shadow-[0_4px_12px_rgba(0,75,156,0.22)]"
+              className="flex-1 px-4 py-3 rounded-xl text-white text-[13px] font-bold transition-all disabled:opacity-60 flex items-center justify-center gap-2 shadow-lg"
               style={{
                 background: "linear-gradient(135deg, #004b9c, #0062cc)",
               }}
@@ -377,8 +450,8 @@ function CategoryModal({
               )}
               {loading
                 ? mode === "add"
-                  ? "Creating…"
-                  : "Saving…"
+                  ? "Creating..."
+                  : "Saving..."
                 : mode === "add"
                   ? "Create Category"
                   : "Save Changes"}
@@ -390,7 +463,7 @@ function CategoryModal({
   );
 }
 
-// ── Category Card ─────────────────────────────────────────────
+// ── Category Card (Modern UI with Top Actions) ─────────────────
 function CategoryCard({
   category,
   index,
@@ -402,21 +475,60 @@ function CategoryCard({
   onEdit: (cat: ICategory) => void;
   onDelete: (cat: ICategory) => void;
 }) {
+  const [isHovered, setIsHovered] = useState(false);
   const initials = category.name.slice(0, 2).toUpperCase();
+
+  const accentColors = [
+    "from-blue-500 to-cyan-500",
+    "from-green-500 to-emerald-500",
+    "from-orange-500 to-amber-500",
+    "from-purple-500 to-pink-500",
+    "from-red-500 to-rose-500",
+    "from-teal-500 to-emerald-500",
+    "from-indigo-500 to-blue-500",
+  ];
+  const colorIndex =
+    category.name.split("").reduce((a, c) => a + c.charCodeAt(0), 0) %
+    accentColors.length;
+  const gradient = accentColors[colorIndex];
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 16 }}
+      initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
+      whileHover={{ y: -4 }}
       transition={{
-        delay: index * 0.04,
-        duration: 0.35,
+        delay: index * 0.03,
+        duration: 0.3,
         ease: [0.25, 0.46, 0.45, 0.94],
       }}
-      className="group bg-white rounded-2xl border border-gray-100 hover:border-gray-200 hover:shadow-[0_4px_24px_rgba(0,0,0,0.06)] transition-all duration-200 overflow-hidden"
+      onHoverStart={() => setIsHovered(true)}
+      onHoverEnd={() => setIsHovered(false)}
+      className="group relative bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300"
     >
+      {/* Gradient top bar */}
+      <div className={`h-1 bg-gradient-to-r ${gradient}`} />
+
+      {/* Action Buttons - Top Right Corner */}
+      <div className="absolute top-3 right-3 z-20 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+        <button
+          onClick={() => onEdit(category)}
+          className="w-8 h-8 rounded-xl bg-white shadow-lg flex items-center justify-center text-[#004b9c] hover:bg-[#004b9c] hover:text-white transition-all duration-200"
+          title="Edit category"
+        >
+          <Pencil size={13} />
+        </button>
+        <button
+          onClick={() => onDelete(category)}
+          className="w-8 h-8 rounded-xl bg-white shadow-lg flex items-center justify-center text-red-500 hover:bg-red-500 hover:text-white transition-all duration-200"
+          title="Delete category"
+        >
+          <Trash2 size={13} />
+        </button>
+      </div>
+
       {/* Image area */}
-      <div className="relative h-36 bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden">
+      <div className="relative h-32 overflow-hidden flex items-center justify-center bg-gradient-to-br from-gray-50 to-white">
         {category.image ? (
           <Image
             src={category.image}
@@ -426,52 +538,26 @@ function CategoryCard({
             sizes="(max-width: 640px) 100vw, 25vw"
           />
         ) : (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
-            <div
-              className="w-14 h-14 rounded-2xl flex items-center justify-center text-[20px] font-black text-white shadow-lg"
-              style={{
-                background: "linear-gradient(135deg, #004b9c, #0062cc)",
-              }}
-            >
-              {initials}
-            </div>
+          <div
+            className={`w-16 h-16 rounded-2xl flex items-center justify-center text-[22px] font-black text-white shadow-lg bg-gradient-to-r ${gradient}`}
+          >
+            {initials}
           </div>
         )}
-        {/* Overlay actions */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
-        <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-          <button
-            onClick={() => onEdit(category)}
-            className="w-8 h-8 rounded-lg bg-white shadow-md flex items-center justify-center text-[#004b9c] hover:bg-[#004b9c] hover:text-white transition-all"
-          >
-            <Pencil size={13} />
-          </button>
-          <button
-            onClick={() => onDelete(category)}
-            className="w-8 h-8 rounded-lg bg-white shadow-md flex items-center justify-center text-red-500 hover:bg-red-500 hover:text-white transition-all"
-          >
-            <Trash2 size={13} />
-          </button>
-        </div>
       </div>
 
       {/* Info */}
       <div className="px-4 py-3.5">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <h3 className="text-[14px] font-bold text-gray-900 truncate">
-              {category.name}
-            </h3>
-            <p className="text-[11px] text-gray-400 font-mono mt-0.5 truncate">
-              /{category.slug}
-            </p>
-          </div>
-          <ChevronRight
-            size={14}
-            className="text-gray-300 mt-0.5 flex-shrink-0"
-          />
+        <h3 className="text-[14px] font-bold text-gray-900 truncate pr-8">
+          {category.name}
+        </h3>
+        <div className="flex items-center gap-1 mt-0.5">
+          <Hash size={10} className="text-gray-300" />
+          <p className="text-[10px] text-gray-400 font-mono truncate">
+            {category.slug}
+          </p>
         </div>
-        <p className="text-[10.5px] text-gray-400 mt-2">
+        <p className="text-[10px] text-gray-400 mt-2.5">
           Added{" "}
           {new Date(category.createdAt).toLocaleDateString("en-AE", {
             day: "numeric",
@@ -490,6 +576,7 @@ export default function AdminCategoriesPage() {
   const [filtered, setFiltered] = useState<ICategory[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
   const [modalMode, setModalMode] = useState<ModalMode>(null);
   const [editTarget, setEditTarget] = useState<ICategory | undefined>();
@@ -571,209 +658,239 @@ export default function AdminCategoriesPage() {
     }
   }
 
-  // ── Render ─────────────────────────────────────────────────
+  const stats = {
+    total: categories.length,
+    withImage: categories.filter((c) => c.image).length,
+    noImage: categories.filter((c) => !c.image).length,
+  };
+
   return (
-    <div className="space-y-5 max-w-[1380px]">
-      {/* ── Page Header ── */}
-      <motion.div
-        initial={{ opacity: 0, y: -8 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex items-center justify-between flex-wrap gap-3"
-      >
-        <div>
-          <p className="text-[11px] font-semibold text-[#81bf42] tracking-[0.15em] uppercase mb-1">
-            Product Catalogue
-          </p>
-          <h2
-            className="text-[22px] font-black text-gray-900 tracking-tight leading-tight"
-            style={{ fontFamily: "'Barlow Condensed', sans-serif" }}
-          >
-            Category Management
-          </h2>
-        </div>
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.97 }}
-          onClick={() => {
-            setEditTarget(undefined);
-            setModalMode("add");
-          }}
-          className="flex items-center gap-2 px-4 py-2.5 text-white text-[12px] font-bold rounded-xl transition-all shadow-[0_4px_12px_rgba(0,75,156,0.25)]"
-          style={{ background: "linear-gradient(135deg, #004b9c, #0062cc)" }}
-        >
-          <Plus size={14} />
-          Add Category
-        </motion.button>
-      </motion.div>
-
-      {/* ── Stats Bar ── */}
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.08 }}
-        className="flex items-center gap-4 p-4 bg-white rounded-2xl border border-gray-100"
-      >
-        <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-[#e8f0fb] flex items-center justify-center">
-            <Tag size={16} style={{ color: "#004b9c" }} />
-          </div>
-          <div>
-            <p className="text-[20px] font-black text-gray-900 leading-none">
-              {categories.length}
-            </p>
-            <p className="text-[11px] text-gray-500 font-medium">
-              Total Categories
-            </p>
-          </div>
-        </div>
-        <div className="w-px h-10 bg-gray-100" />
-        <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-[#eef7e0] flex items-center justify-center">
-            <ImageIcon size={16} style={{ color: "#81bf42" }} />
-          </div>
-          <div>
-            <p className="text-[20px] font-black text-gray-900 leading-none">
-              {categories.filter((c) => c.image).length}
-            </p>
-            <p className="text-[11px] text-gray-500 font-medium">With Images</p>
-          </div>
-        </div>
-        <div className="w-px h-10 bg-gray-100" />
-        <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-gray-100 flex items-center justify-center">
-            <FolderOpen size={16} className="text-gray-500" />
-          </div>
-          <div>
-            <p className="text-[20px] font-black text-gray-900 leading-none">
-              {categories.filter((c) => !c.image).length}
-            </p>
-            <p className="text-[11px] text-gray-500 font-medium">No Image</p>
-          </div>
-        </div>
-        {/* Search — pushed right */}
-        <div className="ml-auto relative">
-          <Search
-            size={14}
-            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-          />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search categories…"
-            className="pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:border-[#004b9c] focus:ring-2 focus:ring-[#004b9c]/10 text-[13px] text-gray-700 placeholder-gray-400 outline-none transition-all w-56"
-          />
-          {search && (
-            <button
-              onClick={() => setSearch("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-            >
-              <X size={13} />
-            </button>
-          )}
-        </div>
-      </motion.div>
-
-      {/* ── Grid ── */}
-      {loading ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-          {Array.from({ length: 10 }).map((_, i) => (
-            <div
-              key={i}
-              className="bg-white rounded-2xl border border-gray-100 overflow-hidden animate-pulse"
-            >
-              <div className="h-36 bg-gray-100" />
-              <div className="p-4 space-y-2">
-                <div className="h-3.5 bg-gray-100 rounded-md w-3/4" />
-                <div className="h-2.5 bg-gray-100 rounded-md w-1/2" />
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : filtered.length === 0 ? (
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
+      <div className="space-y-6 max-w-[1600px] mx-auto p-6">
+        {/* Header with Gradient */}
         <motion.div
-          initial={{ opacity: 0, y: 12 }}
+          initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col items-center justify-center py-20 text-center"
+          className="relative overflow-hidden bg-gradient-to-r from-[#004b9c] to-[#0062cc] rounded-2xl p-6 text-white shadow-xl"
         >
-          <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mb-4">
-            <FolderOpen size={28} className="text-gray-300" />
-          </div>
-          <p className="text-[15px] font-bold text-gray-600 mb-1">
-            {search ? "No categories match your search" : "No categories yet"}
-          </p>
-          <p className="text-[13px] text-gray-400 mb-5">
-            {search
-              ? `Try a different keyword or clear the search`
-              : "Create your first category to organise products"}
-          </p>
-          {!search && (
+          <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-32 -mt-32" />
+          <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full -ml-24 -mb-24" />
+
+          <div className="relative z-10 flex items-center justify-between flex-wrap gap-4">
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-8 h-[3px] bg-[#81bf42] rounded-full" />
+                <span className="text-[#81bf42] text-[11px] font-black tracking-[0.2em] uppercase">
+                  Product Catalogue
+                </span>
+              </div>
+              <h1 className="text-[28px] font-black tracking-tight">
+                Category Management
+              </h1>
+              <p className="text-blue-100 text-[13px] mt-1">
+                Organize your products into categories for easy browsing
+              </p>
+            </div>
             <button
               onClick={() => {
                 setEditTarget(undefined);
                 setModalMode("add");
               }}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-white text-[12.5px] font-bold shadow-[0_4px_12px_rgba(0,75,156,0.22)] transition-all hover:opacity-90"
-              style={{
-                background: "linear-gradient(135deg, #004b9c, #0062cc)",
-              }}
+              className="flex items-center gap-2 px-5 py-3 rounded-xl text-white text-[13px] font-bold bg-gradient-to-r from-[#25D366] to-[#20b859] hover:shadow-lg transition-all"
             >
-              <Plus size={14} /> Add First Category
+              <Plus size={16} /> Add New Category
             </button>
-          )}
+          </div>
         </motion.div>
-      ) : (
+
+        {/* Stats Row */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <StatsCard
+            title="Total Categories"
+            value={stats.total}
+            icon={<Tag size={18} className="text-white" />}
+            color="from-blue-500 to-cyan-500"
+            trend={stats.total > 0 ? "+12% this month" : undefined}
+          />
+          <StatsCard
+            title="With Images"
+            value={stats.withImage}
+            icon={<ImageIcon size={18} className="text-white" />}
+            color="from-emerald-500 to-teal-500"
+          />
+          <StatsCard
+            title="No Image"
+            value={stats.noImage}
+            icon={<FolderOpen size={18} className="text-white" />}
+            color="from-orange-500 to-amber-500"
+          />
+          <StatsCard
+            title="Active Categories"
+            value={stats.total}
+            icon={<Sparkles size={18} className="text-white" />}
+            color="from-purple-500 to-pink-500"
+          />
+        </div>
+
+        {/* Filters Bar */}
         <motion.div
-          layout
-          className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4"
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm"
         >
-          <AnimatePresence mode="popLayout">
-            {filtered.map((cat, i) => (
-              <CategoryCard
-                key={cat._id}
-                category={cat}
-                index={i}
-                onEdit={(c) => {
-                  setEditTarget(c);
-                  setModalMode("edit");
-                }}
-                onDelete={setDeleteTarget}
+          <div className="flex flex-col sm:flex-row gap-3">
+            {/* Search */}
+            <div className="relative flex-1">
+              <Search
+                size={14}
+                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"
               />
-            ))}
-          </AnimatePresence>
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search categories by name or slug..."
+                className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 text-[13px] focus:border-[#004b9c] focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+              />
+              {search && (
+                <button
+                  onClick={() => setSearch("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  <X size={13} />
+                </button>
+              )}
+            </div>
+
+            {/* View Toggle */}
+            <div className="flex items-center gap-1 bg-gray-100 rounded-xl p-1">
+              <button
+                onClick={() => setViewMode("grid")}
+                className={`p-2 rounded-lg transition-all ${viewMode === "grid" ? "bg-white shadow-sm text-[#004b9c]" : "text-gray-500"}`}
+              >
+                <LayoutGrid size={16} />
+              </button>
+              <button
+                onClick={() => setViewMode("list")}
+                className={`p-2 rounded-lg transition-all ${viewMode === "list" ? "bg-white shadow-sm text-[#004b9c]" : "text-gray-500"}`}
+              >
+                <List size={16} />
+              </button>
+            </div>
+          </div>
         </motion.div>
-      )}
 
-      {/* ── Modals ── */}
-      <AnimatePresence>
-        {modalMode && (
-          <CategoryModal
-            mode={modalMode}
-            initial={editTarget}
-            onClose={() => {
-              setModalMode(null);
-              setEditTarget(undefined);
-            }}
-            onSuccess={handleModalSuccess}
-          />
+        {/* Categories Display */}
+        {loading ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            {Array.from({ length: 10 }).map((_, i) => (
+              <div
+                key={i}
+                className="bg-white rounded-2xl border border-gray-100 overflow-hidden animate-pulse"
+              >
+                <div className="h-32 bg-gray-100" />
+                <div className="p-4 space-y-2">
+                  <div className="h-3.5 bg-gray-100 rounded-md w-3/4" />
+                  <div className="h-2.5 bg-gray-100 rounded-md w-1/2" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : filtered.length === 0 ? (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex flex-col items-center justify-center py-20 text-center bg-white rounded-2xl border border-gray-100"
+          >
+            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center mb-4">
+              <FolderOpen size={32} className="text-gray-400" />
+            </div>
+            <p className="text-[16px] font-bold text-gray-700 mb-1">
+              {search ? "No categories match your search" : "No categories yet"}
+            </p>
+            <p className="text-[13px] text-gray-400 mb-5 max-w-sm">
+              {search
+                ? "Try a different keyword or clear the search filter"
+                : "Create your first category to organise your products"}
+            </p>
+            {!search ? (
+              <button
+                onClick={() => {
+                  setEditTarget(undefined);
+                  setModalMode("add");
+                }}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-white text-[12px] font-bold bg-gradient-to-r from-[#004b9c] to-[#0062cc] shadow-md"
+              >
+                <Plus size={14} /> Add First Category
+              </button>
+            ) : (
+              <button
+                onClick={() => setSearch("")}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gray-100 text-gray-700 text-[12px] font-bold"
+              >
+                <Filter size={14} /> Clear Filters
+              </button>
+            )}
+          </motion.div>
+        ) : (
+          <>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+              <AnimatePresence mode="popLayout">
+                {filtered.map((cat, i) => (
+                  <CategoryCard
+                    key={cat._id}
+                    category={cat}
+                    index={i}
+                    onEdit={(c) => {
+                      setEditTarget(c);
+                      setModalMode("edit");
+                    }}
+                    onDelete={setDeleteTarget}
+                  />
+                ))}
+              </AnimatePresence>
+            </div>
+
+            {/* Result count */}
+            <div className="flex justify-between items-center text-[12px] text-gray-400 pt-2">
+              <p>
+                Showing {filtered.length} of {categories.length} categories
+              </p>
+            </div>
+          </>
         )}
-      </AnimatePresence>
 
-      <AnimatePresence>
-        {deleteTarget && (
-          <DeleteDialog
-            category={deleteTarget}
-            onConfirm={handleDelete}
-            onCancel={() => setDeleteTarget(null)}
-            loading={deleteLoading}
-          />
-        )}
-      </AnimatePresence>
+        {/* Modals */}
+        <AnimatePresence>
+          {modalMode && (
+            <CategoryModal
+              mode={modalMode}
+              initial={editTarget}
+              onClose={() => {
+                setModalMode(null);
+                setEditTarget(undefined);
+              }}
+              onSuccess={handleModalSuccess}
+            />
+          )}
+        </AnimatePresence>
 
-      {/* ── Toast ── */}
-      <AnimatePresence>
-        {toast && <Toast toast={toast} onClose={() => setToast(null)} />}
-      </AnimatePresence>
+        <AnimatePresence>
+          {deleteTarget && (
+            <DeleteDialog
+              category={deleteTarget}
+              onConfirm={handleDelete}
+              onCancel={() => setDeleteTarget(null)}
+              loading={deleteLoading}
+            />
+          )}
+        </AnimatePresence>
+
+        {/* Toast */}
+        <AnimatePresence>
+          {toast && <Toast toast={toast} onClose={() => setToast(null)} />}
+        </AnimatePresence>
+      </div>
     </div>
   );
 }
