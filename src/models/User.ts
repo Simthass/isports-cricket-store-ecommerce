@@ -1,5 +1,12 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 
+export interface INotificationPreferences {
+  orderUpdates: boolean;
+  promotions: boolean;
+  newArrivals: boolean;
+  smsAlerts: boolean;
+}
+
 export interface IUser extends Document {
   _id: mongoose.Types.ObjectId;
   firstName: string;
@@ -7,16 +14,27 @@ export interface IUser extends Document {
   name: string;
   email: string;
   phone?: string;
-  password: string;  // Make sure this is string type
+  password: string;
   role: "CUSTOMER" | "ADMIN";
   emailVerified?: Date;
   image?: string;
   address: string;
   city: string;
   emirate: string;
+  notificationPreferences: INotificationPreferences;
   createdAt: Date;
   updatedAt: Date;
 }
+
+const NotificationPreferencesSchema = new Schema(
+  {
+    orderUpdates: { type: Boolean, default: true },
+    promotions: { type: Boolean, default: false },
+    newArrivals: { type: Boolean, default: true },
+    smsAlerts: { type: Boolean, default: false },
+  },
+  { _id: false }
+);
 
 const UserSchema = new Schema<IUser>(
   {
@@ -32,6 +50,15 @@ const UserSchema = new Schema<IUser>(
     address: { type: String, default: "" },
     city: { type: String, default: "" },
     emirate: { type: String, default: "" },
+    notificationPreferences: {
+      type: NotificationPreferencesSchema,
+      default: {
+        orderUpdates: true,
+        promotions: false,
+        newArrivals: true,
+        smsAlerts: false,
+      },
+    },
   },
   { timestamps: true }
 );

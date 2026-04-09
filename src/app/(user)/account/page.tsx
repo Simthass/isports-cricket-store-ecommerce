@@ -41,8 +41,9 @@ export default function AccountPage() {
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  // Profile form — initialized from session
+  // Profile form
   const [profile, setProfile] = useState({
     firstName: "",
     lastName: "",
@@ -67,41 +68,45 @@ export default function AccountPage() {
     smsAlerts: false,
   });
 
-  // ── Populate profile from session when it loads ──
+  // ── Load user data from API ──
   useEffect(() => {
     const loadUserData = async () => {
-      if (session?.user) {
-        try {
-          const response = await fetch("/api/users/address");
-          if (response.ok) {
-            const userData = await response.json();
+      if (!session?.user) return;
+      
+      setLoading(true);
+      try {
+        // Load profile data
+        const profileRes = await fetch("/api/user/settings");
+        if (profileRes.ok) {
+          const data = await profileRes.json();
+          if (data.success && data.user) {
             setProfile({
-              firstName: userData.firstName || "",
-              lastName: userData.lastName || "",
-              email: userData.email || session.user.email || "",
-              phone: userData.phone || "",
-              address: userData.address || "",
-              city: userData.city || "",
-              emirate: userData.emirate || "",
-            });
-          } else {
-            // Fallback to session data
-            setProfile({
-              firstName: (session.user as any).firstName || "",
-              lastName: (session.user as any).lastName || "",
-              email: session.user.email || "",
-              phone: (session.user as any).phone || "",
-              address: (session.user as any).address || "",
-              city: (session.user as any).city || "",
-              emirate: (session.user as any).emirate || "",
+              firstName: data.user.firstName || "",
+              lastName: data.user.lastName || "",
+              email: data.user.email || session.user.email || "",
+              phone: data.user.phone || "",
+              address: data.user.address || "",
+              city: data.user.city || "",
+              emirate: data.user.emirate || "",
             });
           }
-        } catch (error) {
-          console.error("Failed to load user data:", error);
         }
+
+        // Load notification preferences
+        const notifRes = await fetch("/api/user/notifications");
+        if (notifRes.ok) {
+          const data = await notifRes.json();
+          if (data.success && data.preferences) {
+            setNotifications(data.preferences);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to load user data:", error);
+      } finally {
+        setLoading(false);
       }
     };
-    
+
     loadUserData();
   }, [session]);
 
@@ -112,8 +117,17 @@ export default function AccountPage() {
     }
   }, [status, router]);
 
+  // Check URL params for tab
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get("tab");
+    if (tab && ["profile", "security", "addresses", "notifications"].includes(tab)) {
+      setActiveTab(tab);
+    }
+  }, []);
+
   // ── Loading state ──
-  if (status === "loading") {
+  if (status === "loading" || loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
@@ -141,7 +155,7 @@ export default function AccountPage() {
     setSaving(true);
     setSaveError("");
     try {
-      const res = await fetch("/api/users/address", {
+      const res = await fetch("/api/user/settings", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -219,9 +233,37 @@ export default function AccountPage() {
     }
   };
 
+  // ── Save notification preferences ──
+  const handleSaveNotifications = async () => {
+    setSaving(true);
+    setSaveError("");
+    try {
+      const res = await fetch("/api/user/notifications", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(notifications),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setSaveError(data.error || "Failed to save preferences.");
+      } else {
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2500);
+      }
+    } catch {
+      setSaveError("Something went wrong. Please try again.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleSignOut = async () => {
     await signOut({ callbackUrl: "/" });
   };
+
+  const inputClass = "w-full border border-gray-200 rounded-xl px-4 py-2.5 text-[14px] text-gray-700 placeholder-gray-300 focus:outline-none focus:border-[#004b9c] focus:ring-2 focus:ring-[#004b9c]/10 transition-all";
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -345,7 +387,7 @@ export default function AccountPage() {
                         value={profile.firstName}
                         onChange={(e) => setProfile({ ...profile, firstName: e.target.value })}
                         placeholder="Your first name"
-                        className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[14px] text-gray-700 placeholder-gray-300 focus:outline-none focus:border-[#004b9c] focus:ring-2 focus:ring-[#004b9c]/10 transition-all bg-white"
+                        className={inputClass}
                       />
                     </div>
                     <div className="flex flex-col gap-1.5">
@@ -357,7 +399,7 @@ export default function AccountPage() {
                         value={profile.lastName}
                         onChange={(e) => setProfile({ ...profile, lastName: e.target.value })}
                         placeholder="Your last name"
-                        className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[14px] text-gray-700 placeholder-gray-300 focus:outline-none focus:border-[#004b9c] focus:ring-2 focus:ring-[#004b9c]/10 transition-all bg-white"
+                        className={inputClass}
                       />
                     </div>
                     <div className="flex flex-col gap-1.5">
@@ -369,7 +411,7 @@ export default function AccountPage() {
                         value={profile.email}
                         onChange={(e) => setProfile({ ...profile, email: e.target.value })}
                         placeholder="your@email.com"
-                        className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[14px] text-gray-700 placeholder-gray-300 focus:outline-none focus:border-[#004b9c] focus:ring-2 focus:ring-[#004b9c]/10 transition-all bg-white"
+                        className={inputClass}
                       />
                     </div>
                     <div className="flex flex-col gap-1.5">
@@ -381,7 +423,43 @@ export default function AccountPage() {
                         value={profile.phone}
                         onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
                         placeholder="+971 XX XXX XXXX"
-                        className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[14px] text-gray-700 placeholder-gray-300 focus:outline-none focus:border-[#004b9c] focus:ring-2 focus:ring-[#004b9c]/10 transition-all bg-white"
+                        className={inputClass}
+                      />
+                    </div>
+                    <div className="sm:col-span-2 flex flex-col gap-1.5">
+                      <label className="text-[12px] font-bold text-gray-500 uppercase tracking-wider">
+                        Address
+                      </label>
+                      <input
+                        type="text"
+                        value={profile.address}
+                        onChange={(e) => setProfile({ ...profile, address: e.target.value })}
+                        placeholder="Building, Street, Area"
+                        className={inputClass}
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[12px] font-bold text-gray-500 uppercase tracking-wider">
+                        City
+                      </label>
+                      <input
+                        type="text"
+                        value={profile.city}
+                        onChange={(e) => setProfile({ ...profile, city: e.target.value })}
+                        placeholder="Dubai"
+                        className={inputClass}
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[12px] font-bold text-gray-500 uppercase tracking-wider">
+                        Emirate
+                      </label>
+                      <input
+                        type="text"
+                        value={profile.emirate}
+                        onChange={(e) => setProfile({ ...profile, emirate: e.target.value })}
+                        placeholder="Dubai"
+                        className={inputClass}
                       />
                     </div>
                   </div>
@@ -425,19 +503,25 @@ export default function AccountPage() {
                           {profile.city}, {profile.emirate}
                         </p>
                         <div className="flex gap-3 mt-4">
-                          <button className="text-[12px] font-semibold text-[#004b9c] hover:underline">Edit</button>
-                          <button className="text-[12px] font-semibold text-red-400 hover:underline">Delete</button>
+                          <button 
+                            onClick={() => setActiveTab("profile")}
+                            className="text-[12px] font-semibold text-[#004b9c] hover:underline"
+                          >
+                            Edit
+                          </button>
                         </div>
                       </div>
                     ) : (
                       <div className="border-2 border-gray-200 rounded-2xl p-5">
                         <p className="text-gray-500 text-[13px]">No address saved yet.</p>
+                        <button 
+                          onClick={() => setActiveTab("profile")}
+                          className="mt-3 text-[12px] font-semibold text-[#004b9c] hover:underline"
+                        >
+                          Add Address →
+                        </button>
                       </div>
                     )}
-                    <button className="border border-dashed border-gray-300 rounded-2xl p-5 flex flex-col items-center justify-center gap-2 text-gray-400 hover:border-[#004b9c] hover:text-[#004b9c] transition-all duration-200 min-h-[160px]">
-                      <MapPin size={28} strokeWidth={1.4} />
-                      <span className="text-[13px] font-semibold">+ Add New Address</span>
-                    </button>
                   </div>
                 </>
               )}
@@ -477,7 +561,7 @@ export default function AccountPage() {
                         value={passwords.newPass}
                         onChange={(e) => setPasswords({ ...passwords, newPass: e.target.value })}
                         placeholder="••••••••"
-                        className="w-full border border-gray-200 rounded-xl px-4 py-3 pr-11 text-[14px] text-gray-700 placeholder-gray-300 focus:outline-none focus:border-[#004b9c] focus:ring-2 focus:ring-[#004b9c]/10 transition-all"
+                        className={inputClass}
                       />
                     </div>
                     <div className="flex flex-col gap-1.5">
@@ -489,7 +573,7 @@ export default function AccountPage() {
                         value={passwords.confirm}
                         onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })}
                         placeholder="••••••••"
-                        className="w-full border border-gray-200 rounded-xl px-4 py-3 pr-11 text-[14px] text-gray-700 placeholder-gray-300 focus:outline-none focus:border-[#004b9c] focus:ring-2 focus:ring-[#004b9c]/10 transition-all"
+                        className={inputClass}
                       />
                     </div>
                     <p className="text-[12px] text-gray-400">
@@ -598,21 +682,27 @@ export default function AccountPage() {
                       </div>
                     ))}
                   </div>
-                  <button
-                    onClick={() => { setSaved(true); setTimeout(() => setSaved(false), 2500); }}
-                    className="mt-6 flex items-center gap-2 px-7 py-3 rounded-xl bg-[#004b9c] hover:bg-[#003d82] text-white text-[13px] font-bold tracking-wider shadow-[0_4px_16px_rgba(0,75,156,0.3)] active:scale-[0.97] transition-all duration-200"
-                  >
-                    <Save size={15} /> SAVE PREFERENCES
-                  </button>
-                  {saved && (
-                    <motion.p
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      className="mt-3 text-[#81bf42] text-[13px] font-semibold flex items-center gap-1.5"
+                  <div className="mt-6 flex items-center gap-4">
+                    <button
+                      onClick={handleSaveNotifications}
+                      disabled={saving}
+                      className="flex items-center gap-2 px-7 py-3 rounded-xl bg-[#004b9c] hover:bg-[#003d82] text-white text-[13px] font-bold tracking-wider shadow-[0_4px_16px_rgba(0,75,156,0.3)] active:scale-[0.97] transition-all duration-200 disabled:opacity-60"
                     >
-                      <CheckCircle2 size={15} /> Preferences saved!
-                    </motion.p>
-                  )}
+                      {saving
+                        ? <><Loader2 size={14} className="animate-spin" /> Saving...</>
+                        : <><Save size={15} /> SAVE PREFERENCES</>
+                      }
+                    </button>
+                    {saved && (
+                      <motion.p
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="text-[#81bf42] text-[13px] font-semibold flex items-center gap-1.5"
+                      >
+                        <CheckCircle2 size={15} /> Preferences saved!
+                      </motion.p>
+                    )}
+                  </div>
                 </>
               )}
 

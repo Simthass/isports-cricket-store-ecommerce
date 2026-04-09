@@ -57,9 +57,10 @@ export default function CartPage() {
   const [placing, setPlacing] = useState(false);
   const [orderNumber, setOrderNumber] = useState("");
   const [orderDetails, setOrderDetails] = useState<any>(null);
+  const [loadingUserData, setLoadingUserData] = useState(true);
   const topRef = useRef<HTMLDivElement>(null);
 
-  // Address form state - No more hardcoded address
+  // Address form state
   const [info, setInfo] = useState({
     firstName: "",
     lastName: "",
@@ -71,52 +72,42 @@ export default function CartPage() {
     notes: "",
   });
 
-  // Load saved address from localStorage AND database when logged in
+  // ── Load user data from database when logged in ──
   useEffect(() => {
     const loadUserData = async () => {
-      if (session?.user) {
-        // Try to load saved address from localStorage first
-        const savedAddress = localStorage.getItem("shippingAddress");
-        if (savedAddress) {
-          try {
-            const parsed = JSON.parse(savedAddress);
-            setInfo(prev => ({ ...prev, ...parsed }));
-          } catch (e) {
-            console.error("Failed to load saved address:", e);
+      if (!session?.user) {
+        setLoadingUserData(false);
+        return;
+      }
+
+      setLoadingUserData(true);
+      try {
+        const response = await fetch("/api/user/settings");
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.user) {
+            const userData = data.user;
+            setInfo({
+              firstName: userData.firstName || "",
+              lastName: userData.lastName || "",
+              phone: userData.phone || "",
+              email: userData.email || session.user.email || "",
+              address: userData.address || "",
+              city: userData.city || "",
+              emirate: userData.emirate || "",
+              notes: "",
+            });
           }
         }
-        
-        // Also fetch from user profile in database
-        try {
-          const response = await fetch("/api/users/address");
-          if (response.ok) {
-            const userData = await response.json();
-            if (userData.address || userData.phone) {
-              setInfo(prev => ({
-                ...prev,
-                firstName: userData.firstName || prev.firstName,
-                lastName: userData.lastName || prev.lastName,
-                phone: userData.phone || prev.phone,
-                email: userData.email || session.user.email || prev.email,
-                address: userData.address || prev.address,
-                city: userData.city || prev.city,
-                emirate: userData.emirate || prev.emirate,
-              }));
-            }
-          }
-        } catch (error) {
-          console.error("Failed to load user data:", error);
-        }
+      } catch (error) {
+        console.error("Failed to load user data:", error);
+      } finally {
+        setLoadingUserData(false);
       }
     };
-    
+
     loadUserData();
   }, [session]);
-
-  // Save address to localStorage when user fills the form
-  const saveAddressToLocalStorage = (addressData: any) => {
-    localStorage.setItem("shippingAddress", JSON.stringify(addressData));
-  };
 
   // Convert cart items to display format
   const items: CartItemDisplay[] = cartItems.map(item => ({
@@ -154,6 +145,21 @@ export default function CartPage() {
     }
   }, [step, items.length, router]);
 
+  // Handle URL parameter for checkout step - redirect to cart if no items
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const stepParam = urlParams.get("step");
+      if (stepParam === "checkout") {
+        if (items.length > 0) {
+          setStep("checkout");
+        } else {
+          router.push("/cart");
+        }
+      }
+    }
+  }, [items.length, router]);
+
   // Refresh cart when component mounts or when session changes
   useEffect(() => {
     if (session?.user) {
@@ -177,42 +183,41 @@ export default function CartPage() {
     }
   };
 
-  // ── Update form field and save to localStorage ────────────────────────────────
+  // ── Update form field ────────────────────────────────────────────────
   const handleInfoChange = (field: string, value: string) => {
-    const newInfo = { ...info, [field]: value };
-    setInfo(newInfo);
-    // Auto-save to localStorage as user types
-    if (session?.user) {
-      saveAddressToLocalStorage({
-        firstName: newInfo.firstName,
-        lastName: newInfo.lastName,
-        phone: newInfo.phone,
-        email: newInfo.email,
-        address: newInfo.address,
-        city: newInfo.city,
-        emirate: newInfo.emirate,
-      });
-    }
+    setInfo(prev => ({ ...prev, [field]: value }));
   };
 
-  // ── WhatsApp order ────────────────────────────────────────────────────────────
+  // WhatsApp order - uses customer details from form (which comes from database)
   const handleWhatsApp = () => {
     const adminPhone = process.env.NEXT_PUBLIC_ADMIN_WHATSAPP ?? "971500000000";
+    
+    if (!info.firstName || !info.phone || !info.address) {
+      alert("Please fill in your contact and address details before placing order via WhatsApp.");
+      return;
+    }
+    
     const lines = items.map(
       (i) => `• ${i.name} (${i.size}) ×${i.qty} — AED ${i.price * i.qty}`
     );
+    
     const msg =
-      `🏏 *New Order from iSPORTS*\n\n` +
-      lines.join("\n") +
-      `\n\n*Subtotal:* AED ${subtotal.toLocaleString()}` +
-      (couponApplied ? `\n*Discount (10%):* -AED ${discount}` : "") +
-      `\n*Shipping:* ${shippingCost === 0 ? "FREE" : `AED ${shippingCost}`}` +
-      `\n*Total:* AED ${total.toLocaleString()}\n\n` +
-      `*Customer Details:*\n` +
+      `🏏 *NEW ORDER FROM iSPORTS*\n\n` +
+      `*CUSTOMER DETAILS*\n` +
       `Name: ${info.firstName} ${info.lastName}\n` +
       `Phone: ${info.phone}\n` +
       `Email: ${info.email}\n` +
-      `Address: ${info.address}, ${info.city}, ${info.emirate}\n\n` +
+      `Address: ${info.address}, ${info.city}${info.emirate ? `, ${info.emirate}` : ''}\n\n` +
+      `*ORDER DETAILS*\n` +
+      lines.join("\n") + "\n\n" +
+      `*ORDER SUMMARY*\n` +
+      `Subtotal: AED ${subtotal.toLocaleString()}\n` +
+      (couponApplied ? `Discount (10%): -AED ${discount}\n` : "") +
+      `Shipping: ${shippingCost === 0 ? "FREE" : `AED ${shippingCost}`}\n` +
+      `─────────────────\n` +
+      `*TOTAL: AED ${total.toLocaleString()}*\n\n` +
+      `Delivery Method: ${delivery === "express" ? "Express Shipping" : "Standard Delivery"}\n` +
+      `Payment Method: Cash on Delivery\n\n` +
       `Please confirm this order. Thank you!`;
 
     window.open(
@@ -257,28 +262,6 @@ export default function CartPage() {
       });
 
       if (res.ok) {
-        // ✅ Save address to user profile in database for future auto-fill
-        if (session?.user) {
-          try {
-            await fetch("/api/users/address", {
-              method: "PATCH",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                firstName: info.firstName,
-                lastName: info.lastName,
-                phone: info.phone,
-                email: info.email,
-                address: info.address,
-                city: info.city,
-                emirate: info.emirate,
-              }),
-            });
-            console.log("Address saved to user profile");
-          } catch (err) {
-            console.error("Failed to save address to profile:", err);
-          }
-        }
-
         const data = await res.json();
         setOrderNumber(data.orderNumber);
         setOrderDetails(orderData);
@@ -296,7 +279,7 @@ export default function CartPage() {
   };
 
   // Show loading state
-  if (isLoading) {
+  if (isLoading || loadingUserData) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <Loader2 size={40} className="animate-spin text-[#004b9c]" />
@@ -304,7 +287,7 @@ export default function CartPage() {
     );
   }
 
-  // Confirmed screen with padding to avoid header overlap
+  // ── Confirmed screen ──────────────────────────────────────────────────────────
   if (step === "confirmed") {
     const displaySubtotal = orderDetails?.subtotal || subtotal;
     const displayDiscount = orderDetails?.discount || discount;
@@ -483,6 +466,7 @@ export default function CartPage() {
                         transition={{ duration: 0.3 }}
                         className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col sm:flex-row gap-5"
                       >
+                        {/* Image / placeholder */}
                         <div className="w-full sm:w-[100px] h-[100px] flex-shrink-0 bg-blue-50 rounded-xl flex items-center justify-center overflow-hidden">
                           {item.image ? (
                             <img
@@ -519,6 +503,7 @@ export default function CartPage() {
                           </div>
 
                           <div className="flex items-center justify-between flex-wrap gap-4 mt-auto pt-2">
+                            {/* Qty stepper */}
                             <div className="flex items-center border border-gray-200 rounded-xl overflow-hidden">
                               <button
                                 onClick={() => updateQty(item.id, -1)}

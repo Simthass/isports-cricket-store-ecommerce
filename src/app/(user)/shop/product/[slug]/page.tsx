@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -87,6 +87,7 @@ const COLOR_HEX: Record<string, string> = {
 type TabType = "description" | "specs" | "reviews";
 
 export default function ProductDetailPage() {
+  const router = useRouter();
   const { data: session } = useSession();
   const { addToCart } = useCart();
   const params = useParams();
@@ -133,40 +134,39 @@ export default function ProductDetailPage() {
       .finally(() => setLoading(false));
   }, [slug]);
 
-  const handleAddToCart = () => {
-    // Check if user is logged in
-    if (!session?.user) {
-      setAuthMode("login");
-      setAuthModalOpen(true);
-      return;
+const handleAddToCart = () => {
+  // Check if user is logged in
+  if (!session?.user) {
+    router.push("/login");
+    return;
+  }
+
+  if (!product) return;
+
+  // Get the size value safely
+  let sizeValue = "Standard";
+  if (selectedSize) {
+    if (typeof selectedSize === "object") {
+      sizeValue = selectedSize.label;
+    } else {
+      sizeValue = selectedSize;
     }
+  }
 
-    if (!product) return;
+  // Add to cart using the context
+  addToCart({
+    productId: product._id,
+    name: product.name,
+    brand: product.brandId?.name || "",
+    price: displayPrice,
+    quantity: qty,
+    size: sizeValue,
+    image: product.images?.[0] || null,
+  });
 
-    // Get the size value safely
-    let sizeValue = "Standard";
-    if (selectedSize) {
-      if (typeof selectedSize === "object") {
-        sizeValue = selectedSize.label;
-      } else {
-        sizeValue = selectedSize;
-      }
-    }
-
-    // Add to cart using the context
-    addToCart({
-      productId: product._id,
-      name: product.name,
-      brand: product.brandId?.name || "",
-      price: displayPrice,
-      quantity: qty,
-      size: sizeValue,
-      image: product.images?.[0] || null,
-    });
-
-    setAddedToCart(true);
-    setTimeout(() => setAddedToCart(false), 2500);
-  };
+  setAddedToCart(true);
+  setTimeout(() => setAddedToCart(false), 2500);
+};
 
   if (loading)
     return (
