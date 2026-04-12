@@ -15,7 +15,8 @@ export async function POST(req: NextRequest) {
 
     await connectDB();
 
-    // Clear the session token for this user
+    // ✅ Only clear session token for the admin user
+    // This does NOT affect customer sessions
     await User.findByIdAndUpdate(session.user.id, {
       currentSessionToken: null,
       lastActiveAt: new Date(),
