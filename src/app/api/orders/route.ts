@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import dbConnect from "@/lib/dbConnect";
 import Order from "@/models/Order";
 import User from "@/models/User";
+import Product from "@/models/Product";
 import nodemailer from "nodemailer";
 import mongoose from "mongoose";
 
@@ -10,6 +11,38 @@ function generateOrderNumber(): string {
   const timestamp = Date.now().toString(36).toUpperCase();
   const random = Math.random().toString(36).substring(2, 6).toUpperCase();
   return `ISP-${timestamp}-${random}`;
+}
+
+// ✅ Function to reduce product stock when order is placed
+async function reduceStock(items: any[]) {
+  const stockUpdates = [];
+  
+  for (const item of items) {
+    const product = await Product.findById(item.productId);
+    if (!product) {
+      throw new Error(`Product ${item.productId} not found`);
+    }
+    
+    if (product.stockQty < item.quantity) {
+      throw new Error(`Insufficient stock for product: ${product.name}. Available: ${product.stockQty}, Requested: ${item.quantity}`);
+    }
+    
+    // Reduce stock
+    product.stockQty -= item.quantity;
+    
+    // Update inStock flag
+    product.inStock = product.stockQty > 0;
+    
+    await product.save();
+    stockUpdates.push({ 
+      productId: item.productId, 
+      name: product.name,
+      oldStock: product.stockQty + item.quantity,
+      newStock: product.stockQty 
+    });
+  }
+  
+  return stockUpdates;
 }
 
 async function sendAdminEmail(order: any) {
@@ -229,6 +262,9 @@ export async function POST(req: NextRequest) {
       // New structure from Stripe/COD checkout
       const { customerInfo, items, deliveryMethod, paymentMethod, paymentIntentId, subtotal, discount, shippingCost, total, couponApplied, status } = body;
       
+      // ✅ Reduce stock before creating order
+      await reduceStock(items);
+      
       orderData = {
         orderNumber: generateOrderNumber(),
         userId: session?.user?.id ? new mongoose.Types.ObjectId(session.user.id) : undefined,
@@ -273,6 +309,9 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
       }
 
+      // ✅ Reduce stock before creating order
+      await reduceStock(items);
+      
       orderData = {
         orderNumber: generateOrderNumber(),
         userId: session?.user?.id ? new mongoose.Types.ObjectId(session.user.id) : undefined,
@@ -329,6 +368,7 @@ export async function POST(req: NextRequest) {
     }, { status: 201 });
   } catch (error) {
     console.error("Orders POST error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : "Internal server error";
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }

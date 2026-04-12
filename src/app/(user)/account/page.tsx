@@ -175,9 +175,8 @@ export default function AccountPage() {
     if (!session?.user) return;
     setLoadingData(true);
     try {
-      // Fetch user profile from the correct endpoint
+      // Fetch user profile from settings endpoint
       const profileRes = await fetch("/api/user/settings");
-
       if (profileRes.ok) {
         const data = await profileRes.json();
         const userData = data.user || data;
@@ -191,12 +190,17 @@ export default function AccountPage() {
           city: userData.city ?? "",
           emirate: userData.emirate ?? "",
         });
-      } else {
-        // If no profile exists yet, populate with session data
-        setProfile((prev) => ({
+      }
+
+      // Also fetch address separately to ensure it's synced
+      const addressRes = await fetch("/api/users/address");
+      if (addressRes.ok) {
+        const addressData = await addressRes.json();
+        setProfile(prev => ({
           ...prev,
-          name: session.user?.name ?? "",
-          email: session.user?.email ?? "",
+          address: addressData.address || prev.address,
+          city: addressData.city || prev.city,
+          emirate: addressData.emirate || prev.emirate,
         }));
       }
 
@@ -261,13 +265,12 @@ export default function AccountPage() {
     setSaving(true);
     setSaveError("");
     try {
-      const res = await fetch("/api/user/update-profile", {
+      const res = await fetch("/api/user/settings", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           firstName: profile.firstName,
           lastName: profile.lastName,
-          name: `${profile.firstName} ${profile.lastName}`.trim() || profile.name,
           phone: profile.phone,
           email: profile.email,
           address: profile.address,
@@ -281,9 +284,43 @@ export default function AccountPage() {
         setSaveError(data.error ?? "Failed to save. Please try again.");
       } else {
         await update({
-          name: `${profile.firstName} ${profile.lastName}`.trim() || profile.name,
+          name: `${profile.firstName} ${profile.lastName}`.trim(),
         });
         flashSaved();
+        loadUserData();
+      }
+    } catch {
+      setSaveError("Something went wrong. Please try again.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // ── Save address ──────────────────────────────────────────────────────────
+  const handleSaveAddress = async () => {
+    setSaving(true);
+    setSaveError("");
+    try {
+      const res = await fetch("/api/users/address", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          firstName: profile.firstName,
+          lastName: profile.lastName,
+          phone: profile.phone,
+          email: profile.email,
+          address: profile.address,
+          city: profile.city,
+          emirate: profile.emirate,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setSaveError(data.error ?? "Failed to save address. Please try again.");
+      } else {
+        flashSaved();
+        loadUserData();
       }
     } catch {
       setSaveError("Something went wrong. Please try again.");
@@ -461,7 +498,7 @@ export default function AccountPage() {
               transition={{ duration: 0.22 }}
               className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
             >
-              {/* ── Profile tab ── */}
+              {/* ── PROFILE TAB ── */}
               {activeTab === "profile" && (
                 <div className="p-8">
                   <h2 className="text-[18px] font-black text-gray-900 mb-6">
@@ -526,6 +563,51 @@ export default function AccountPage() {
                         className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[14px] text-gray-800 focus:outline-none focus:border-[#004b9c] focus:ring-2 focus:ring-[#004b9c]/10 transition-all"
                       />
                     </div>
+
+                    <div className="sm:col-span-2">
+                      <label className="block text-[12px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">
+                        Street Address
+                      </label>
+                      <input
+                        type="text"
+                        value={profile.address}
+                        onChange={(e) =>
+                          setProfile((p) => ({ ...p, address: e.target.value }))
+                        }
+                        placeholder="Building, Street, Area"
+                        className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[14px] focus:outline-none focus:border-[#004b9c] focus:ring-2 focus:ring-[#004b9c]/10 transition-all"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[12px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">
+                        City
+                      </label>
+                      <input
+                        type="text"
+                        value={profile.city}
+                        onChange={(e) =>
+                          setProfile((p) => ({ ...p, city: e.target.value }))
+                        }
+                        placeholder="Dubai"
+                        className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[14px] focus:outline-none focus:border-[#004b9c] focus:ring-2 focus:ring-[#004b9c]/10 transition-all"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[12px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">
+                        Emirate
+                      </label>
+                      <input
+                        type="text"
+                        value={profile.emirate}
+                        onChange={(e) =>
+                          setProfile((p) => ({ ...p, emirate: e.target.value }))
+                        }
+                        placeholder="Dubai"
+                        className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[14px] focus:outline-none focus:border-[#004b9c] focus:ring-2 focus:ring-[#004b9c]/10 transition-all"
+                      />
+                    </div>
                   </div>
 
                   {saveError && (
@@ -554,7 +636,7 @@ export default function AccountPage() {
                 </div>
               )}
 
-              {/* ── Security tab ── */}
+              {/* ── SECURITY TAB ── */}
               {activeTab === "security" && (
                 <div className="p-8">
                   <h2 className="text-[18px] font-black text-gray-900 mb-2">
@@ -635,7 +717,7 @@ export default function AccountPage() {
                 </div>
               )}
 
-              {/* ── Addresses tab ── */}
+              {/* ── ADDRESSES TAB ── */}
               {activeTab === "addresses" && (
                 <div className="p-8">
                   <h2 className="text-[18px] font-black text-gray-900 mb-6">
@@ -698,7 +780,7 @@ export default function AccountPage() {
                   )}
 
                   <button
-                    onClick={handleSaveProfile}
+                    onClick={handleSaveAddress}
                     disabled={saving}
                     className="mt-6 flex items-center gap-2 px-6 py-3 bg-[#004b9c] hover:bg-[#003d82] disabled:bg-[#004b9c]/60 text-white text-[13px] font-bold tracking-wider rounded-xl transition-colors"
                   >
@@ -712,7 +794,7 @@ export default function AccountPage() {
                 </div>
               )}
 
-              {/* ── Orders tab ── */}
+              {/* ── ORDERS TAB ── */}
               {activeTab === "orders" && (
                 <div className="p-8">
                   <h2 className="text-[18px] font-black text-gray-900 mb-6">
@@ -754,7 +836,7 @@ export default function AccountPage() {
                 </div>
               )}
 
-              {/* ── Reviews tab ── */}
+              {/* ── REVIEWS TAB ── */}
               {activeTab === "reviews" && (
                 <div className="p-8 text-center">
                   <p className="text-gray-500 mb-4">Manage your product reviews</p>
