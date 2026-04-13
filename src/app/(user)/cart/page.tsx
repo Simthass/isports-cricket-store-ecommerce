@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { useSession } from "next-auth/react";
+import { showToast } from "@/components/ui/Toast";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 interface CartItemDisplay {
@@ -191,12 +192,12 @@ export default function CartPage() {
   // WhatsApp Order - Creates order in database first, then opens WhatsApp
   const handleWhatsAppOrder = async () => {
     if (!info.firstName || !info.phone || !info.address) {
-      alert("Please fill in your contact and address details before placing order via WhatsApp.");
+      showToast("warning", "Missing Information", "Please fill in your contact and address details.");
       return;
     }
 
     if (items.length === 0) {
-      alert("Your cart is empty.");
+      showToast("warning", "Empty Cart", "Your cart is empty.");
       return;
     }
 
@@ -248,22 +249,23 @@ export default function CartPage() {
         const whatsappUrl = `https://wa.me/971526514666?text=${encodeURIComponent(message)}`;
         window.open(whatsappUrl, "_blank");
         
-        alert(`Order request sent! Your order number is ${data.order.orderNumber}. Admin will confirm shortly.`);
+        showToast("success", "Order Request Sent!", `Order #: ${data.order.orderNumber}. Admin will confirm shortly.`);
       } else {
-        alert(data.error || "Failed to create order. Please try again.");
+        showToast("error", "Order Failed", data.error || "Failed to create order. Please try again.");
       }
     } catch (error) {
       console.error("WhatsApp order error:", error);
-      alert("Something went wrong. Please try again.");
+      showToast("error", "Something went wrong", "Please try again.");
     }
   };
 
   // ── Place order (COD) ───────────────────────────────────────────────────────────────
   const handlePlaceOrder = async () => {
     if (!info.firstName || !info.phone || !info.email || !info.address || !info.city) {
-      alert("Please fill in all required fields.");
+      showToast("warning", "Missing Information", "Please fill in all required fields.");
       return;
     }
+    
     setPlacing(true);
     try {
       const orderData = {
@@ -299,12 +301,13 @@ export default function CartPage() {
         setOrderDetails(orderData);
         await clearCart();
         setStep("confirmed");
+        showToast("success", "Order Placed!", `Order #: ${data.orderNumber}`);
       } else {
         throw new Error("Failed to place order");
       }
     } catch (error) {
       console.error("Order placement error:", error);
-      alert("Something went wrong. Please try again.");
+      showToast("error", "Order Failed", "Something went wrong. Please try again.");
     } finally {
       setPlacing(false);
     }

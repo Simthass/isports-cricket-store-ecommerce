@@ -26,6 +26,7 @@ import {
 import { useSession } from "next-auth/react";
 import { useCart } from "@/context/CartContext";
 import ReviewSection from "@/components/products/ReviewSection";
+import { showToast } from "@/components/ui/Toast";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface SizeOption {
@@ -181,121 +182,121 @@ export default function ProductDetailPage() {
     setTimeout(() => setAddedToCart(false), 2500);
   };
 
-  // Handle WhatsApp Order - Creates order in database then opens WhatsApp
-  const handleWhatsAppOrder = async () => {
-    if (!session?.user) {
-      router.push("/login?redirect=" + encodeURIComponent(window.location.pathname));
+// Handle WhatsApp Order - Creates order in database then opens WhatsApp
+const handleWhatsAppOrder = async () => {
+  if (!session?.user) {
+    router.push("/login?redirect=" + encodeURIComponent(window.location.pathname));
+    return;
+  }
+
+  if (!product) return;
+
+  setWhatsappOrderLoading(true);
+
+  // Get customer info
+  let customerName = session.user.name || "";
+  let customerPhone = (session.user as any)?.phone || "";
+  let customerEmail = session.user.email || "";
+
+  // Fetch latest user data
+  try {
+    const res = await fetch("/api/user/settings");
+    if (res.ok) {
+      const data = await res.json();
+      if (data.user) {
+        customerName = data.user.name || customerName;
+        customerPhone = data.user.phone || customerPhone;
+        customerEmail = data.user.email || customerEmail;
+      }
+    }
+  } catch (e) {
+    console.error("Error fetching user data:", e);
+  }
+
+  // If no phone, prompt for it
+  if (!customerPhone) {
+    customerPhone = prompt("Please enter your WhatsApp number (with country code):") || "";
+    if (!customerPhone) {
+      showToast("error", "Phone Required", "Phone number is required to place order.");
+      setWhatsappOrderLoading(false);
       return;
     }
+  }
 
-    if (!product) return;
+  // Get size value
+  let sizeValue = "Standard";
+  if (selectedSize) {
+    sizeValue = typeof selectedSize === "object" ? selectedSize.label : selectedSize;
+  }
 
-    setWhatsappOrderLoading(true);
+  // Calculate final price
+  let finalPrice = product.price;
+  if (product.enableSizePrice && selectedSize && typeof selectedSize === "object") {
+    finalPrice = selectedSize.price;
+  }
 
-    // Get customer info
-    let customerName = session.user.name || "";
-    let customerPhone = (session.user as any)?.phone || "";
-    let customerEmail = session.user.email || "";
+  const orderItems = [{
+    productId: product._id,
+    name: product.name,
+    brand: product.brandId?.name || "",
+    price: finalPrice,
+    quantity: qty,
+    size: sizeValue,
+    image: product.images?.[0],
+  }];
 
-    // Fetch latest user data
-    try {
-      const res = await fetch("/api/user/settings");
-      if (res.ok) {
-        const data = await res.json();
-        if (data.user) {
-          customerName = data.user.name || customerName;
-          customerPhone = data.user.phone || customerPhone;
-          customerEmail = data.user.email || customerEmail;
-        }
-      }
-    } catch (e) {
-      console.error("Error fetching user data:", e);
+  try {
+    const response = await fetch("/api/whatsapp/orders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        customerInfo: {
+          name: customerName,
+          phone: customerPhone,
+          email: customerEmail,
+        },
+        items: orderItems,
+        subtotal: finalPrice * qty,
+        total: finalPrice * qty,
+        customerNotes: `Product order from product page: ${product.name} (${sizeValue}) x${qty}`,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      // Build WhatsApp message with order details
+      const message = `🏏 *PRODUCT ORDER REQUEST*\n\n` +
+        `*Customer:* ${customerName}\n` +
+        `*Phone:* ${customerPhone}\n` +
+        `*Email:* ${customerEmail || "Not provided"}\n\n` +
+        `*Product:* ${product.name}\n` +
+        `*Size:* ${sizeValue}\n` +
+        `*Color:* ${selectedColor || "N/A"}\n` +
+        `*Quantity:* ${qty}\n` +
+        `*Price:* AED ${(finalPrice * qty).toLocaleString()}\n\n` +
+        `*Order #:* ${data.order.orderNumber}\n\n` +
+        `⚠️ *ADMIN ACTION REQUIRED:*\n` +
+        `Please contact customer to confirm:\n` +
+        `- Full delivery address\n` +
+        `- Any additional items\n` +
+        `- Final quantity\n\n` +
+        `Customer will receive confirmation after admin updates.`;
+
+      const whatsappUrl = `https://wa.me/971526514666?text=${encodeURIComponent(message)}`;
+      window.open(whatsappUrl, "_blank");
+      
+      showToast("success", "Order Request Sent!", `Order #: ${data.order.orderNumber}. Admin will contact you shortly.`);
+    } else {
+      showToast("error", "Order Failed", data.error || "Failed to create order. Please try again.");
     }
-
-    // If no phone, prompt for it
-    if (!customerPhone) {
-      customerPhone = prompt("Please enter your WhatsApp number (with country code):") || "";
-      if (!customerPhone) {
-        alert("Phone number is required to place order.");
-        setWhatsappOrderLoading(false);
-        return;
-      }
-    }
-
-    // Get size value
-    let sizeValue = "Standard";
-    if (selectedSize) {
-      sizeValue = typeof selectedSize === "object" ? selectedSize.label : selectedSize;
-    }
-
-    // Calculate final price
-    let finalPrice = product.price;
-    if (product.enableSizePrice && selectedSize && typeof selectedSize === "object") {
-      finalPrice = selectedSize.price;
-    }
-
-    const orderItems = [{
-      productId: product._id,
-      name: product.name,
-      brand: product.brandId?.name || "",
-      price: finalPrice,
-      quantity: qty,
-      size: sizeValue,
-      image: product.images?.[0],
-    }];
-
-    try {
-      const response = await fetch("/api/whatsapp/orders", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          customerInfo: {
-            name: customerName,
-            phone: customerPhone,
-            email: customerEmail,
-          },
-          items: orderItems,
-          subtotal: finalPrice * qty,
-          total: finalPrice * qty,
-          customerNotes: `Product order from product page: ${product.name} (${sizeValue}) x${qty}`,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        // Build WhatsApp message with order details
-        const message = `🏏 *PRODUCT ORDER REQUEST*\n\n` +
-          `*Customer:* ${customerName}\n` +
-          `*Phone:* ${customerPhone}\n` +
-          `*Email:* ${customerEmail || "Not provided"}\n\n` +
-          `*Product:* ${product.name}\n` +
-          `*Size:* ${sizeValue}\n` +
-          `*Color:* ${selectedColor || "N/A"}\n` +
-          `*Quantity:* ${qty}\n` +
-          `*Price:* AED ${(finalPrice * qty).toLocaleString()}\n\n` +
-          `*Order #:* ${data.order.orderNumber}\n\n` +
-          `⚠️ *ADMIN ACTION REQUIRED:*\n` +
-          `Please contact customer to confirm:\n` +
-          `- Full delivery address\n` +
-          `- Any additional items\n` +
-          `- Final quantity\n\n` +
-          `Customer will receive confirmation after admin updates.`;
-
-        const whatsappUrl = `https://wa.me/971526514666?text=${encodeURIComponent(message)}`;
-        window.open(whatsappUrl, "_blank");
-        
-        alert(`Order request sent! Order #: ${data.order.orderNumber}\nAdmin will contact you shortly to confirm details.`);
-      } else {
-        alert(data.error || "Failed to create order. Please try again.");
-      }
-    } catch (error) {
-      console.error("WhatsApp order error:", error);
-      alert("Something went wrong. Please try again.");
-    } finally {
-      setWhatsappOrderLoading(false);
-    }
-  };
+  } catch (error) {
+    console.error("WhatsApp order error:", error);
+    showToast("error", "Something went wrong", "Please try again later.");
+  } finally {
+    setWhatsappOrderLoading(false);
+  }
+};
 
   // ── Loading / error states ─────────────────────────────────────────────────
   if (loading)

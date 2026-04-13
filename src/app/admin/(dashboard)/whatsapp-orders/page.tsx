@@ -10,6 +10,7 @@ import {
   Search as SearchIcon, AlertCircle, Truck, CreditCard,
 } from "lucide-react";
 import Image from "next/image";
+import { showToast } from "@/components/ui/Toast";
 
 interface OrderItem {
   productId: string;
@@ -186,47 +187,48 @@ export default function AdminWhatsAppOrdersPage() {
     return { subtotal, total };
   };
 
-  const updateOrder = async (orderId: string, status: string) => {
-    setUpdating(true);
-    try {
-      const { subtotal, total } = calculateTotals();
-      
-      const body: any = { 
-        status,
-        items: editingItems,
-        adminNotes: adminNotes,
-        deliveryAddress: deliveryAddress,
-        customerInfo: {
-          name: customerName,
-          phone: customerPhone,
-          email: customerEmail,
-        },
-        subtotal,
-        total,
-      };
+const updateOrder = async (orderId: string, status: string) => {
+  setUpdating(true);
+  try {
+    const { subtotal, total } = calculateTotals();
+    
+    const body: any = { 
+      status,
+      items: editingItems,
+      adminNotes: adminNotes,
+      deliveryAddress: deliveryAddress,
+      customerInfo: {
+        name: customerName,
+        phone: customerPhone,
+        email: customerEmail,
+      },
+      subtotal,
+      total,
+    };
 
-      const res = await fetch(`/api/whatsapp/orders/${orderId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
+    const res = await fetch(`/api/whatsapp/orders/${orderId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
 
-      if (res.ok) {
-        await fetchOrders();
-        setEditingOrder(null);
-        setEditingItems([]);
-        setShowProductModal(false);
-      } else {
-        const error = await res.json();
-        alert(error.error || "Failed to update order");
-      }
-    } catch (error) {
-      console.error("Error updating order:", error);
-      alert("Something went wrong");
-    } finally {
-      setUpdating(false);
+    if (res.ok) {
+      await fetchOrders();
+      setEditingOrder(null);
+      setEditingItems([]);
+      setShowProductModal(false);
+      showToast("success", "Order Updated", `Order ${status === "CONFIRMED" ? "confirmed" : "cancelled"} successfully`);
+    } else {
+      const error = await res.json();
+      showToast("error", "Update Failed", error.error || "Failed to update order");
     }
-  };
+  } catch (error) {
+    console.error("Error updating order:", error);
+    showToast("error", "Something went wrong", "Please try again");
+  } finally {
+    setUpdating(false);
+  }
+};
 
   const startEditing = (order: WhatsAppOrder) => {
     setEditingOrder(order);
