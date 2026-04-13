@@ -21,6 +21,7 @@ import {
   Heart,
   Loader2,
   QrCode,
+  MessageCircle,
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useCart } from "@/context/CartContext";
@@ -114,6 +115,7 @@ export default function ProductDetailPage() {
   const [addedToCart, setAddedToCart] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>("description");
   const [qrBannerVisible, setQrBannerVisible] = useState(viaQr);
+  const [whatsappOrderLoading, setWhatsappOrderLoading] = useState(false);
 
   // Auto-hide QR banner after 5 s
   useEffect(() => {
@@ -179,6 +181,122 @@ export default function ProductDetailPage() {
     setTimeout(() => setAddedToCart(false), 2500);
   };
 
+  // Handle WhatsApp Order - Creates order in database then opens WhatsApp
+  const handleWhatsAppOrder = async () => {
+    if (!session?.user) {
+      router.push("/login?redirect=" + encodeURIComponent(window.location.pathname));
+      return;
+    }
+
+    if (!product) return;
+
+    setWhatsappOrderLoading(true);
+
+    // Get customer info
+    let customerName = session.user.name || "";
+    let customerPhone = (session.user as any)?.phone || "";
+    let customerEmail = session.user.email || "";
+
+    // Fetch latest user data
+    try {
+      const res = await fetch("/api/user/settings");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.user) {
+          customerName = data.user.name || customerName;
+          customerPhone = data.user.phone || customerPhone;
+          customerEmail = data.user.email || customerEmail;
+        }
+      }
+    } catch (e) {
+      console.error("Error fetching user data:", e);
+    }
+
+    // If no phone, prompt for it
+    if (!customerPhone) {
+      customerPhone = prompt("Please enter your WhatsApp number (with country code):") || "";
+      if (!customerPhone) {
+        alert("Phone number is required to place order.");
+        setWhatsappOrderLoading(false);
+        return;
+      }
+    }
+
+    // Get size value
+    let sizeValue = "Standard";
+    if (selectedSize) {
+      sizeValue = typeof selectedSize === "object" ? selectedSize.label : selectedSize;
+    }
+
+    // Calculate final price
+    let finalPrice = product.price;
+    if (product.enableSizePrice && selectedSize && typeof selectedSize === "object") {
+      finalPrice = selectedSize.price;
+    }
+
+    const orderItems = [{
+      productId: product._id,
+      name: product.name,
+      brand: product.brandId?.name || "",
+      price: finalPrice,
+      quantity: qty,
+      size: sizeValue,
+      image: product.images?.[0],
+    }];
+
+    try {
+      const response = await fetch("/api/whatsapp/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customerInfo: {
+            name: customerName,
+            phone: customerPhone,
+            email: customerEmail,
+          },
+          items: orderItems,
+          subtotal: finalPrice * qty,
+          total: finalPrice * qty,
+          customerNotes: `Product order from product page: ${product.name} (${sizeValue}) x${qty}`,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Build WhatsApp message with order details
+        const message = `🏏 *PRODUCT ORDER REQUEST*\n\n` +
+          `*Customer:* ${customerName}\n` +
+          `*Phone:* ${customerPhone}\n` +
+          `*Email:* ${customerEmail || "Not provided"}\n\n` +
+          `*Product:* ${product.name}\n` +
+          `*Size:* ${sizeValue}\n` +
+          `*Color:* ${selectedColor || "N/A"}\n` +
+          `*Quantity:* ${qty}\n` +
+          `*Price:* AED ${(finalPrice * qty).toLocaleString()}\n\n` +
+          `*Order #:* ${data.order.orderNumber}\n\n` +
+          `⚠️ *ADMIN ACTION REQUIRED:*\n` +
+          `Please contact customer to confirm:\n` +
+          `- Full delivery address\n` +
+          `- Any additional items\n` +
+          `- Final quantity\n\n` +
+          `Customer will receive confirmation after admin updates.`;
+
+        const whatsappUrl = `https://wa.me/971526514666?text=${encodeURIComponent(message)}`;
+        window.open(whatsappUrl, "_blank");
+        
+        alert(`Order request sent! Order #: ${data.order.orderNumber}\nAdmin will contact you shortly to confirm details.`);
+      } else {
+        alert(data.error || "Failed to create order. Please try again.");
+      }
+    } catch (error) {
+      console.error("WhatsApp order error:", error);
+      alert("Something went wrong. Please try again.");
+    } finally {
+      setWhatsappOrderLoading(false);
+    }
+  };
+
   // ── Loading / error states ─────────────────────────────────────────────────
   if (loading)
     return (
@@ -224,16 +342,6 @@ export default function ProductDetailPage() {
   const hasSimpleSizes = !hasSizeOptions && product.sizes?.length > 0;
   const hasSizes = hasSizeOptions || hasSimpleSizes;
   const hasColors = product.colors?.length > 0;
-
-  const waMsg = encodeURIComponent(
-    `Hi iSPORTS! I'm interested in the ${product.name}` +
-      (selectedSize
-        ? ` (${typeof selectedSize === "object" ? (selectedSize as SizeOption).label : selectedSize})`
-        : "") +
-      (selectedColor ? `, Colour: ${selectedColor}` : "") +
-      `. Can you help me?`,
-  );
-  const whatsappLink = `https://wa.me/971526514666?text=${waMsg}`;
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
@@ -620,24 +728,25 @@ export default function ProductDetailPage() {
                 </button>
               </div>
 
-              {/* WhatsApp */}
-              <a
-                href={whatsappLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2.5 py-3.5 rounded-xl text-[13px] font-black tracking-wider uppercase active:scale-[0.97] transition-all"
+              {/* WhatsApp Order Button - UPDATED to create order in database */}
+              <button
+                onClick={handleWhatsAppOrder}
+                disabled={whatsappOrderLoading || !product.inStock}
+                className="flex items-center justify-center gap-2.5 py-3.5 rounded-xl text-[13px] font-black tracking-wider uppercase active:scale-[0.97] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ backgroundColor: "#25D366", color: "white" }}
               >
-                <svg
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                >
-                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
-                </svg>
-                Chat on WhatsApp
-              </a>
+                {whatsappOrderLoading ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    Creating Order...
+                  </>
+                ) : (
+                  <>
+                    <MessageCircle size={16} />
+                    ORDER VIA WHATSAPP
+                  </>
+                )}
+              </button>
             </div>
 
             {/* Trust Badges */}

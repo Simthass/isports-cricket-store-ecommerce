@@ -41,7 +41,8 @@ const navGroups = [
         icon: ClipboardList,
       },
       { label: "Customers", href: "/admin/customers", icon: Users },
-      { label: "Reviews", href: "/admin/reviews", icon: Star }, // ✅ ADDED Reviews menu
+      { label: "Reviews", href: "/admin/reviews", icon: Star },
+      { label: "WhatsApp Orders", href: "/admin/whatsapp-orders", icon: MessageCircle },
     ],
   },
   {
@@ -54,7 +55,7 @@ const navGroups = [
   {
     label: "System",
     items: [
-      { label: "WhatsApp", href: "/admin/whatsapp", icon: MessageCircle },
+      { label: "WhatsApp Templates", href: "/admin/whatsapp-templates", icon: MessageCircle },
       { label: "Settings", href: "/admin/settings", icon: Settings },
     ],
   },
@@ -64,6 +65,27 @@ export default function AdminSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
+
+  // Helper function to determine if a nav item is active
+  const isNavActive = (href: string) => {
+    // Exact match for specific routes
+    if (href === "/admin/whatsapp-orders") {
+      return pathname === "/admin/whatsapp-orders";
+    }
+    if (href === "/admin/whatsapp-templates") {
+      return pathname === "/admin/whatsapp-templates";
+    }
+    // For dashboard, exact match only
+    if (href === "/admin/dashboard") {
+      return pathname === "/admin/dashboard";
+    }
+    // For other routes, check if pathname starts with href
+    if (href !== "/admin/dashboard" && pathname.startsWith(href)) {
+      return true;
+    }
+    // Exact match fallback
+    return pathname === href;
+  };
 
   const handleLogout = async () => {
     await signOut({ redirect: false });
@@ -144,10 +166,7 @@ export default function AdminSidebar() {
 
             <div className="space-y-1.5">
               {group.items.map((item) => {
-                const isActive =
-                  pathname === item.href ||
-                  (item.href !== "/admin/dashboard" &&
-                    pathname.startsWith(item.href));
+                const isActive = isNavActive(item.href);
                 const Icon = item.icon;
 
                 return (

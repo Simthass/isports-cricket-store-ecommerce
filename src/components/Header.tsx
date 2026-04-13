@@ -285,7 +285,7 @@ function ShopMegaMenu({
 // ── Main Header ───────────────────────────────────────────────
 export default function Header() {
   const { data: session, status } = useSession();
-  const { cartCount } = useCart(); // ✅ Get real cart count from context
+  const { cartCount } = useCart();
   const isLoggedIn = status === "authenticated";
   const isAdmin = session?.user?.role === "ADMIN";
   const settings = useSiteSettings();
@@ -359,9 +359,9 @@ export default function Header() {
         <div className="max-w-[1400px] mx-auto px-10 flex items-center justify-between h-9">
           <div className="flex items-center gap-1.5 text-white text-[11px] font-medium tracking-wide">
             <Phone size={11} className="text-[#81bf42]" />
-            <span>{settings.phone || "+971 52 6514 666"}</span>{" "}
+            <span>{settings.phone || "+971 52 6514 666"}</span>
             <span className="mx-3 text-white">|</span>
-            <span>{settings.email || "info@isportscricket.com"}</span>{" "}
+            <span>{settings.email || "info@isportscricket.com"}</span>
           </div>
           <div className="flex items-center gap-6 text-[11px] font-medium tracking-wide">
             <Link
@@ -588,7 +588,7 @@ export default function Header() {
                 </button>
               )}
 
-              {/* Cart - Updated with real cart count */}
+              {/* Cart */}
               <Link
                 href="/cart"
                 className="relative flex items-center justify-center w-10 h-10 rounded-xl text-gray-600 hover:text-[#004b9c] hover:bg-blue-50 transition-all duration-150"

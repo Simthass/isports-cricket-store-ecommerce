@@ -13,6 +13,7 @@ import {
   User,
   Command,
   ShoppingBag,
+  MessageCircle, // ADD THIS
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 
@@ -62,6 +63,7 @@ export default function AdminHeader({ session }: AdminHeaderProps) {
   const [notifOpen, setNotifOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
+  const [whatsappPendingCount, setWhatsappPendingCount] = useState(0);
 
   const meta = pageMeta[pathname] ?? {
     title: "Admin",
@@ -89,6 +91,22 @@ export default function AdminHeader({ session }: AdminHeaderProps) {
     // Poll every 60 seconds for new orders
     const interval = setInterval(fetchPendingOrders, 60000);
     
+    return () => clearInterval(interval);
+  }, []);
+
+  // Fetch WhatsApp pending orders count
+  useEffect(() => {
+    const fetchWhatsappPending = async () => {
+      try {
+        const res = await fetch("/api/whatsapp/orders?status=WAITING_CONFIRMATION&limit=1");
+        const data = await res.json();
+        setWhatsappPendingCount(data.pendingCount || 0);
+      } catch (e) {
+        console.error("Error fetching WhatsApp pending:", e);
+      }
+    };
+    fetchWhatsappPending();
+    const interval = setInterval(fetchWhatsappPending, 30000);
     return () => clearInterval(interval);
   }, []);
 
@@ -144,6 +162,22 @@ export default function AdminHeader({ session }: AdminHeaderProps) {
             <Command size={10} /> K
           </div>
         </div>
+
+        <div className="w-px h-6 bg-gray-200" />
+
+        {/* WhatsApp Orders Bell */}
+        <Link
+          href="/admin/whatsapp-orders"
+          className="relative flex items-center justify-center w-9 h-9 rounded-xl hover:bg-gray-100 transition-colors text-gray-500"
+          title="WhatsApp Orders"
+        >
+          <MessageCircle size={18} strokeWidth={1.75} />
+          {whatsappPendingCount > 0 && (
+            <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] rounded-full bg-[#25D366] text-white text-[10px] font-black flex items-center justify-center px-1 shadow-md">
+              {whatsappPendingCount > 99 ? "99+" : whatsappPendingCount}
+            </span>
+          )}
+        </Link>
 
         <div className="w-px h-6 bg-gray-200" />
 

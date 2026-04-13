@@ -88,13 +88,13 @@ export default function CartPage() {
           if (data.success && data.user) {
             const userData = data.user;
             setInfo({
-              firstName: userData.firstName || "",
-              lastName: userData.lastName || "",
-              phone: userData.phone || "",
-              email: userData.email || session.user.email || "",
-              address: userData.address || "",
-              city: userData.city || "",
-              emirate: userData.emirate || "",
+              firstName: userData.firstName ?? "",
+              lastName: userData.lastName ?? "",
+              phone: userData.phone ?? "",
+              email: userData.email ?? session.user.email ?? "",
+              address: userData.address ?? "",
+              city: userData.city ?? "",
+              emirate: userData.emirate ?? "",
               notes: "",
             });
           }
@@ -188,45 +188,77 @@ export default function CartPage() {
     setInfo(prev => ({ ...prev, [field]: value }));
   };
 
-  // WhatsApp order - uses customer details from form (which comes from database)
-  const handleWhatsApp = () => {
-    const adminPhone = process.env.NEXT_PUBLIC_ADMIN_WHATSAPP ?? "971500000000";
-    
+  // WhatsApp Order - Creates order in database first, then opens WhatsApp
+  const handleWhatsAppOrder = async () => {
     if (!info.firstName || !info.phone || !info.address) {
       alert("Please fill in your contact and address details before placing order via WhatsApp.");
       return;
     }
-    
-    const lines = items.map(
-      (i) => `• ${i.name} (${i.size}) ×${i.qty} — AED ${i.price * i.qty}`
-    );
-    
-    const msg =
-      `🏏 *NEW ORDER FROM iSPORTS*\n\n` +
-      `*CUSTOMER DETAILS*\n` +
-      `Name: ${info.firstName} ${info.lastName}\n` +
-      `Phone: ${info.phone}\n` +
-      `Email: ${info.email}\n` +
-      `Address: ${info.address}, ${info.city}${info.emirate ? `, ${info.emirate}` : ''}\n\n` +
-      `*ORDER DETAILS*\n` +
-      lines.join("\n") + "\n\n" +
-      `*ORDER SUMMARY*\n` +
-      `Subtotal: AED ${subtotal.toLocaleString()}\n` +
-      (couponApplied ? `Discount (10%): -AED ${discount}\n` : "") +
-      `Shipping: ${shippingCost === 0 ? "FREE" : `AED ${shippingCost}`}\n` +
-      `─────────────────\n` +
-      `*TOTAL: AED ${total.toLocaleString()}*\n\n` +
-      `Delivery Method: ${delivery === "express" ? "Express Shipping" : "Standard Delivery"}\n` +
-      `Payment Method: Cash on Delivery\n\n` +
-      `Please confirm this order. Thank you!`;
 
-    window.open(
-      `https://wa.me/${adminPhone}?text=${encodeURIComponent(msg)}`,
-      "_blank"
-    );
+    if (items.length === 0) {
+      alert("Your cart is empty.");
+      return;
+    }
+
+    const orderItems = cartItems.map(item => ({
+      productId: item.productId,
+      name: item.name,
+      brand: item.brand,
+      price: item.price,
+      quantity: item.quantity,
+      size: item.size,
+      image: item.image,
+    }));
+
+    try {
+      const response = await fetch("/api/whatsapp/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customerInfo: {
+            name: `${info.firstName} ${info.lastName}`.trim(),
+            phone: info.phone,
+            email: info.email,
+          },
+          items: orderItems,
+          subtotal: subtotal,
+          total: total,
+          customerNotes: info.notes,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        const itemLines = orderItems.map(i => `• ${i.name} (${i.size}) x${i.quantity} - AED ${i.price * i.quantity}`).join("\n");
+        const message = `🏏 *NEW ORDER REQUEST*\n\n` +
+          `*Customer:* ${info.firstName} ${info.lastName}\n` +
+          `*Phone:* ${info.phone}\n` +
+          `*Email:* ${info.email || "Not provided"}\n\n` +
+          `*Items:*\n${itemLines}\n\n` +
+          `*Subtotal:* AED ${subtotal.toLocaleString()}\n` +
+          (couponApplied ? `*Discount:* -AED ${discount}\n` : "") +
+          `*Shipping:* ${shippingCost === 0 ? "FREE" : `AED ${shippingCost}`}\n` +
+          `─────────────────\n` +
+          `*TOTAL:* AED ${total.toLocaleString()}\n\n` +
+          `*Delivery:* ${delivery === "express" ? "Express Shipping" : "Standard Delivery"}\n` +
+          `*Order #:* ${data.order.orderNumber}\n\n` +
+          `Please confirm this order. Thank you!`;
+
+        const whatsappUrl = `https://wa.me/971526514666?text=${encodeURIComponent(message)}`;
+        window.open(whatsappUrl, "_blank");
+        
+        alert(`Order request sent! Your order number is ${data.order.orderNumber}. Admin will confirm shortly.`);
+      } else {
+        alert(data.error || "Failed to create order. Please try again.");
+      }
+    } catch (error) {
+      console.error("WhatsApp order error:", error);
+      alert("Something went wrong. Please try again.");
+    }
   };
 
-  // ── Place order ───────────────────────────────────────────────────────────────
+  // ── Place order (COD) ───────────────────────────────────────────────────────────────
   const handlePlaceOrder = async () => {
     if (!info.firstName || !info.phone || !info.email || !info.address || !info.city) {
       alert("Please fill in all required fields.");
@@ -866,11 +898,11 @@ export default function CartPage() {
                 {step === "cart" ? (
                   <>
                     <button
-                      onClick={handleWhatsApp}
+                      onClick={handleWhatsAppOrder}
                       className="mt-6 flex items-center justify-center gap-3 w-full py-3.5 rounded-2xl bg-[#25D366] hover:bg-[#1ebe5d] text-white text-[13px] font-black tracking-wider uppercase transition-all duration-200 shadow-[0_4px_20px_rgba(37,211,102,0.35)] hover:shadow-[0_6px_28px_rgba(37,211,102,0.45)] active:scale-[0.98]"
                     >
                       <MessageCircle size={18} />
-                      PLACE ORDER VIA WHATSAPP
+                      ORDER VIA WHATSAPP
                     </button>
                     
                     <button
