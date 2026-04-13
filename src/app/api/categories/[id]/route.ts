@@ -1,3 +1,4 @@
+// src/app/api/categories/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import slugify from "slugify";
@@ -5,15 +6,21 @@ import connectDB from "@/lib/mongodb";
 import Category from "@/models/Category";
 import { auth } from "@/lib/auth";
 
-// ── Zod Schema ────────────────────────────────────────────────
+const SubCategoryInput = z.object({
+  name: z.string().min(1).max(60).trim(),
+});
+
 const UpdateCategorySchema = z.object({
   name: z.string().min(2).max(60).trim().optional(),
-  image: z.string().url("Must be a valid URL").optional().or(z.literal("")),
+  image: z
+    .string()
+    .optional()
+    .transform((v) => (v && v.trim() !== "" ? v.trim() : undefined)),
+  subCategories: z.array(SubCategoryInput).optional(),
 });
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-// ── GET /api/categories/[id] ──────────────────────────────────
 export async function GET(_req: NextRequest, context: RouteContext) {
   try {
     const { id } = await context.params;
@@ -35,7 +42,6 @@ export async function GET(_req: NextRequest, context: RouteContext) {
   }
 }
 
-// ── PUT /api/categories/[id] ──────────────────────────────────
 export async function PUT(req: NextRequest, context: RouteContext) {
   try {
     const session = await auth();
@@ -47,9 +53,10 @@ export async function PUT(req: NextRequest, context: RouteContext) {
     }
 
     const { id } = await context.params;
-    const body: unknown = await req.json();
-    const parsed = UpdateCategorySchema.safeParse(body);
+    const body = await req.json();
+    console.log("[PUT /api/categories/[id]] body:", JSON.stringify(body));
 
+    const parsed = UpdateCategorySchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
         { success: false, error: parsed.error.flatten().fieldErrors },
@@ -62,9 +69,11 @@ export async function PUT(req: NextRequest, context: RouteContext) {
     const updateData: Record<string, unknown> = {};
 
     if (parsed.data.name) {
-      // Check duplicate name (excluding this doc)
       const existing = await Category.findOne({
-        name: { $regex: `^${parsed.data.name}$`, $options: "i" },
+        name: {
+          $regex: `^${parsed.data.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`,
+          $options: "i",
+        },
         _id: { $ne: id },
       });
       if (existing) {
@@ -81,12 +90,29 @@ export async function PUT(req: NextRequest, context: RouteContext) {
     }
 
     if (parsed.data.image !== undefined) {
-      updateData.image = parsed.data.image || undefined;
+      updateData.image = parsed.data.image;
     }
 
-    const updated = await Category.findByIdAndUpdate(id, updateData, {
-      new: true,
-    }).lean();
+    // Always update subCategories when provided (even empty array = clearing all subs)
+    if (body.subCategories !== undefined) {
+      const rawSubs: Array<{ name: string }> = body.subCategories || [];
+      updateData.subCategories = rawSubs
+        .filter((s) => s.name && s.name.trim())
+        .map((sc) => ({
+          name: sc.name.trim(),
+          slug: slugify(sc.name.trim(), { lower: true, strict: true }),
+        }));
+      console.log(
+        "[PUT /api/categories/[id]] updating subCategories:",
+        updateData.subCategories,
+      );
+    }
+
+    const updated = await Category.findByIdAndUpdate(
+      id,
+      { $set: updateData },
+      { new: true },
+    ).lean();
 
     if (!updated) {
       return NextResponse.json(
@@ -95,6 +121,7 @@ export async function PUT(req: NextRequest, context: RouteContext) {
       );
     }
 
+    console.log("[PUT /api/categories/[id]] result:", JSON.stringify(updated));
     return NextResponse.json({ success: true, data: updated });
   } catch (error) {
     console.error("[PUT /api/categories/[id]]", error);
@@ -105,7 +132,6 @@ export async function PUT(req: NextRequest, context: RouteContext) {
   }
 }
 
-// ── DELETE /api/categories/[id] ───────────────────────────────
 export async function DELETE(_req: NextRequest, context: RouteContext) {
   try {
     const session = await auth();

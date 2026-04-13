@@ -1,3 +1,4 @@
+// src/components/layout/Header.tsx
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
@@ -30,11 +31,17 @@ import { useRouter } from "next/navigation";
 import { useCart } from "@/context/CartContext";
 
 // ── Types ─────────────────────────────────────────────────────
+interface NavSubCategory {
+  name: string;
+  slug: string;
+}
+
 interface NavCategory {
   _id: string;
   name: string;
   slug: string;
   image?: string;
+  subCategories?: NavSubCategory[];
 }
 
 interface NavBrand {
@@ -44,7 +51,6 @@ interface NavBrand {
   logo?: string;
 }
 
-// ── Static nav links (Shop mega-menu is handled separately) ───
 const staticNavLinks = [
   { name: "Home", href: "/" },
   { name: "About us", href: "/about" },
@@ -57,10 +63,9 @@ const marqueeItems = [
   { icon: Headphones, text: "24/7 CUSTOMER SUPPORT AVAILABLE" },
   { icon: Mail, text: "SIGN UP FOR GREAT DEALS" },
 ];
-
 const doubledMarquee = [...marqueeItems, ...marqueeItems];
 
-// ── Avatar helper ─────────────────────────────────────────────
+// ── Avatar ─────────────────────────────────────────────────────
 function UserAvatar({
   name,
   image,
@@ -104,7 +109,7 @@ function UserAvatar({
   );
 }
 
-// ── Shop Mega-Menu ────────────────────────────────────────────
+// ── Shop Mega-Menu with subcategory fly-out ───────────────────
 function ShopMegaMenu({
   categories,
   brands,
@@ -117,6 +122,14 @@ function ShopMegaMenu({
   const [activePanel, setActivePanel] = useState<"categories" | "brands">(
     "categories",
   );
+  // Track which category is hovered to show its subs
+  const [hoveredCatId, setHoveredCatId] = useState<string | null>(null);
+
+  const hoveredCat = categories.find((c) => c._id === hoveredCatId) ?? null;
+  const showSubPanel =
+    activePanel === "categories" &&
+    hoveredCat &&
+    (hoveredCat.subCategories?.length ?? 0) > 0;
 
   return (
     <motion.div
@@ -124,20 +137,19 @@ function ShopMegaMenu({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 10 }}
       transition={{ duration: 0.18 }}
-      className="absolute top-full left-1/2 -translate-x-1/2 mt-1 w-[560px] bg-white rounded-2xl shadow-[0_16px_60px_rgba(0,75,156,0.18)] border border-gray-100 overflow-hidden z-50"
+      className="absolute top-full left-1/2 -translate-x-1/2 mt-1 bg-white rounded-2xl shadow-[0_16px_60px_rgba(0,75,156,0.18)] border border-gray-100 overflow-hidden z-50"
+      style={{ width: showSubPanel ? 720 : 560 }}
+      onMouseLeave={() => setHoveredCatId(null)}
     >
-      <div className="flex">
+      <div className="flex h-full">
+        {/* Left sidebar */}
         <div className="w-[180px] flex-shrink-0 bg-[#f8f9fc] border-r border-gray-100 p-3 flex flex-col gap-1">
           <p className="text-[9px] font-black text-gray-400 tracking-[0.18em] uppercase px-3 pt-1 pb-2">
             Browse By
           </p>
           <button
             onMouseEnter={() => setActivePanel("categories")}
-            className={`flex items-center justify-between px-3 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-150 group ${
-              activePanel === "categories"
-                ? "bg-[#004b9c] text-white shadow-[0_4px_14px_rgba(0,75,156,0.28)]"
-                : "text-gray-600 hover:bg-white hover:text-[#004b9c]"
-            }`}
+            className={`flex items-center justify-between px-3 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-150 ${activePanel === "categories" ? "bg-[#004b9c] text-white shadow-[0_4px_14px_rgba(0,75,156,0.28)]" : "text-gray-600 hover:bg-white hover:text-[#004b9c]"}`}
           >
             <span className="flex items-center gap-2.5">
               <Layers
@@ -157,11 +169,7 @@ function ShopMegaMenu({
           </button>
           <button
             onMouseEnter={() => setActivePanel("brands")}
-            className={`flex items-center justify-between px-3 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-150 group ${
-              activePanel === "brands"
-                ? "bg-[#004b9c] text-white shadow-[0_4px_14px_rgba(0,75,156,0.28)]"
-                : "text-gray-600 hover:bg-white hover:text-[#004b9c]"
-            }`}
+            className={`flex items-center justify-between px-3 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-150 ${activePanel === "brands" ? "bg-[#004b9c] text-white shadow-[0_4px_14px_rgba(0,75,156,0.28)]" : "text-gray-600 hover:bg-white hover:text-[#004b9c]"}`}
           >
             <span className="flex items-center gap-2.5">
               <Tag
@@ -190,6 +198,7 @@ function ShopMegaMenu({
           </div>
         </div>
 
+        {/* Main panel */}
         <div className="flex-1 p-4 max-h-[360px] overflow-y-auto">
           <AnimatePresence mode="wait">
             {activePanel === "categories" ? (
@@ -204,33 +213,47 @@ function ShopMegaMenu({
                   All Categories
                 </p>
                 <div className="grid grid-cols-2 gap-1.5">
-                  {categories.map((cat) => (
-                    <Link
-                      key={cat._id}
-                      href={`/shop?category=${cat.slug}`}
-                      onClick={onClose}
-                      className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-blue-50 hover:text-[#004b9c] text-gray-700 transition-all duration-150 group"
-                    >
-                      {cat.image ? (
-                        <div className="w-8 h-8 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 border border-gray-100">
-                          <Image
-                            src={cat.image}
-                            alt={cat.name}
-                            width={32}
-                            height={32}
-                            className="object-cover w-full h-full"
-                          />
-                        </div>
-                      ) : (
-                        <div className="w-8 h-8 rounded-lg bg-[#004b9c]/8 flex items-center justify-center flex-shrink-0">
-                          <Layers size={14} className="text-[#004b9c]" />
-                        </div>
-                      )}
-                      <span className="text-[13px] font-medium group-hover:font-semibold transition-all truncate">
-                        {cat.name}
-                      </span>
-                    </Link>
-                  ))}
+                  {categories.map((cat) => {
+                    const hasSubs = (cat.subCategories?.length ?? 0) > 0;
+                    const isHov = hoveredCatId === cat._id;
+                    return (
+                      <div
+                        key={cat._id}
+                        onMouseEnter={() => setHoveredCatId(cat._id)}
+                      >
+                        <Link
+                          href={`/shop?category=${cat.slug}`}
+                          onClick={onClose}
+                          className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-gray-700 transition-all duration-150 group w-full ${isHov ? "bg-blue-50 text-[#004b9c]" : "hover:bg-blue-50 hover:text-[#004b9c]"}`}
+                        >
+                          {cat.image ? (
+                            <div className="w-8 h-8 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 border border-gray-100">
+                              <Image
+                                src={cat.image}
+                                alt={cat.name}
+                                width={32}
+                                height={32}
+                                className="object-cover w-full h-full"
+                              />
+                            </div>
+                          ) : (
+                            <div className="w-8 h-8 rounded-lg bg-[#004b9c]/8 flex items-center justify-center flex-shrink-0">
+                              <Layers size={14} className="text-[#004b9c]" />
+                            </div>
+                          )}
+                          <span className="text-[13px] font-medium group-hover:font-semibold transition-all truncate flex-1">
+                            {cat.name}
+                          </span>
+                          {hasSubs && (
+                            <ChevronRight
+                              size={12}
+                              className="text-gray-300 flex-shrink-0"
+                            />
+                          )}
+                        </Link>
+                      </div>
+                    );
+                  })}
                 </div>
               </motion.div>
             ) : (
@@ -277,6 +300,45 @@ function ShopMegaMenu({
             )}
           </AnimatePresence>
         </div>
+
+        {/* Sub-category fly-out panel */}
+        <AnimatePresence>
+          {showSubPanel && hoveredCat && (
+            <motion.div
+              key={hoveredCat._id + "-subs"}
+              initial={{ opacity: 0, x: 14 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 8 }}
+              transition={{ duration: 0.15 }}
+              className="w-[160px] flex-shrink-0 border-l border-gray-100 bg-[#fafbff] p-3 max-h-[360px] overflow-y-auto"
+              onMouseEnter={() => setHoveredCatId(hoveredCat._id)}
+            >
+              <p className="text-[9px] font-black text-gray-400 tracking-[0.15em] uppercase px-2 pt-1 pb-2 truncate">
+                {hoveredCat.name}
+              </p>
+              <div className="flex flex-col gap-0.5">
+                <Link
+                  href={`/shop?category=${hoveredCat.slug}`}
+                  onClick={onClose}
+                  className="flex items-center gap-2 px-2.5 py-2 rounded-lg text-[12px] font-bold text-[#004b9c] hover:bg-blue-100 transition-colors"
+                >
+                  All {hoveredCat.name}
+                </Link>
+                {hoveredCat.subCategories!.map((sc) => (
+                  <Link
+                    key={sc.slug}
+                    href={`/shop?category=${hoveredCat.slug}__${sc.slug}`}
+                    onClick={onClose}
+                    className="flex items-center gap-2 px-2.5 py-2 rounded-lg text-[12px] font-medium text-gray-600 hover:bg-blue-50 hover:text-[#004b9c] transition-colors"
+                  >
+                    <span className="w-1 h-1 rounded-full bg-gray-300 flex-shrink-0" />
+                    {sc.name}
+                  </Link>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </motion.div>
   );
@@ -285,7 +347,7 @@ function ShopMegaMenu({
 // ── Main Header ───────────────────────────────────────────────
 export default function Header() {
   const { data: session, status } = useSession();
-  const { cartCount } = useCart(); // ✅ Get real cart count from context
+  const { cartCount } = useCart();
   const isLoggedIn = status === "authenticated";
   const isAdmin = session?.user?.role === "ADMIN";
   const settings = useSiteSettings();
@@ -294,31 +356,30 @@ export default function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [shopMenuOpen, setShopMenuOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
-  const [authOpen, setAuthOpen] = useState(false);
-  const [authMode, setAuthMode] = useState<"login" | "register">("login");
   const [accountOpen, setAccountOpen] = useState(false);
   const accountRef = useRef<HTMLDivElement>(null);
   const shopRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
-  // Nav data from DB
   const [navCategories, setNavCategories] = useState<NavCategory[]>([]);
   const [navBrands, setNavBrands] = useState<NavBrand[]>([]);
   const [navLoading, setNavLoading] = useState(true);
 
-  // Mobile sub-menus
   const [mobileShopOpen, setMobileShopOpen] = useState(false);
   const [mobileCatOpen, setMobileCatOpen] = useState(false);
   const [mobileBrandOpen, setMobileBrandOpen] = useState(false);
+  // Track which mobile category has its subs expanded
+  const [mobileExpandedCat, setMobileExpandedCat] = useState<string | null>(
+    null,
+  );
 
-  // Fetch nav data once
   useEffect(() => {
     fetch("/api/shop/nav-data")
       .then((r) => r.json())
       .then((json) => {
         if (json.success) {
-          setNavCategories(json.data.categories);
-          setNavBrands(json.data.brands);
+          setNavCategories(json.data.categories ?? []);
+          setNavBrands(json.data.brands ?? []);
         }
       })
       .finally(() => setNavLoading(false));
@@ -330,18 +391,12 @@ export default function Header() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // Close account dropdown on outside click
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (
-        accountRef.current &&
-        !accountRef.current.contains(e.target as Node)
-      ) {
+      if (accountRef.current && !accountRef.current.contains(e.target as Node))
         setAccountOpen(false);
-      }
-      if (shopRef.current && !shopRef.current.contains(e.target as Node)) {
+      if (shopRef.current && !shopRef.current.contains(e.target as Node))
         setShopMenuOpen(false);
-      }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -354,14 +409,14 @@ export default function Header() {
 
   return (
     <>
-      {/* ── Top Utility Bar ── */}
+      {/* Top Utility Bar */}
       <div className="fixed top-0 left-0 w-full z-50 bg-[#002f6c] hidden lg:block">
         <div className="max-w-[1400px] mx-auto px-10 flex items-center justify-between h-9">
           <div className="flex items-center gap-1.5 text-white text-[11px] font-medium tracking-wide">
             <Phone size={11} className="text-[#81bf42]" />
-            <span>{settings.phone || "+971 52 6514 666"}</span>{" "}
+            <span>{settings.phone || "+971 52 6514 666"}</span>
             <span className="mx-3 text-white">|</span>
-            <span>{settings.email || "info@isportscricket.com"}</span>{" "}
+            <span>{settings.email || "info@isportscricket.com"}</span>
           </div>
           <div className="flex items-center gap-6 text-[11px] font-medium tracking-wide">
             <Link
@@ -385,10 +440,7 @@ export default function Header() {
               </button>
             ) : (
               <button
-                onClick={() => {
-                  setAuthMode("login");
-                  setAuthOpen(true);
-                }}
+                onClick={() => router.push("/login")}
                 className="text-white hover:text-[#81bf42] transition-colors duration-150"
               >
                 Sign In
@@ -398,7 +450,7 @@ export default function Header() {
         </div>
       </div>
 
-      {/* ── Main Header ── */}
+      {/* Main Header */}
       <header
         className={`fixed left-0 w-full z-40 bg-white transition-all duration-300 lg:top-9 top-0 ${scrolled ? "shadow-[0_4px_30px_rgba(0,75,156,0.13)]" : "shadow-sm"}`}
       >
@@ -420,7 +472,6 @@ export default function Header() {
 
             {/* Desktop Nav */}
             <nav className="hidden lg:flex items-center gap-1 flex-1 justify-center">
-              {/* Home */}
               <Link
                 href="/"
                 className="group relative flex items-center gap-1 px-4 py-2 rounded-lg text-[14px] font-medium text-gray-800 hover:text-[#004b9c] hover:bg-blue-50/70 transition-all duration-150"
@@ -429,7 +480,7 @@ export default function Header() {
                 <span className="absolute bottom-1 left-4 right-4 h-[2px] bg-[#81bf42] rounded-full scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left" />
               </Link>
 
-              {/* Shop — mega menu trigger */}
+              {/* Shop mega menu */}
               <div
                 ref={shopRef}
                 className="relative"
@@ -447,7 +498,6 @@ export default function Header() {
                   />
                   <span className="absolute bottom-1 left-4 right-4 h-[2px] bg-[#81bf42] rounded-full scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left" />
                 </Link>
-
                 <AnimatePresence>
                   {shopMenuOpen && !navLoading && (
                     <ShopMegaMenu
@@ -459,7 +509,6 @@ export default function Header() {
                 </AnimatePresence>
               </div>
 
-              {/* About, Contact */}
               {staticNavLinks
                 .filter((l) => l.name !== "Home")
                 .map((link) => (
@@ -476,12 +525,9 @@ export default function Header() {
 
             {/* Right Controls */}
             <div className="flex items-center gap-2 flex-shrink-0 ml-auto lg:ml-0">
-              {/* Search */}
               <SearchBar className="hidden lg:block w-[310px] xl:w-[360px]" />
-
               <div className="hidden lg:block w-px h-8 bg-gray-200 mx-1" />
 
-              {/* Account Area */}
               {isLoggedIn ? (
                 <div className="relative" ref={accountRef}>
                   <button
@@ -506,7 +552,6 @@ export default function Header() {
                       className={`text-gray-400 transition-transform duration-200 ${accountOpen ? "rotate-180" : ""}`}
                     />
                   </button>
-
                   <AnimatePresence>
                     {accountOpen && (
                       <motion.div
@@ -541,7 +586,7 @@ export default function Header() {
                               <LayoutDashboard
                                 size={15}
                                 className="text-[#004b9c]"
-                              />
+                              />{" "}
                               Admin Dashboard
                             </Link>
                           )}
@@ -550,16 +595,16 @@ export default function Header() {
                             onClick={() => setAccountOpen(false)}
                             className="flex items-center gap-3 px-4 py-2.5 text-[13px] font-medium text-gray-700 hover:bg-blue-50 hover:text-[#004b9c] transition-colors duration-100"
                           >
-                            <User size={15} className="text-gray-400" />
-                            My Account
+                            <User size={15} className="text-gray-400" /> My
+                            Account
                           </Link>
                           <Link
                             href="/account/orders"
                             onClick={() => setAccountOpen(false)}
                             className="flex items-center gap-3 px-4 py-2.5 text-[13px] font-medium text-gray-700 hover:bg-blue-50 hover:text-[#004b9c] transition-colors duration-100"
                           >
-                            <Package size={15} className="text-gray-400" />
-                            My Orders
+                            <Package size={15} className="text-gray-400" /> My
+                            Orders
                           </Link>
                         </div>
                         <div className="border-t border-gray-100 py-2">
@@ -567,8 +612,8 @@ export default function Header() {
                             onClick={handleSignOut}
                             className="flex items-center gap-3 w-full px-4 py-2.5 text-[13px] font-medium text-red-500 hover:bg-red-50 transition-colors duration-100"
                           >
-                            <LogOut size={15} className="text-red-400" />
-                            Sign Out
+                            <LogOut size={15} className="text-red-400" /> Sign
+                            Out
                           </button>
                         </div>
                       </motion.div>
@@ -577,10 +622,7 @@ export default function Header() {
                 </div>
               ) : (
                 <button
-                  onClick={() => {
-                    setAuthMode("login");
-                    setAuthOpen(true);
-                  }}
+                  onClick={() => router.push("/login")}
                   className="flex items-center justify-center w-10 h-10 rounded-xl text-gray-600 hover:text-[#004b9c] hover:bg-blue-50 transition-all duration-150"
                   title="Sign In"
                 >
@@ -588,7 +630,6 @@ export default function Header() {
                 </button>
               )}
 
-              {/* Cart - Updated with real cart count */}
               <Link
                 href="/cart"
                 className="relative flex items-center justify-center w-10 h-10 rounded-xl text-gray-600 hover:text-[#004b9c] hover:bg-blue-50 transition-all duration-150"
@@ -618,7 +659,6 @@ export default function Header() {
                 </button>
               )}
 
-              {/* Mobile Menu Toggle */}
               <button
                 onClick={() => setMobileOpen(!mobileOpen)}
                 className="lg:hidden flex items-center justify-center w-10 h-10 rounded-xl border border-gray-200 text-gray-700 hover:border-[#004b9c] hover:text-[#004b9c] hover:bg-blue-50 transition-all duration-150"
@@ -662,7 +702,7 @@ export default function Header() {
         </div>
       </header>
 
-      {/* ── Mobile Drawer ── */}
+      {/* Mobile Drawer */}
       <AnimatePresence>
         {mobileOpen && (
           <>
@@ -681,7 +721,6 @@ export default function Header() {
               className="fixed top-0 left-0 z-40 w-[310px] h-full bg-white shadow-2xl flex flex-col lg:hidden"
             >
               <div className="h-1.5 bg-gradient-to-r from-[#004b9c] via-[#81bf42] to-[#004b9c]" />
-
               <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
                 <div className="relative w-[130px] h-[44px]">
                   <Image
@@ -718,7 +757,6 @@ export default function Header() {
                 </div>
               )}
 
-              {/* Mobile Search */}
               <div className="px-4 py-3 border-b border-gray-100">
                 <div className="relative flex items-center">
                   <Search className="absolute left-3 text-gray-400" size={14} />
@@ -730,7 +768,6 @@ export default function Header() {
                 </div>
               </div>
 
-              {/* Mobile Nav */}
               <nav className="flex flex-col px-3 py-3 flex-1 gap-0.5 overflow-y-auto">
                 <Link
                   href="/"
@@ -752,7 +789,6 @@ export default function Header() {
                       className={`text-gray-400 transition-transform duration-200 ${mobileShopOpen ? "rotate-180" : ""}`}
                     />
                   </button>
-
                   <AnimatePresence>
                     {mobileShopOpen && (
                       <motion.div
@@ -770,13 +806,13 @@ export default function Header() {
                           View All Products
                         </Link>
 
-                        {/* Categories toggle */}
+                        {/* Categories */}
                         <button
                           onClick={() => setMobileCatOpen(!mobileCatOpen)}
                           className="flex items-center justify-between w-full py-2 px-2 text-[12.5px] text-gray-600 hover:text-[#004b9c] hover:bg-blue-50 rounded-lg font-semibold"
                         >
                           <span className="flex items-center gap-2">
-                            <Layers size={13} className="text-[#004b9c]" />
+                            <Layers size={13} className="text-[#004b9c]" />{" "}
                             Categories
                           </span>
                           <ChevronDown
@@ -792,28 +828,78 @@ export default function Header() {
                               exit={{ height: 0, opacity: 0 }}
                               className="overflow-hidden ml-4 border-l border-gray-200 pl-2"
                             >
-                              {navCategories.map((cat) => (
-                                <Link
-                                  key={cat._id}
-                                  href={`/shop?category=${cat.slug}`}
-                                  onClick={() => setMobileOpen(false)}
-                                  className="flex items-center py-1.5 px-2 text-[12px] text-gray-600 hover:text-[#004b9c] hover:bg-blue-50 rounded-lg transition-colors"
-                                >
-                                  {cat.name}
-                                </Link>
-                              ))}
+                              {navCategories.map((cat) => {
+                                const hasSubs =
+                                  (cat.subCategories?.length ?? 0) > 0;
+                                const isExpanded =
+                                  mobileExpandedCat === cat._id;
+                                return (
+                                  <div key={cat._id}>
+                                    <div className="flex items-center">
+                                      <Link
+                                        href={`/shop?category=${cat.slug}`}
+                                        onClick={() => setMobileOpen(false)}
+                                        className="flex-1 flex items-center py-1.5 px-2 text-[12px] text-gray-600 hover:text-[#004b9c] hover:bg-blue-50 rounded-lg transition-colors"
+                                      >
+                                        {cat.name}
+                                      </Link>
+                                      {hasSubs && (
+                                        <button
+                                          onClick={() =>
+                                            setMobileExpandedCat(
+                                              isExpanded ? null : cat._id,
+                                            )
+                                          }
+                                          className="p-1.5 text-gray-400 hover:text-[#004b9c]"
+                                        >
+                                          <ChevronRight
+                                            size={12}
+                                            className={`transition-transform ${isExpanded ? "rotate-90" : ""}`}
+                                          />
+                                        </button>
+                                      )}
+                                    </div>
+                                    <AnimatePresence>
+                                      {isExpanded && hasSubs && (
+                                        <motion.div
+                                          initial={{ height: 0, opacity: 0 }}
+                                          animate={{
+                                            height: "auto",
+                                            opacity: 1,
+                                          }}
+                                          exit={{ height: 0, opacity: 0 }}
+                                          className="overflow-hidden ml-3 border-l border-gray-100 pl-2"
+                                        >
+                                          {cat.subCategories!.map((sc) => (
+                                            <Link
+                                              key={sc.slug}
+                                              href={`/shop?category=${cat.slug}__${sc.slug}`}
+                                              onClick={() =>
+                                                setMobileOpen(false)
+                                              }
+                                              className="flex items-center gap-1.5 py-1.5 px-2 text-[11px] text-gray-500 hover:text-[#004b9c] hover:bg-blue-50 rounded-lg transition-colors"
+                                            >
+                                              <span className="w-1 h-1 rounded-full bg-gray-300" />
+                                              {sc.name}
+                                            </Link>
+                                          ))}
+                                        </motion.div>
+                                      )}
+                                    </AnimatePresence>
+                                  </div>
+                                );
+                              })}
                             </motion.div>
                           )}
                         </AnimatePresence>
 
-                        {/* Brands toggle */}
+                        {/* Brands */}
                         <button
                           onClick={() => setMobileBrandOpen(!mobileBrandOpen)}
                           className="flex items-center justify-between w-full py-2 px-2 text-[12.5px] text-gray-600 hover:text-[#004b9c] hover:bg-blue-50 rounded-lg font-semibold"
                         >
                           <span className="flex items-center gap-2">
-                            <Tag size={13} className="text-[#81bf42]" />
-                            Brands
+                            <Tag size={13} className="text-[#81bf42]" /> Brands
                           </span>
                           <ChevronDown
                             size={12}
@@ -861,7 +947,6 @@ export default function Header() {
                   Contact us
                 </Link>
 
-                {/* Mobile account links */}
                 {isLoggedIn && (
                   <div className="mt-2 pt-2 border-t border-gray-100">
                     <p className="px-4 py-1 text-[10px] font-black text-gray-400 uppercase tracking-widest">
@@ -894,7 +979,6 @@ export default function Header() {
                 )}
               </nav>
 
-              {/* Mobile Footer */}
               <div className="px-4 py-4 border-t border-gray-100 flex flex-col gap-2.5">
                 {isLoggedIn ? (
                   <button

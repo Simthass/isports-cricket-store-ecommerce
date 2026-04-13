@@ -19,6 +19,7 @@ const UpdateProductSchema = z.object({
   originalPrice: z.number().positive().optional().nullable(),
   images: z.array(z.string().url()).min(1).max(10).optional(),
   categoryId: z.string().min(1).optional(),
+  subCategorySlug: z.string().optional(),
   brandId: z.string().min(1).optional(),
   stockQty: z.number().int().min(0).optional(),
   inStock: z.boolean().optional(),
@@ -36,7 +37,7 @@ const UpdateProductSchema = z.object({
 
 type RouteContext = { params: Promise<{ slug: string }> };
 
-// ── GET /api/products/[slug] ─────────────────────────────────────────────────
+// ── GET /api/products/[slug] ──────────────────────────────────
 export async function GET(_req: NextRequest, context: RouteContext) {
   try {
     const { slug } = await context.params;
@@ -45,7 +46,7 @@ export async function GET(_req: NextRequest, context: RouteContext) {
     await import("@/models/Brand");
 
     const product = await Product.findOne({ slug })
-      .populate("categoryId", "name slug")
+      .populate("categoryId", "name slug subCategories")
       .populate("brandId", "name slug logo")
       .lean();
 
@@ -65,7 +66,7 @@ export async function GET(_req: NextRequest, context: RouteContext) {
   }
 }
 
-// ── PUT /api/products/[slug] ─────────────────────────────────────────────────
+// ── PUT /api/products/[slug] ──────────────────────────────────
 export async function PUT(req: NextRequest, context: RouteContext) {
   try {
     const session = await auth();
@@ -106,16 +107,15 @@ export async function PUT(req: NextRequest, context: RouteContext) {
       updateData.slug = newSlug;
     }
 
-    // NOTE: QR code is intentionally NOT updated here — the product's QR always
-    // points to /qr/<qrCodeId> which then resolves the slug at scan time,
-    // so renaming a product never breaks printed labels. ✅
+    // NOTE: QR code intentionally NOT updated on rename — QR always resolves
+    // via /qr/<qrCodeId> so printed labels stay valid. ✅
 
     const updated = await Product.findByIdAndUpdate(
       existingProduct._id,
       updateData,
       { new: true },
     )
-      .populate("categoryId", "name slug")
+      .populate("categoryId", "name slug subCategories")
       .populate("brandId", "name slug logo")
       .lean();
 
@@ -129,7 +129,7 @@ export async function PUT(req: NextRequest, context: RouteContext) {
   }
 }
 
-// ── DELETE /api/products/[slug] ──────────────────────────────────────────────
+// ── DELETE /api/products/[slug] ───────────────────────────────
 export async function DELETE(_req: NextRequest, context: RouteContext) {
   try {
     const session = await auth();
