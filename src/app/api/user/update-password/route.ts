@@ -31,15 +31,34 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
-    const user = await User.findById(session.user.id);
+    // ✅ IMPORTANT: Use .select('+password') to include the password field
+    const user = await User.findById(session.user.id).select('+password');
+    
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    // Check if user has a password set (for OAuth users)
+    if (!user.password) {
+      return NextResponse.json(
+        { error: "This account uses Google/Facebook login. Please use that method to sign in." },
+        { status: 400 }
+      );
     }
 
     // Verify current password
     const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
     if (!isPasswordValid) {
       return NextResponse.json({ error: "Current password is incorrect" }, { status: 400 });
+    }
+
+    // Check if new password is same as old
+    const isSamePassword = await bcrypt.compare(newPassword, user.password);
+    if (isSamePassword) {
+      return NextResponse.json(
+        { error: "New password must be different from current password" },
+        { status: 400 }
+      );
     }
 
     // Hash new password
