@@ -25,6 +25,10 @@ import {
   LayoutDashboard,
   Tag,
   Layers,
+  Heart,
+  Clock,
+  MapPin,
+  Gift,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
@@ -107,6 +111,23 @@ function UserAvatar({
       {initials}
     </div>
   );
+}
+
+// ── Helper: Scroll to stores section on about page ────────────
+function handleStoreLocatorClick(e: React.MouseEvent) {
+  e.preventDefault();
+  const aboutUrl = "/about";
+  // If we're already on about page, just scroll
+  if (window.location.pathname === aboutUrl) {
+    const storesSection = document.getElementById("visit-our-stores");
+    if (storesSection) {
+      storesSection.scrollIntoView({ behavior: "smooth" });
+    }
+  } else {
+    // Navigate and then scroll after page loads
+    sessionStorage.setItem("scrollToStores", "true");
+    window.location.href = aboutUrl;
+  }
 }
 
 // ── Shop Mega-Menu with subcategory fly-out ───────────────────
@@ -373,6 +394,23 @@ export default function Header() {
     null,
   );
 
+  // Handle scroll to stores section after navigation
+  useEffect(() => {
+    if (
+      window.location.pathname === "/about" &&
+      sessionStorage.getItem("scrollToStores") === "true"
+    ) {
+      sessionStorage.removeItem("scrollToStores");
+      const timer = setTimeout(() => {
+        const storesSection = document.getElementById("visit-our-stores");
+        if (storesSection) {
+          storesSection.scrollIntoView({ behavior: "smooth" });
+        }
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
   useEffect(() => {
     fetch("/api/shop/nav-data")
       .then((r) => r.json())
@@ -407,30 +445,42 @@ export default function Header() {
     await signOut({ callbackUrl: "/" });
   };
 
+  // Get WhatsApp number from settings or default
+  const whatsappNumber = settings.whatsappNumber || "+971526514666";
+  const emailAddress = settings.email || "info@isportscricket.com";
+
   return (
     <>
       {/* Top Utility Bar */}
       <div className="fixed top-0 left-0 w-full z-50 bg-[#002f6c] hidden lg:block">
         <div className="max-w-[1400px] mx-auto px-10 flex items-center justify-between h-9">
           <div className="flex items-center gap-1.5 text-white text-[11px] font-medium tracking-wide">
-            <Phone size={11} className="text-[#81bf42]" />
-            <span>{settings.phone || "+971 52 6514 666"}</span>
-            <span className="mx-3 text-white">|</span>
-            <span>{settings.email || "info@isportscricket.com"}</span>
+            <a
+              href={`https://wa.me/${whatsappNumber.replace(/[^0-9]/g, "")}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 hover:text-[#81bf42] transition-colors duration-150"
+            >
+              <Phone size={11} className="text-[#81bf42]" />
+              <span>{settings.phone || "+971 52 6514 666"}</span>
+            </a>
+            <span className="mx-3 text-white/40">|</span>
+            <a
+              href={`mailto:${emailAddress}`}
+              className="flex items-center gap-1.5 hover:text-[#81bf42] transition-colors duration-150"
+            >
+              <Mail size={11} className="text-[#81bf42]" />
+              <span>{emailAddress}</span>
+            </a>
           </div>
-          <div className="flex items-center gap-6 text-[11px] font-medium tracking-wide">
-            <Link
-              href="/product"
-              className="text-white hover:text-[#81bf42] transition-colors duration-150"
+          <div className="flex items-center gap-5 text-[11px] font-medium tracking-wide">
+            <a
+              href="https://maps.app.goo.gl/Y8PAhyAZXXmPDRLYA"
+              onClick={handleStoreLocatorClick}
+              className="text-white hover:text-[#81bf42] transition-colors duration-150 flex items-center gap-1.5 cursor-pointer"
             >
-              Track Order
-            </Link>
-            <Link
-              href="/store-locator"
-              className="text-white hover:text-[#81bf42] transition-colors duration-150"
-            >
-              Store Locator
-            </Link>
+              <MapPin size={11} /> Store Locator
+            </a>
             {isLoggedIn ? (
               <button
                 onClick={handleSignOut}
@@ -605,6 +655,14 @@ export default function Header() {
                           >
                             <Package size={15} className="text-gray-400" /> My
                             Orders
+                          </Link>
+                          <Link
+                            href="/wishlist"
+                            onClick={() => setAccountOpen(false)}
+                            className="flex items-center gap-3 px-4 py-2.5 text-[13px] font-medium text-gray-700 hover:bg-blue-50 hover:text-[#004b9c] transition-colors duration-100"
+                          >
+                            <Heart size={15} className="text-gray-400" />{" "}
+                            Wishlist
                           </Link>
                         </div>
                         <div className="border-t border-gray-100 py-2">
@@ -975,6 +1033,13 @@ export default function Header() {
                       className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-[13px] font-medium text-gray-700 hover:bg-blue-50 hover:text-[#004b9c]"
                     >
                       <Package size={15} className="text-gray-400" /> My Orders
+                    </Link>
+                    <Link
+                      href="/wishlist"
+                      onClick={() => setMobileOpen(false)}
+                      className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-[13px] font-medium text-gray-700 hover:bg-blue-50 hover:text-[#004b9c]"
+                    >
+                      <Heart size={15} className="text-gray-400" /> Wishlist
                     </Link>
                   </div>
                 )}

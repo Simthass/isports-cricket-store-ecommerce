@@ -129,6 +129,7 @@ export default function FeaturedBrands() {
       `}</style>
 
       <section
+        id="brands"
         ref={ref}
         className="relative w-full bg-white overflow-hidden py-16 lg:py-24"
         style={{ fontFamily: "'Poppins', sans-serif" }}
