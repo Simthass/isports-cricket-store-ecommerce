@@ -11,8 +11,6 @@ import {
   Lock,
   MapPin,
   Bell,
-  ShoppingBag,
-  MessageCircle,
   Save,
   Eye,
   EyeOff,
@@ -20,11 +18,9 @@ import {
   LogOut,
   Loader2,
   ChevronRight,
-  Package,
-  Truck,
 } from "lucide-react";
 
-// ── Tab config (Combined both versions) ─────────────────────────────────────
+// ── Tab config (Removed orders and reviews tabs) ─────────────────────────────
 const tabs = [
   { id: "profile", label: "Profile", icon: User, href: "/account" },
   {
@@ -40,47 +36,10 @@ const tabs = [
     href: "/account?tab=addresses",
   },
   {
-    id: "orders",
-    label: "My Orders",
-    icon: ShoppingBag,
-    href: "/account/orders",
-  },
-  {
-    id: "reviews",
-    label: "My Reviews",
-    icon: MessageCircle,
-    href: "/account/reviews",
-  },
-  {
     id: "notifications",
     label: "Notifications",
     icon: Bell,
     href: "/account?tab=notifications",
-  },
-];
-
-// ── Dummy orders for display ──────────────────────────────────────────────────
-const DUMMY_ORDERS = [
-  {
-    id: "ISP-2024-001",
-    date: "12 Mar 2026",
-    total: "AED 649",
-    status: "Delivered",
-    statusColor: "text-green-600 bg-green-50",
-  },
-  {
-    id: "ISP-2024-002",
-    date: "28 Feb 2026",
-    total: "AED 299",
-    status: "Shipped",
-    statusColor: "text-blue-600 bg-blue-50",
-  },
-  {
-    id: "ISP-2024-003",
-    date: "10 Feb 2026",
-    total: "AED 178",
-    status: "Processing",
-    statusColor: "text-amber-600 bg-amber-50",
   },
 ];
 
@@ -136,10 +95,8 @@ export default function AccountPage() {
   const [saving, setSaving] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
 
-  // ── Profile form (combined fields) ──────────────────────────────────────────
+  // ── Profile form ──────────────────────────────────────────────────────────
   const [profile, setProfile] = useState({
-    firstName: "",
-    lastName: "",
     name: "",
     email: "",
     phone: "",
@@ -175,42 +132,26 @@ export default function AccountPage() {
     if (!session?.user) return;
     setLoadingData(true);
     try {
-      // Fetch user profile from settings endpoint
-      const profileRes = await fetch("/api/user/settings");
+      const [profileRes, notifRes] = await Promise.all([
+        fetch("/api/users/profile"),
+        fetch("/api/users/notifications"),
+      ]);
+
       if (profileRes.ok) {
         const data = await profileRes.json();
-        const userData = data.user || data;
         setProfile({
-          firstName: userData.firstName ?? "",
-          lastName: userData.lastName ?? "",
-          name: userData.name ?? "",
-          email: userData.email ?? session.user.email ?? "",
-          phone: userData.phone ?? "",
-          address: userData.address ?? "",
-          city: userData.city ?? "",
-          emirate: userData.emirate ?? "",
+          name: data.name ?? "",
+          email: data.email ?? session.user.email ?? "",
+          phone: data.phone ?? "",
+          address: data.address ?? "",
+          city: data.city ?? "",
+          emirate: data.emirate ?? "",
         });
       }
 
-      // Also fetch address separately to ensure it's synced
-      const addressRes = await fetch("/api/users/address");
-      if (addressRes.ok) {
-        const addressData = await addressRes.json();
-        setProfile(prev => ({
-          ...prev,
-          address: addressData.address || prev.address,
-          city: addressData.city || prev.city,
-          emirate: addressData.emirate || prev.emirate,
-        }));
-      }
-
-      // Fetch notification settings
-      const notifRes = await fetch("/api/user/notifications");
       if (notifRes.ok) {
         const data = await notifRes.json();
-        if (data.preferences || data.notifications) {
-          setNotifications(data.preferences || data.notifications);
-        }
+        if (data.notifications) setNotifications(data.notifications);
       }
     } catch (err) {
       console.error("Failed to load user data:", err);
@@ -244,15 +185,14 @@ export default function AccountPage() {
   if (!session?.user) return null;
 
   const user = session.user;
-  const fullName =
-    profile.firstName || profile.lastName
-      ? `${profile.firstName} ${profile.lastName}`.trim()
-      : profile.name || user.name || user.email?.slice(0, 2).toUpperCase() || "??";
-
-  const initials =
-    profile.firstName && profile.lastName
-      ? (profile.firstName[0] + profile.lastName[0]).toUpperCase()
-      : fullName.slice(0, 2).toUpperCase();
+  const initials = profile.name
+    ? profile.name
+        .split(" ")
+        .map((n) => n[0])
+        .slice(0, 2)
+        .join("")
+        .toUpperCase()
+    : (user.email?.slice(0, 2) ?? "??").toUpperCase();
 
   // ── Helpers ───────────────────────────────────────────────────────────────
   const flashSaved = () => {
@@ -265,12 +205,11 @@ export default function AccountPage() {
     setSaving(true);
     setSaveError("");
     try {
-      const res = await fetch("/api/user/settings", {
+      const res = await fetch("/api/users/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          firstName: profile.firstName,
-          lastName: profile.lastName,
+          name: profile.name,
           phone: profile.phone,
           email: profile.email,
           address: profile.address,
@@ -283,44 +222,8 @@ export default function AccountPage() {
       if (!res.ok) {
         setSaveError(data.error ?? "Failed to save. Please try again.");
       } else {
-        await update({
-          name: `${profile.firstName} ${profile.lastName}`.trim(),
-        });
+        await update({ name: profile.name });
         flashSaved();
-        loadUserData();
-      }
-    } catch {
-      setSaveError("Something went wrong. Please try again.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  // ── Save address ──────────────────────────────────────────────────────────
-  const handleSaveAddress = async () => {
-    setSaving(true);
-    setSaveError("");
-    try {
-      const res = await fetch("/api/users/address", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          firstName: profile.firstName,
-          lastName: profile.lastName,
-          phone: profile.phone,
-          email: profile.email,
-          address: profile.address,
-          city: profile.city,
-          emirate: profile.emirate,
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        setSaveError(data.error ?? "Failed to save address. Please try again.");
-      } else {
-        flashSaved();
-        loadUserData();
       }
     } catch {
       setSaveError("Something went wrong. Please try again.");
@@ -347,7 +250,7 @@ export default function AccountPage() {
 
     setSaving(true);
     try {
-      const res = await fetch("/api/user/update-password", {
+      const res = await fetch("/api/users/update-password", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -375,7 +278,7 @@ export default function AccountPage() {
     setSaving(true);
     setSaveError("");
     try {
-      const res = await fetch("/api/user/notifications", {
+      const res = await fetch("/api/users/notifications", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(notifications),
@@ -385,9 +288,7 @@ export default function AccountPage() {
       if (!res.ok) {
         setSaveError(data.error ?? "Failed to save notification settings.");
       } else {
-        if (data.preferences || data.notifications) {
-          setNotifications(data.preferences || data.notifications);
-        }
+        if (data.notifications) setNotifications(data.notifications);
         flashSaved();
       }
     } catch {
@@ -398,12 +299,6 @@ export default function AccountPage() {
   };
 
   const handleSignOut = () => signOut({ callbackUrl: "/" });
-
-  const orderStatusIcon = (status: string) => {
-    if (status === "Delivered") return <CheckCircle2 size={14} />;
-    if (status === "Shipped") return <Truck size={14} />;
-    return <Package size={14} />;
-  };
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
@@ -433,7 +328,7 @@ export default function AccountPage() {
                 </div>
                 <div>
                   <h1 className="text-white text-3xl lg:text-4xl font-black italic uppercase">
-                    {fullName || "My Account"}
+                    {profile.name || "My Account"}
                   </h1>
                   <p className="text-blue-200 text-[14px] mt-0.5">
                     {profile.email || user.email}
@@ -498,39 +393,24 @@ export default function AccountPage() {
               transition={{ duration: 0.22 }}
               className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
             >
-              {/* ── PROFILE TAB ── */}
+              {/* ── Profile tab ── */}
               {activeTab === "profile" && (
                 <div className="p-8">
                   <h2 className="text-[18px] font-black text-gray-900 mb-6">
                     Personal Information
                   </h2>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  <div className="grid grid-cols-1 gap-5">
                     <div>
                       <label className="block text-[12px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">
-                        First Name
+                        Full Name
                       </label>
                       <input
                         type="text"
-                        value={profile.firstName}
+                        value={profile.name}
                         onChange={(e) =>
-                          setProfile((p) => ({ ...p, firstName: e.target.value }))
+                          setProfile((p) => ({ ...p, name: e.target.value }))
                         }
-                        placeholder="Your first name"
-                        className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[14px] text-gray-800 focus:outline-none focus:border-[#004b9c] focus:ring-2 focus:ring-[#004b9c]/10 transition-all"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-[12px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">
-                        Last Name
-                      </label>
-                      <input
-                        type="text"
-                        value={profile.lastName}
-                        onChange={(e) =>
-                          setProfile((p) => ({ ...p, lastName: e.target.value }))
-                        }
-                        placeholder="Your last name"
+                        placeholder="Your full name"
                         className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[14px] text-gray-800 focus:outline-none focus:border-[#004b9c] focus:ring-2 focus:ring-[#004b9c]/10 transition-all"
                       />
                     </div>
@@ -563,51 +443,6 @@ export default function AccountPage() {
                         className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[14px] text-gray-800 focus:outline-none focus:border-[#004b9c] focus:ring-2 focus:ring-[#004b9c]/10 transition-all"
                       />
                     </div>
-
-                    <div className="sm:col-span-2">
-                      <label className="block text-[12px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">
-                        Street Address
-                      </label>
-                      <input
-                        type="text"
-                        value={profile.address}
-                        onChange={(e) =>
-                          setProfile((p) => ({ ...p, address: e.target.value }))
-                        }
-                        placeholder="Building, Street, Area"
-                        className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[14px] focus:outline-none focus:border-[#004b9c] focus:ring-2 focus:ring-[#004b9c]/10 transition-all"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-[12px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">
-                        City
-                      </label>
-                      <input
-                        type="text"
-                        value={profile.city}
-                        onChange={(e) =>
-                          setProfile((p) => ({ ...p, city: e.target.value }))
-                        }
-                        placeholder="Dubai"
-                        className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[14px] focus:outline-none focus:border-[#004b9c] focus:ring-2 focus:ring-[#004b9c]/10 transition-all"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-[12px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">
-                        Emirate
-                      </label>
-                      <input
-                        type="text"
-                        value={profile.emirate}
-                        onChange={(e) =>
-                          setProfile((p) => ({ ...p, emirate: e.target.value }))
-                        }
-                        placeholder="Dubai"
-                        className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[14px] focus:outline-none focus:border-[#004b9c] focus:ring-2 focus:ring-[#004b9c]/10 transition-all"
-                      />
-                    </div>
                   </div>
 
                   {saveError && (
@@ -636,7 +471,7 @@ export default function AccountPage() {
                 </div>
               )}
 
-              {/* ── SECURITY TAB ── */}
+              {/* ── Security tab ── */}
               {activeTab === "security" && (
                 <div className="p-8">
                   <h2 className="text-[18px] font-black text-gray-900 mb-2">
@@ -717,7 +552,7 @@ export default function AccountPage() {
                 </div>
               )}
 
-              {/* ── ADDRESSES TAB ── */}
+              {/* ── Addresses tab ── */}
               {activeTab === "addresses" && (
                 <div className="p-8">
                   <h2 className="text-[18px] font-black text-gray-900 mb-6">
@@ -780,7 +615,7 @@ export default function AccountPage() {
                   )}
 
                   <button
-                    onClick={handleSaveAddress}
+                    onClick={handleSaveProfile}
                     disabled={saving}
                     className="mt-6 flex items-center gap-2 px-6 py-3 bg-[#004b9c] hover:bg-[#003d82] disabled:bg-[#004b9c]/60 text-white text-[13px] font-bold tracking-wider rounded-xl transition-colors"
                   >
@@ -791,61 +626,6 @@ export default function AccountPage() {
                     )}
                     {saving ? "Saving…" : "Save Address"}
                   </button>
-                </div>
-              )}
-
-              {/* ── ORDERS TAB ── */}
-              {activeTab === "orders" && (
-                <div className="p-8">
-                  <h2 className="text-[18px] font-black text-gray-900 mb-6">
-                    Order History
-                  </h2>
-                  <div className="flex flex-col gap-4">
-                    {DUMMY_ORDERS.map((order) => (
-                      <div
-                        key={order.id}
-                        className="flex items-center justify-between flex-wrap gap-4 border border-gray-100 rounded-2xl px-5 py-4 hover:border-[#004b9c]/30 hover:bg-blue-50/30 transition-all duration-200"
-                      >
-                        <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-[#004b9c]">
-                            {orderStatusIcon(order.status)}
-                          </div>
-                          <div>
-                            <p className="font-bold text-gray-800 text-[14px]">
-                              {order.id}
-                            </p>
-                            <p className="text-gray-400 text-[12px]">{order.date}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-5">
-                          <p className="font-bold text-[#004b9c] text-[15px]">
-                            {order.total}
-                          </p>
-                          <span
-                            className={`text-[11px] font-bold px-3 py-1 rounded-full flex items-center gap-1.5 ${order.statusColor}`}
-                          >
-                            {orderStatusIcon(order.status)} {order.status}
-                          </span>
-                          <button className="text-[12px] font-semibold text-gray-400 hover:text-[#004b9c] flex items-center gap-1 transition-colors">
-                            View <ChevronRight size={13} />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* ── REVIEWS TAB ── */}
-              {activeTab === "reviews" && (
-                <div className="p-8 text-center">
-                  <p className="text-gray-500 mb-4">Manage your product reviews</p>
-                  <Link
-                    href="/account/reviews"
-                    className="inline-block px-6 py-3 bg-[#004b9c] text-white rounded-xl font-bold hover:bg-[#003d82] transition-colors"
-                  >
-                    View My Reviews →
-                  </Link>
                 </div>
               )}
 

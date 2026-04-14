@@ -11,7 +11,9 @@ export async function GET() {
     }
 
     await dbConnect();
-    const user = await User.findById(session.user.id).select("firstName lastName phone email address city emirate").lean();
+    const user = await User.findById(session.user.id)
+      .select("firstName lastName phone email address city emirate")
+      .lean();
 
     return NextResponse.json({
       firstName: user?.firstName || "",
@@ -24,7 +26,10 @@ export async function GET() {
     });
   } catch (error) {
     console.error("Address GET error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 },
+    );
   }
 }
 
@@ -36,7 +41,8 @@ export async function PATCH(req: NextRequest) {
     }
 
     await dbConnect();
-    const { firstName, lastName, phone, email, address, city, emirate } = await req.json();
+    const { firstName, lastName, phone, email, address, city, emirate } =
+      await req.json();
 
     const updateData: any = {};
     if (firstName !== undefined) updateData.firstName = firstName;
@@ -46,12 +52,14 @@ export async function PATCH(req: NextRequest) {
     if (address !== undefined) updateData.address = address;
     if (city !== undefined) updateData.city = city;
     if (emirate !== undefined) updateData.emirate = emirate;
-    
+
     // Also update the full name if firstName or lastName changed
     if (firstName !== undefined || lastName !== undefined) {
       const currentUser = await User.findById(session.user.id);
-      const newFirstName = firstName !== undefined ? firstName : currentUser?.firstName || "";
-      const newLastName = lastName !== undefined ? lastName : currentUser?.lastName || "";
+      const newFirstName =
+        firstName !== undefined ? firstName : currentUser?.firstName || "";
+      const newLastName =
+        lastName !== undefined ? lastName : currentUser?.lastName || "";
       updateData.name = `${newFirstName} ${newLastName}`.trim();
     }
 
@@ -60,6 +68,9 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Address PATCH error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 },
+    );
   }
 }
