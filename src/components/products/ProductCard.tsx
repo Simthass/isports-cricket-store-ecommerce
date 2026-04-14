@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useCart } from "@/context/CartContext";
+import { showToast } from "@/components/ui/Toast";
 
 interface Product {
   id: string;
@@ -82,15 +83,10 @@ export default function ProductCard({
     return "text-gray-700";
   };
 
+  // ✅ FIXED: No login required for adding to cart
   const handleCart = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-
-    if (!session?.user) {
-      // Redirect to login page instead of showing modal
-      router.push("/login");
-      return;
-    }
 
     if (adding || added) return;
 
@@ -107,13 +103,12 @@ export default function ProductCard({
     });
 
     setAdded(true);
+    showToast("success", "Added to Cart", `${product.name} added to your cart`);
     setTimeout(() => setAdded(false), 2200);
     setAdding(false);
   };
 
   if (!product) return null;
-
-  const isLoggedIn = !!session?.user;
 
   return (
     <motion.div
@@ -192,7 +187,7 @@ export default function ProductCard({
                   transition={{ duration: 0.2 }}
                   className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-white via-white/80 to-transparent"
                 >
-                  {/* Add to Cart / Quick Add Button Only */}
+                  {/* Add to Cart / Quick Add Button - No login required */}
                   <button
                     onClick={handleCart}
                     disabled={adding || added}
@@ -214,7 +209,7 @@ export default function ProductCard({
                     ) : (
                       <>
                         <ShoppingCart size={14} />
-                        {isLoggedIn ? "Quick Add" : "Sign in to Add"}
+                        Quick Add
                       </>
                     )}
                   </button>
