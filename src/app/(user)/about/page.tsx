@@ -713,7 +713,10 @@ export default function AboutPage() {
         {/* ════════════════════════════════════════════════════════
             §6  STORE LOCATIONS
         ════════════════════════════════════════════════════════ */}
-        <section className="relative w-full bg-[#f8faff] py-24 lg:py-28 overflow-hidden">
+        <section
+          className="relative w-full bg-[#f8faff] py-24 lg:py-28 overflow-hidden"
+          id="visit-our-stores"
+        >
           <div className="absolute inset-0 opacity-25 pointer-events-none [background-image:radial-gradient(circle,#004b9c10_1.2px,transparent_1.2px)] [background-size:28px_28px]" />
 
           <div className="relative max-w-[1400px] mx-auto px-5 lg:px-12">
@@ -745,6 +748,7 @@ export default function AboutPage() {
                   badge: "Main Branch",
                   badgeColor: BLUE,
                   delay: 0,
+                  mapsLink: "https://maps.app.goo.gl/TFc1zBiB4wGjJmX9A", // Karama store maps link
                 },
                 {
                   city: "Sharjah",
@@ -756,6 +760,7 @@ export default function AboutPage() {
                   badge: "Same-Day Delivery",
                   badgeColor: GREEN,
                   delay: 0.1,
+                  mapsLink: "https://maps.app.goo.gl/Y8PAhyAZXXmPDRLYA", // Replace with actual Sharjah store maps link
                 },
               ].map((store, i) => (
                 <FadeUp key={i} delay={store.delay}>
@@ -812,7 +817,7 @@ export default function AboutPage() {
                       ))}
                       <div className="pt-1">
                         <Link
-                          href="/store-locator"
+                          href={store.mapsLink}
                           className="inline-flex items-center gap-2 text-[#004b9c] text-[13px] font-bold tracking-wide hover:gap-3 transition-all duration-200"
                         >
                           Get Directions{" "}

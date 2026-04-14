@@ -47,7 +47,7 @@ const STATIC_SLIDES = [
     headline: ["Professional", "Cricket Gear"],
     sub: "Premium equipment trusted by 1,000+ players across the UAE. Same-day delivery in Sharjah & Ajman.",
     cta: { label: "Shop New Arrivals", href: "/shop" },
-    sec: { label: "View All Brands", href: "/brands" },
+    sec: { label: "View All Brands", href: "/#brands" },
     badge: { icon: Zap, text: "Same-Day Delivery" },
     stats: [
       { value: "15+", label: "Elite Brands" },
@@ -61,7 +61,7 @@ const STATIC_SLIDES = [
     tag: "ENGLISH WILLOW · KASHMIR WILLOW",
     headline: ["Elite Batting", "Equipment"],
     sub: "From Gray-Nicolls to SS — Grade 1 English Willow blades engineered to elevate your game.",
-    cta: { label: "Explore Bats", href: "/category/bats" },
+    cta: { label: "Explore Bats", href: "shop?category=cricket-bats" },
     sec: { label: "Order via WhatsApp", href: "#whatsapp" },
     badge: { icon: Shield, text: "Authenticity Guaranteed" },
     stats: [
@@ -76,8 +76,23 @@ const STATIC_SLIDES = [
     tag: "SHREY · MOONWALKR · DSC",
     headline: ["ICC-Certified", "Helmets"],
     sub: "Cutting-edge Stem Guard technology. Safety meets premium design for the modern UAE cricketer.",
-    cta: { label: "Shop Helmets", href: "/category/helmets" },
-    sec: { label: "Find a Store", href: "/store-locator" },
+    cta: { label: "Shop Helmets", href: "shop?category=helmets" },
+    sec: {
+      label: "Find a Store",
+      href: "/about#visit-our-stores",
+      onClick: (e) => {
+        e.preventDefault();
+        if (window.location.pathname === "/about") {
+          const storesSection = document.getElementById("visit-our-stores");
+          if (storesSection) {
+            storesSection.scrollIntoView({ behavior: "smooth" });
+          }
+        } else {
+          sessionStorage.setItem("scrollToStores", "true");
+          window.location.href = "/about";
+        }
+      },
+    },
     badge: { icon: Star, text: "ICC Certified" },
     stats: [
       { value: "50+", label: "Helmet Models" },

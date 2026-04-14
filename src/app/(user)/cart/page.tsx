@@ -5,9 +5,20 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Trash2, Plus, Minus, ShoppingBasket, ArrowRight,
-  Tag, ChevronRight, CreditCard, Truck, CheckCircle2,
-  MessageCircle, MapPin, Plus as PlusIcon, Loader2,
+  Trash2,
+  Plus,
+  Minus,
+  ShoppingBasket,
+  ArrowRight,
+  Tag,
+  ChevronRight,
+  CreditCard,
+  Truck,
+  CheckCircle2,
+  MessageCircle,
+  MapPin,
+  Plus as PlusIcon,
+  Loader2,
 } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { useSession } from "next-auth/react";
@@ -49,7 +60,15 @@ function SectionHeader({ number, title }: { number: number; title: string }) {
 // ══════════════════════════════════════════════════════════════════════════════
 export default function CartPage() {
   const router = useRouter();
-  const { cartItems, updateQuantity, removeFromCart, clearCart, fetchCart, cartCount, isLoading } = useCart();
+  const {
+    cartItems,
+    updateQuantity,
+    removeFromCart,
+    clearCart,
+    fetchCart,
+    cartCount,
+    isLoading,
+  } = useCart();
   const { data: session } = useSession();
   const [coupon, setCoupon] = useState("");
   const [couponApplied, setCouponApplied] = useState(false);
@@ -111,7 +130,7 @@ export default function CartPage() {
   }, [session]);
 
   // Convert cart items to display format
-  const items: CartItemDisplay[] = cartItems.map(item => ({
+  const items: CartItemDisplay[] = cartItems.map((item) => ({
     id: item.productId,
     name: item.name,
     brand: item.brand,
@@ -125,7 +144,10 @@ export default function CartPage() {
   }));
 
   // ── Calculations ─────────────────────────────────────────────────────────────
-  const subtotal = cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
+  const subtotal = cartItems.reduce(
+    (total, item) => total + item.price * item.quantity,
+    0,
+  );
   const discount = couponApplied ? Math.round(subtotal * 0.1) : 0;
   const shippingCost = delivery === "express" ? 50 : subtotal >= 500 ? 0 : 25;
   const total = subtotal - discount + shippingCost;
@@ -148,7 +170,7 @@ export default function CartPage() {
 
   // Handle URL parameter for checkout step - redirect to cart if no items
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
       const urlParams = new URLSearchParams(window.location.search);
       const stepParam = urlParams.get("step");
       if (stepParam === "checkout") {
@@ -170,7 +192,7 @@ export default function CartPage() {
 
   // ── Cart helpers ──────────────────────────────────────────────────────────────
   const updateQty = (id: string, delta: number) => {
-    const item = cartItems.find(i => i.productId === id);
+    const item = cartItems.find((i) => i.productId === id);
     if (item) {
       const newQty = Math.max(1, item.quantity + delta);
       updateQuantity(id, item.size, newQty);
@@ -178,7 +200,7 @@ export default function CartPage() {
   };
 
   const removeItem = (id: string) => {
-    const item = cartItems.find(i => i.productId === id);
+    const item = cartItems.find((i) => i.productId === id);
     if (item) {
       removeFromCart(id, item.size);
     }
@@ -186,16 +208,19 @@ export default function CartPage() {
 
   // ── Update form field ────────────────────────────────────────────────
   const handleInfoChange = (field: string, value: string) => {
-    setInfo(prev => ({ ...prev, [field]: value }));
+    setInfo((prev) => ({ ...prev, [field]: value }));
   };
 
   // WhatsApp Order - Creates order in database first, then opens WhatsApp
-  // WhatsApp Order - Creates order in database for ALL users (guest or logged in)
-const handleWhatsAppOrder = async () => {
-  if (items.length === 0) {
-    showToast("warning", "Empty Cart", "Your cart is empty.");
-    return;
-  }
+  const handleWhatsAppOrder = async () => {
+    if (!info.firstName || !info.phone || !info.address) {
+      showToast(
+        "warning",
+        "Missing Information",
+        "Please fill in your contact and address details.",
+      );
+      return;
+    }
 
   // Prepare customer info
   let customerName = "";
@@ -203,21 +228,71 @@ const handleWhatsAppOrder = async () => {
   let customerEmail = "";
   let isLoggedIn = false;
 
-  if (session?.user) {
-    isLoggedIn = true;
-    customerName = session.user.name || "";
-    customerPhone = (session.user as any)?.phone || "";
-    customerEmail = session.user.email || "";
+    const orderItems = cartItems.map((item) => ({
+      productId: item.productId,
+      name: item.name,
+      brand: item.brand,
+      price: item.price,
+      quantity: item.quantity,
+      size: item.size,
+      image: item.image,
+    }));
 
     try {
-      const res = await fetch("/api/users/settings");
-      if (res.ok) {
-        const data = await res.json();
-        if (data.user) {
-          customerName = data.user.name || customerName;
-          customerPhone = data.user.phone || customerPhone;
-          customerEmail = data.user.email || customerEmail;
-        }
+      const response = await fetch("/api/whatsapp/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customerInfo: {
+            name: `${info.firstName} ${info.lastName}`.trim(),
+            phone: info.phone,
+            email: info.email,
+          },
+          items: orderItems,
+          subtotal: subtotal,
+          total: total,
+          customerNotes: info.notes,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        const itemLines = orderItems
+          .map(
+            (i) =>
+              `• ${i.name} (${i.size}) x${i.quantity} - AED ${i.price * i.quantity}`,
+          )
+          .join("\n");
+        const message =
+          `🏏 *NEW ORDER REQUEST*\n\n` +
+          `*Customer:* ${info.firstName} ${info.lastName}\n` +
+          `*Phone:* ${info.phone}\n` +
+          `*Email:* ${info.email || "Not provided"}\n\n` +
+          `*Items:*\n${itemLines}\n\n` +
+          `*Subtotal:* AED ${subtotal.toLocaleString()}\n` +
+          (couponApplied ? `*Discount:* -AED ${discount}\n` : "") +
+          `*Shipping:* ${shippingCost === 0 ? "FREE" : `AED ${shippingCost}`}\n` +
+          `─────────────────\n` +
+          `*TOTAL:* AED ${total.toLocaleString()}\n\n` +
+          `*Delivery:* ${delivery === "express" ? "Express Shipping" : "Standard Delivery"}\n` +
+          `*Order #:* ${data.order.orderNumber}\n\n` +
+          `Please confirm this order. Thank you!`;
+
+        const whatsappUrl = `https://wa.me/971526514666?text=${encodeURIComponent(message)}`;
+        window.open(whatsappUrl, "_blank");
+
+        showToast(
+          "success",
+          "Order Request Sent!",
+          `Order #: ${data.order.orderNumber}. Admin will confirm shortly.`,
+        );
+      } else {
+        showToast(
+          "error",
+          "Order Failed",
+          data.error || "Failed to create order. Please try again.",
+        );
       }
     } catch (e) {
       console.error("Error fetching user data:", e);
@@ -290,15 +365,25 @@ const handleWhatsAppOrder = async () => {
 
   // ── Place order (COD) ───────────────────────────────────────────────────────────────
   const handlePlaceOrder = async () => {
-    if (!info.firstName || !info.phone || !info.email || !info.address || !info.city) {
-      showToast("warning", "Missing Information", "Please fill in all required fields.");
+    if (
+      !info.firstName ||
+      !info.phone ||
+      !info.email ||
+      !info.address ||
+      !info.city
+    ) {
+      showToast(
+        "warning",
+        "Missing Information",
+        "Please fill in all required fields.",
+      );
       return;
     }
-    
+
     setPlacing(true);
     try {
       const orderData = {
-        items: cartItems.map(item => ({
+        items: cartItems.map((item) => ({
           productId: item.productId,
           name: item.name,
           brand: item.brand,
@@ -309,13 +394,13 @@ const handleWhatsAppOrder = async () => {
         })),
         customerInfo: info,
         deliveryMethod: delivery,
-        paymentMethod: 'cod',
+        paymentMethod: "cod",
         subtotal: subtotal,
         discount: discount,
         shippingCost: shippingCost,
         total: total,
         couponApplied: couponApplied,
-        status: 'PENDING',
+        status: "PENDING",
       };
 
       const res = await fetch("/api/orders", {
@@ -336,7 +421,11 @@ const handleWhatsAppOrder = async () => {
       }
     } catch (error) {
       console.error("Order placement error:", error);
-      showToast("error", "Order Failed", "Something went wrong. Please try again.");
+      showToast(
+        "error",
+        "Order Failed",
+        "Something went wrong. Please try again.",
+      );
     } finally {
       setPlacing(false);
     }
@@ -360,7 +449,10 @@ const handleWhatsAppOrder = async () => {
     const displayItems = orderDetails?.items || cartItems;
 
     return (
-      <div ref={topRef} className="min-h-screen bg-gray-50 pt-[140px] lg:pt-[180px] px-6">
+      <div
+        ref={topRef}
+        className="min-h-screen bg-gray-50 pt-[140px] lg:pt-[180px] px-6"
+      >
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -368,13 +460,18 @@ const handleWhatsAppOrder = async () => {
           className="bg-white rounded-2xl border border-gray-100 shadow-sm p-12 max-w-md w-full mx-auto text-center"
         >
           <div className="w-16 h-16 rounded-full bg-[#81bf42]/10 flex items-center justify-center mx-auto mb-5">
-            <CheckCircle2 size={36} className="text-[#81bf42]" strokeWidth={1.8} />
+            <CheckCircle2
+              size={36}
+              className="text-[#81bf42]"
+              strokeWidth={1.8}
+            />
           </div>
           <h2 className="text-2xl font-black text-gray-900 uppercase italic mb-2">
             Order Placed!
           </h2>
           <p className="text-gray-500 text-[14px] mb-1">
-            Thank you, <strong>{info.firstName || "Customer"}</strong>! Your order has been received.
+            Thank you, <strong>{info.firstName || "Customer"}</strong>! Your
+            order has been received.
           </p>
           {orderNumber && (
             <p className="text-[13px] font-bold text-[#004b9c] mb-1">
@@ -400,19 +497,25 @@ const handleWhatsAppOrder = async () => {
                 <span className="truncate max-w-[200px]">
                   {item.name.split(" ").slice(0, 4).join(" ")}… ×{item.quantity}
                 </span>
-                <span className="font-bold ml-2">AED {(item.price * item.quantity).toLocaleString()}</span>
+                <span className="font-bold ml-2">
+                  AED {(item.price * item.quantity).toLocaleString()}
+                </span>
               </div>
             ))}
             {displayDiscount > 0 && (
               <div className="flex justify-between text-[13px] text-[#81bf42] mb-1.5">
                 <span>Discount (10%)</span>
-                <span className="font-bold">-AED {displayDiscount.toLocaleString()}</span>
+                <span className="font-bold">
+                  -AED {displayDiscount.toLocaleString()}
+                </span>
               </div>
             )}
             <div className="flex justify-between text-[13px] text-gray-500 mb-1.5">
               <span>Shipping</span>
               <span className="font-bold">
-                {displayShipping === 0 ? "FREE" : `AED ${displayShipping.toLocaleString()}`}
+                {displayShipping === 0
+                  ? "FREE"
+                  : `AED ${displayShipping.toLocaleString()}`}
               </span>
             </div>
             <div className="border-t border-gray-200 mt-3 pt-3 flex justify-between font-black text-[#004b9c]">
@@ -435,11 +538,15 @@ const handleWhatsAppOrder = async () => {
   // ══════════════════════════════════════════════════════════════════════════════
   return (
     <div className="min-h-screen bg-gray-50 font-poppins">
-      <div ref={topRef} className="max-w-[1400px] mx-auto px-6 lg:px-10 py-8 lg:py-12">
-
+      <div
+        ref={topRef}
+        className="max-w-[1400px] mx-auto px-6 lg:px-10 py-8 lg:py-12"
+      >
         {/* ── Breadcrumb ── */}
         <div className="flex items-center gap-1.5 text-[12px] text-gray-400 mb-8">
-          <Link href="/" className="hover:text-[#004b9c] transition-colors">Home</Link>
+          <Link href="/" className="hover:text-[#004b9c] transition-colors">
+            Home
+          </Link>
           <ChevronRight size={12} />
           {step === "checkout" ? (
             <>
@@ -460,7 +567,11 @@ const handleWhatsAppOrder = async () => {
         {/* ── Step indicator ── */}
         <div className="flex items-center gap-3 mb-10">
           {["Cart", "Checkout", "Confirmed"].map((s, i) => {
-            const stepMap: Record<string, number> = { cart: 0, checkout: 1, confirmed: 2 };
+            const stepMap: Record<string, number> = {
+              cart: 0,
+              checkout: 1,
+              confirmed: 2,
+            };
             const current = stepMap[step];
             const active = i <= current;
             return (
@@ -468,7 +579,9 @@ const handleWhatsAppOrder = async () => {
                 <div className="flex items-center gap-2">
                   <div
                     className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-black transition-all duration-200 ${
-                      active ? "bg-[#004b9c] text-white" : "bg-gray-200 text-gray-400"
+                      active
+                        ? "bg-[#004b9c] text-white"
+                        : "bg-gray-200 text-gray-400"
                     }`}
                   >
                     {i + 1}
@@ -496,7 +609,11 @@ const handleWhatsAppOrder = async () => {
         {/* ── Empty cart ── */}
         {items.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-28 gap-5 text-center">
-            <ShoppingBasket size={64} className="text-gray-200" strokeWidth={1.2} />
+            <ShoppingBasket
+              size={64}
+              className="text-gray-200"
+              strokeWidth={1.2}
+            />
             <h2 className="text-2xl font-black text-gray-700 uppercase italic">
               Your cart is empty
             </h2>
@@ -512,10 +629,8 @@ const handleWhatsAppOrder = async () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-
             {/* LEFT — Cart items OR Checkout form */}
             <div className="xl:col-span-2 flex flex-col gap-5">
-
               {/* ── CART STEP ── */}
               {step === "cart" && (
                 <>
@@ -526,7 +641,12 @@ const handleWhatsAppOrder = async () => {
                         layout
                         initial={{ opacity: 0, y: 12 }}
                         animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, x: -40, height: 0, marginBottom: 0 }}
+                        exit={{
+                          opacity: 0,
+                          x: -40,
+                          height: 0,
+                          marginBottom: 0,
+                        }}
                         transition={{ duration: 0.3 }}
                         className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col sm:flex-row gap-5"
                       >
@@ -602,10 +722,15 @@ const handleWhatsAppOrder = async () => {
 
                   {subtotal < 500 && (
                     <div className="bg-[#81bf42]/10 border border-[#81bf42]/30 rounded-xl px-5 py-3.5 flex items-center gap-3">
-                      <Truck size={18} className="text-[#81bf42] flex-shrink-0" />
+                      <Truck
+                        size={18}
+                        className="text-[#81bf42] flex-shrink-0"
+                      />
                       <p className="text-[13px] text-gray-700 font-semibold">
                         Add{" "}
-                        <strong className="text-[#004b9c]">AED {500 - subtotal}</strong>{" "}
+                        <strong className="text-[#004b9c]">
+                          AED {500 - subtotal}
+                        </strong>{" "}
                         more to get FREE delivery!
                       </p>
                     </div>
@@ -632,7 +757,9 @@ const handleWhatsAppOrder = async () => {
                         <input
                           type="text"
                           value={info.firstName}
-                          onChange={(e) => handleInfoChange("firstName", e.target.value)}
+                          onChange={(e) =>
+                            handleInfoChange("firstName", e.target.value)
+                          }
                           placeholder="Ahmed"
                           className={inputCls}
                           required
@@ -645,7 +772,9 @@ const handleWhatsAppOrder = async () => {
                         <input
                           type="text"
                           value={info.lastName}
-                          onChange={(e) => handleInfoChange("lastName", e.target.value)}
+                          onChange={(e) =>
+                            handleInfoChange("lastName", e.target.value)
+                          }
                           placeholder="Al Mansoori"
                           className={inputCls}
                         />
@@ -657,7 +786,9 @@ const handleWhatsAppOrder = async () => {
                         <input
                           type="tel"
                           value={info.phone}
-                          onChange={(e) => handleInfoChange("phone", e.target.value)}
+                          onChange={(e) =>
+                            handleInfoChange("phone", e.target.value)
+                          }
                           placeholder="+971 52 XXX XXXX"
                           className={inputCls}
                           required
@@ -670,7 +801,9 @@ const handleWhatsAppOrder = async () => {
                         <input
                           type="email"
                           value={info.email}
-                          onChange={(e) => handleInfoChange("email", e.target.value)}
+                          onChange={(e) =>
+                            handleInfoChange("email", e.target.value)
+                          }
                           placeholder="you@example.com"
                           className={inputCls}
                           required
@@ -682,7 +815,7 @@ const handleWhatsAppOrder = async () => {
                   {/* 2. Shipping Address */}
                   <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
                     <SectionHeader number={2} title="Shipping Address" />
-                    
+
                     <div className="grid grid-cols-1 gap-4">
                       <div className="flex flex-col gap-1.5">
                         <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">
@@ -691,7 +824,9 @@ const handleWhatsAppOrder = async () => {
                         <input
                           type="text"
                           value={info.address}
-                          onChange={(e) => handleInfoChange("address", e.target.value)}
+                          onChange={(e) =>
+                            handleInfoChange("address", e.target.value)
+                          }
                           placeholder="Building, Street, Area"
                           className={inputCls}
                           required
@@ -705,7 +840,9 @@ const handleWhatsAppOrder = async () => {
                           <input
                             type="text"
                             value={info.city}
-                            onChange={(e) => handleInfoChange("city", e.target.value)}
+                            onChange={(e) =>
+                              handleInfoChange("city", e.target.value)
+                            }
                             placeholder="Dubai"
                             className={inputCls}
                             required
@@ -718,7 +855,9 @@ const handleWhatsAppOrder = async () => {
                           <input
                             type="text"
                             value={info.emirate}
-                            onChange={(e) => handleInfoChange("emirate", e.target.value)}
+                            onChange={(e) =>
+                              handleInfoChange("emirate", e.target.value)
+                            }
                             placeholder="Dubai"
                             className={inputCls}
                           />
@@ -733,7 +872,9 @@ const handleWhatsAppOrder = async () => {
                       </label>
                       <textarea
                         value={info.notes}
-                        onChange={(e) => handleInfoChange("notes", e.target.value)}
+                        onChange={(e) =>
+                          handleInfoChange("notes", e.target.value)
+                        }
                         placeholder="Any special instructions for your order..."
                         rows={3}
                         className={`${inputCls} resize-none`}
@@ -770,7 +911,9 @@ const handleWhatsAppOrder = async () => {
                           <div className="flex items-center gap-3">
                             <div
                               className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
-                                delivery === opt.id ? "border-[#004b9c]" : "border-gray-300"
+                                delivery === opt.id
+                                  ? "border-[#004b9c]"
+                                  : "border-gray-300"
                               }`}
                             >
                               {delivery === opt.id && (
@@ -778,13 +921,19 @@ const handleWhatsAppOrder = async () => {
                               )}
                             </div>
                             <div>
-                              <p className="text-[14px] font-bold text-gray-800">{opt.label}</p>
-                              <p className="text-[12px] text-gray-400">{opt.desc}</p>
+                              <p className="text-[14px] font-bold text-gray-800">
+                                {opt.label}
+                              </p>
+                              <p className="text-[12px] text-gray-400">
+                                {opt.desc}
+                              </p>
                             </div>
                           </div>
                           <span
                             className={`text-[14px] font-black ${
-                              opt.price === "Free" ? "text-[#81bf42]" : "text-gray-700"
+                              opt.price === "Free"
+                                ? "text-[#81bf42]"
+                                : "text-gray-700"
                             }`}
                           >
                             {opt.price}
@@ -805,12 +954,17 @@ const handleWhatsAppOrder = async () => {
                   {/* 4. Payment - COD Only */}
                   <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
                     <SectionHeader number={4} title="Payment" />
-                    
+
                     <div className="bg-green-50 border border-green-200 rounded-xl p-4">
                       <div className="flex items-start gap-3">
-                        <CheckCircle2 size={20} className="text-green-600 mt-0.5" />
+                        <CheckCircle2
+                          size={20}
+                          className="text-green-600 mt-0.5"
+                        />
                         <div>
-                          <p className="font-semibold text-green-800">Cash on Delivery</p>
+                          <p className="font-semibold text-green-800">
+                            Cash on Delivery
+                          </p>
                           <p className="text-sm text-green-700 mt-1">
                             Pay when your order arrives. No additional fees.
                           </p>
@@ -820,7 +974,8 @@ const handleWhatsAppOrder = async () => {
 
                     <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mt-4">
                       <p className="text-sm text-amber-800">
-                        ⚠️ Please have exact change ready as our delivery partners may not carry change.
+                        ⚠️ Please have exact change ready as our delivery
+                        partners may not carry change.
                       </p>
                     </div>
 
@@ -856,7 +1011,10 @@ const handleWhatsAppOrder = async () => {
                 {step === "cart" && (
                   <div className="flex gap-2 mb-5">
                     <div className="relative flex-1">
-                      <Tag size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                      <Tag
+                        size={13}
+                        className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                      />
                       <input
                         type="text"
                         placeholder="Coupon code"
@@ -882,19 +1040,30 @@ const handleWhatsAppOrder = async () => {
                 {step === "checkout" && (
                   <div className="flex flex-col gap-3 mb-5 pb-5 border-b border-gray-100">
                     {items.map((item) => (
-                      <div key={item.id + item.size} className="flex items-center gap-3">
+                      <div
+                        key={item.id + item.size}
+                        className="flex items-center gap-3"
+                      >
                         <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
                           {item.image ? (
-                            <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                            <img
+                              src={item.image}
+                              alt={item.name}
+                              className="w-full h-full object-cover"
+                            />
                           ) : (
-                            <span className="text-[#004b9c] font-black text-[9px] italic">{item.label}</span>
+                            <span className="text-[#004b9c] font-black text-[9px] italic">
+                              {item.label}
+                            </span>
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-[12px] font-bold text-gray-700 truncate">
                             {item.name.split(" ").slice(0, 4).join(" ")}…
                           </p>
-                          <p className="text-[11px] text-gray-400">×{item.qty} · {item.size}</p>
+                          <p className="text-[11px] text-gray-400">
+                            ×{item.qty} · {item.size}
+                          </p>
                         </div>
                         <p className="text-[13px] font-black text-[#004b9c] flex-shrink-0">
                           AED {item.price * item.qty}
@@ -907,7 +1076,9 @@ const handleWhatsAppOrder = async () => {
                 <div className="flex flex-col gap-3 text-[14px] border-t border-gray-100 pt-4">
                   <div className="flex justify-between text-gray-500">
                     <span>Subtotal ({totalQty} items)</span>
-                    <span className="font-bold text-gray-800">AED {subtotal.toLocaleString()}</span>
+                    <span className="font-bold text-gray-800">
+                      AED {subtotal.toLocaleString()}
+                    </span>
                   </div>
                   {couponApplied && (
                     <div className="flex justify-between text-[#81bf42]">
@@ -917,47 +1088,49 @@ const handleWhatsAppOrder = async () => {
                   )}
                   <div className="flex justify-between text-gray-500">
                     <span>Shipping</span>
-                    <span className={`font-bold ${shippingCost === 0 ? "text-[#81bf42]" : "text-gray-800"}`}>
+                    <span
+                      className={`font-bold ${shippingCost === 0 ? "text-[#81bf42]" : "text-gray-800"}`}
+                    >
                       {shippingCost === 0 ? "FREE" : `AED ${shippingCost}`}
                     </span>
                   </div>
                   <div className="flex justify-between text-[18px] font-black text-gray-900 border-t border-gray-100 pt-3 mt-1">
                     <span>Total</span>
-                    <span className="text-[#004b9c]">AED {total.toLocaleString()}</span>
+                    <span className="text-[#004b9c]">
+                      AED {total.toLocaleString()}
+                    </span>
                   </div>
                 </div>
 
                 {step === "cart" ? (
-  <>
-    {/* ORDER VIA WHATSAPP BUTTON */}
-    <button
-      onClick={handleWhatsAppOrder}
-      className="mt-6 flex items-center justify-center gap-3 w-full py-3.5 rounded-2xl bg-[#25D366] hover:bg-[#1ebe5d] text-white text-[13px] font-black tracking-wider uppercase transition-all duration-200 shadow-[0_4px_20px_rgba(37,211,102,0.35)] hover:shadow-[0_6px_28px_rgba(37,211,102,0.45)] active:scale-[0.98]"
-    >
-      <MessageCircle size={18} />
-      ORDER VIA WHATSAPP
-    </button>
-    
-    {/* PROCEED TO CHECKOUT BUTTON */}
-    <button
-      onClick={() => {
-        if (!session?.user) {
-          router.push("/login?redirect=" + encodeURIComponent(window.location.pathname));
-          return;
-        }
-        setStep("checkout");
-      }}
-      className="mt-3 flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-[#004b9c] hover:bg-[#003d82] text-white text-[13px] font-black tracking-wider uppercase shadow-[0_4px_20px_rgba(0,75,156,0.3)] hover:shadow-[0_6px_28px_rgba(0,75,156,0.4)] active:scale-[0.98] transition-all duration-200"
-    >
-      PROCEED TO CHECKOUT <ArrowRight size={15} />
-    </button>
-    
-    <Link href="/shop" className="mt-3 flex items-center justify-center gap-1 text-[12px] text-gray-400 hover:text-[#004b9c] transition-colors py-1">
-      ← Continue Shopping
-    </Link>
-  </>
+                  <>
+                    <button
+                      onClick={handleWhatsAppOrder}
+                      className="mt-6 flex items-center justify-center gap-3 w-full py-3.5 rounded-2xl bg-[#25D366] hover:bg-[#1ebe5d] text-white text-[13px] font-black tracking-wider uppercase transition-all duration-200 shadow-[0_4px_20px_rgba(37,211,102,0.35)] hover:shadow-[0_6px_28px_rgba(37,211,102,0.45)] active:scale-[0.98]"
+                    >
+                      <MessageCircle size={18} />
+                      ORDER VIA WHATSAPP
+                    </button>
+
+                    <button
+                      onClick={() => setStep("checkout")}
+                      className="mt-3 flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-[#004b9c] hover:bg-[#003d82] text-white text-[13px] font-black tracking-wider uppercase shadow-[0_4px_20px_rgba(0,75,156,0.3)] hover:shadow-[0_6px_28px_rgba(0,75,156,0.4)] active:scale-[0.98] transition-all duration-200"
+                    >
+                      PROCEED TO CHECKOUT <ArrowRight size={15} />
+                    </button>
+
+                    <Link
+                      href="/shop"
+                      className="mt-3 flex items-center justify-center gap-1 text-[12px] text-gray-400 hover:text-[#004b9c] transition-colors py-1"
+                    >
+                      ← Continue Shopping
+                    </Link>
+                  </>
                 ) : (
-                  <Link href="/cart" className="mt-3 flex items-center justify-center gap-1 text-[12px] text-gray-400 hover:text-[#004b9c] transition-colors py-1 w-full">
+                  <Link
+                    href="/cart"
+                    className="mt-3 flex items-center justify-center gap-1 text-[12px] text-gray-400 hover:text-[#004b9c] transition-colors py-1 w-full"
+                  >
                     ← Back to Cart
                   </Link>
                 )}
@@ -968,14 +1141,16 @@ const handleWhatsAppOrder = async () => {
                     "Free Returns Within 14 Days",
                     "Authentic Products Guaranteed",
                   ].map((t) => (
-                    <p key={t} className="text-[11.5px] text-gray-400 flex items-center gap-2">
+                    <p
+                      key={t}
+                      className="text-[11.5px] text-gray-400 flex items-center gap-2"
+                    >
                       <span className="text-[#81bf42] font-black">✓</span> {t}
                     </p>
                   ))}
                 </div>
               </div>
             </div>
-
           </div>
         )}
       </div>
