@@ -713,7 +713,10 @@ export default function AboutPage() {
         {/* ════════════════════════════════════════════════════════
             §6  STORE LOCATIONS
         ════════════════════════════════════════════════════════ */}
-        <section className="relative w-full bg-[#f8faff] py-24 lg:py-28 overflow-hidden">
+        <section
+          className="relative w-full bg-[#f8faff] py-24 lg:py-28 overflow-hidden"
+          id="visit-our-stores"
+        >
           <div className="absolute inset-0 opacity-25 pointer-events-none [background-image:radial-gradient(circle,#004b9c10_1.2px,transparent_1.2px)] [background-size:28px_28px]" />
 
           <div className="relative max-w-[1400px] mx-auto px-5 lg:px-12">
