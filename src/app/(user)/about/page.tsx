@@ -302,7 +302,7 @@ export default function AboutPage() {
                   {/* Bottom-right */}
                   <div className="relative rounded-2xl overflow-hidden h-[182px] shadow-lg group">
                     <Image
-                      src="/about/cricket-player.jpg" // ← your image
+                      src="/shop inter.jpg" // ← your image
                       alt="Cricket Player UAE"
                       fill
                       className="object-cover group-hover:scale-105 transition-transform duration-600"
@@ -691,7 +691,7 @@ export default function AboutPage() {
               <FadeUp delay={0} className="order-1 lg:order-2">
                 <div className="relative rounded-3xl overflow-hidden h-[380px] shadow-2xl group">
                   <Image
-                    src="/about/whatsapp-ordering.jpg" // ← your image
+                    src="/whatsapp-order.png" // ← your image
                     alt="WhatsApp Cricket Ordering"
                     fill
                     className="object-cover group-hover:scale-105 transition-transform duration-700"
