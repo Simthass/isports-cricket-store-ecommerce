@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";   // ← import auth() from your real NextAuth instance
+import { auth } from "@/lib/auth";
 import dbConnect from "@/lib/dbConnect";
 import Cart from "@/models/Cart";
 import mongoose from "mongoose";
@@ -14,11 +14,11 @@ export async function GET() {
     await dbConnect();
     const cart = await Cart.findOne({ userId: session.user.id }).lean();
     const cartData = cart ?? { items: [], totalItems: 0, totalPrice: 0 };
-return NextResponse.json({ 
-  items: cartData.items,
-  totalItems: cartData.totalItems,
-  totalPrice: cartData.totalPrice
-});
+    return NextResponse.json({ 
+      items: cartData.items,
+      totalItems: cartData.totalItems,
+      totalPrice: cartData.totalPrice
+    });
   } catch (error) {
     console.error("Cart GET error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
@@ -63,16 +63,15 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Calculate totals
     cart.totalItems = cart.items.reduce((sum: number, item: any) => sum + item.qty, 0);
     cart.totalPrice = cart.items.reduce((sum: number, item: any) => sum + (item.price * item.qty), 0);
 
     await cart.save();
     return NextResponse.json({ 
-  items: cart.items,
-  totalItems: cart.totalItems,
-  totalPrice: cart.totalPrice
-});
+      items: cart.items,
+      totalItems: cart.totalItems,
+      totalPrice: cart.totalPrice
+    });
   } catch (error) {
     console.error("Cart POST error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
@@ -108,12 +107,15 @@ export async function PATCH(req: NextRequest) {
 
     item.qty = Math.max(1, qty);
     
-    // Recalculate totals
     cart.totalItems = cart.items.reduce((sum: number, item: any) => sum + item.qty, 0);
     cart.totalPrice = cart.items.reduce((sum: number, item: any) => sum + (item.price * item.qty), 0);
     
     await cart.save();
-    return NextResponse.json({ success: true, cart });
+    return NextResponse.json({ 
+      items: cart.items,
+      totalItems: cart.totalItems,
+      totalPrice: cart.totalPrice
+    });
   } catch (error) {
     console.error("Cart PATCH error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
@@ -147,12 +149,15 @@ export async function DELETE(req: NextRequest) {
       );
     }
 
-    // Recalculate totals
     cart.totalItems = cart.items.reduce((sum: number, item: any) => sum + item.qty, 0);
     cart.totalPrice = cart.items.reduce((sum: number, item: any) => sum + (item.price * item.qty), 0);
 
     await cart.save();
-    return NextResponse.json({ success: true, cart });
+    return NextResponse.json({ 
+      items: cart.items,
+      totalItems: cart.totalItems,
+      totalPrice: cart.totalPrice
+    });
   } catch (error) {
     console.error("Cart DELETE error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

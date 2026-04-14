@@ -4,6 +4,7 @@ import "./globals.css";
 import { Providers } from "./providers";
 import { SiteSettingsProvider } from "@/components/providers/SiteSettingsProvider";
 import { getSiteSettings } from "@/lib/site-settings";
+import { ToastContainer } from "@/components/ui/Toast";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -54,6 +55,7 @@ export default async function RootLayout({
         <SiteSettingsProvider initialSettings={settings}>
           <Providers>{children}</Providers>
         </SiteSettingsProvider>
+        <ToastContainer />
       </body>
     </html>
   );

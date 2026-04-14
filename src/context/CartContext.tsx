@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
 import { useSession } from "next-auth/react";
 
 export interface CartItem {
@@ -33,16 +33,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const cartCount = cartItems.reduce((total, item) => total + item.quantity, 0);
 
-  const fetchCart = async () => {
+  const fetchCart = useCallback(async () => {
     if (!session?.user) return;
     
     try {
       const response = await fetch("/api/cart");
       if (response.ok) {
         const data = await response.json();
-        console.log("Cart data:", data); // Debug log
+        console.log("Cart data:", data);
         
-        // Map API response (which uses 'qty') to our CartItem format (which uses 'quantity')
         const items = (data.items || []).map((item: any) => ({
           productId: item.productId?.toString() || item.productId,
           name: item.name,
@@ -58,7 +57,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error("Failed to fetch cart:", error);
     }
-  };
+  }, [session?.user]);
 
   const addToCart = async (item: CartItem) => {
     if (!session?.user) return;
@@ -80,18 +79,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       });
 
       if (response.ok) {
-        const data = await response.json();
-        // Map the response items
-        const items = (data.items || []).map((cartItem: any) => ({
-          productId: cartItem.productId?.toString() || cartItem.productId,
-          name: cartItem.name,
-          brand: cartItem.brand || "",
-          price: Number(cartItem.price) || 0,
-          quantity: cartItem.qty || 1,
-          size: cartItem.size || "Standard",
-          image: cartItem.image || null,
-        }));
-        setCartItems(items);
+        await fetchCart();
       } else {
         const error = await response.json();
         console.error("Add to cart error:", error);
@@ -114,17 +102,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       });
 
       if (response.ok) {
-        const data = await response.json();
-        const items = (data.items || []).map((cartItem: any) => ({
-          productId: cartItem.productId?.toString() || cartItem.productId,
-          name: cartItem.name,
-          brand: cartItem.brand || "",
-          price: Number(cartItem.price) || 0,
-          quantity: cartItem.qty || 1,
-          size: cartItem.size || "Standard",
-          image: cartItem.image || null,
-        }));
-        setCartItems(items);
+        await fetchCart();
       }
     } catch (error) {
       console.error("Remove from cart error:", error);
@@ -142,17 +120,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       });
 
       if (response.ok) {
-        const data = await response.json();
-        const items = (data.items || []).map((cartItem: any) => ({
-          productId: cartItem.productId?.toString() || cartItem.productId,
-          name: cartItem.name,
-          brand: cartItem.brand || "",
-          price: Number(cartItem.price) || 0,
-          quantity: cartItem.qty || 1,
-          size: cartItem.size || "Standard",
-          image: cartItem.image || null,
-        }));
-        setCartItems(items);
+        await fetchCart();
       }
     } catch (error) {
       console.error("Update quantity error:", error);
@@ -182,7 +150,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     } else {
       setCartItems([]);
     }
-  }, [session]);
+  }, [session?.user, fetchCart]);
 
   return (
     <CartContext.Provider

@@ -630,6 +630,7 @@ export default function Header() {
                 </button>
               )}
 
+              {/* Cart */}
               <Link
                 href="/cart"
                 className="relative flex items-center justify-center w-10 h-10 rounded-xl text-gray-600 hover:text-[#004b9c] hover:bg-blue-50 transition-all duration-150"

@@ -35,6 +35,7 @@ export interface IOrder extends Document {
   paymentIntentId?: string;
   orderSource: string;
   waMessageId?: string;
+  whatsappOrderId?: mongoose.Types.ObjectId; // ✅ ADD THIS FIELD
   status: OrderStatus;
   totalAmount: number;
   subtotal?: number;
@@ -76,6 +77,7 @@ const OrderSchema = new Schema<IOrder>(
     paymentIntentId: { type: String },
     orderSource: { type: String, default: "web" },
     waMessageId: { type: String },
+    whatsappOrderId: { type: Schema.Types.ObjectId, ref: "WhatsAppOrder" }, // ✅ ADD THIS
     status: {
       type: String,
       enum: ["PENDING", "CONFIRMED", "PROCESSING", "SHIPPED", "DELIVERED", "CANCELLED", "PAID"],

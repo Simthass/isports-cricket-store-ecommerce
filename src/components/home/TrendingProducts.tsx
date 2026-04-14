@@ -5,7 +5,6 @@ import Link from "next/link";
 import Image from "next/image";
 import { motion, useInView } from "framer-motion";
 import { ArrowRight, Star, Loader2, Zap, Sparkles } from "lucide-react";
-import ProductCard from "@/components/products/ProductCard";
 
 interface Product {
   _id: string;
@@ -22,7 +21,6 @@ interface Product {
   isNew?: boolean;
 }
 
-// Update the local ProductCard to accept onAuthRequired and use the real ProductCard component
 function LocalProductCard({ product, index, onAuthRequired }: { product: Product; index: number; onAuthRequired?: () => void }) {
   const discount = product.originalPrice
     ? Math.round(

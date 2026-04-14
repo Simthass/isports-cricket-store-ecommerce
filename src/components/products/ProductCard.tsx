@@ -3,6 +3,7 @@
 import React, { useState, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion, useInView, AnimatePresence } from "framer-motion";
 import {
   ShoppingCart, Star, ArrowRight, Check,
@@ -42,6 +43,7 @@ export default function ProductCard({
   index = 0,
   onAuthRequired,
 }: Props) {
+  const router = useRouter();
   const { data: session } = useSession();
   const { addToCart } = useCart();
   const [hovered, setHovered] = useState(false);
@@ -85,7 +87,8 @@ export default function ProductCard({
     e.stopPropagation();
 
     if (!session?.user) {
-      onAuthRequired?.();
+      // Redirect to login page instead of showing modal
+      router.push("/login");
       return;
     }
 

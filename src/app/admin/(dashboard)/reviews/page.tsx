@@ -403,7 +403,7 @@ export default function AdminReviewsPage() {
           />
           <StatsCard
             title="Avg. Rating"
-            value={stats.avgRating.toFixed(1)}
+            value={Number(stats.avgRating.toFixed(1))}
             icon={<Star size={18} className="text-white" />}
             color="from-amber-500 to-yellow-500"
           />
