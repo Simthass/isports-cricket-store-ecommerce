@@ -3,10 +3,21 @@
 
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, X, SlidersHorizontal } from "lucide-react";
+import { ChevronDown, X, SlidersHorizontal, ChevronRight } from "lucide-react";
+
+interface SubCategoryOption {
+  value: string; // "categorySlug__subSlug"
+  label: string;
+}
+
+interface CategoryOption {
+  value: string;
+  label: string;
+  subCategories: SubCategoryOption[];
+}
 
 interface Filters {
-  categories: string[];
+  categories: string[]; // can be "bats" or "bats__english-willow"
   brands: string[];
   priceRange: { min: number; max: number } | null;
   inStockOnly: boolean;
@@ -70,14 +81,124 @@ function Section({
   );
 }
 
+// ── Checkbox row ──────────────────────────────────────────────
+function CheckRow({
+  label,
+  active,
+  onClick,
+  indent = false,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+  indent?: boolean;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-150 text-left w-full ${
+        indent ? "pl-7" : ""
+      } ${
+        active
+          ? "bg-[#004b9c]/8 text-[#004b9c] font-semibold"
+          : "text-gray-600 hover:bg-gray-50 hover:text-gray-800"
+      }`}
+    >
+      <span
+        className={`w-3.5 h-3.5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all ${
+          active ? "bg-[#004b9c] border-[#004b9c]" : "border-gray-300"
+        }`}
+      >
+        {active && (
+          <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+            <polyline
+              points="1 4 3 6 7 2"
+              stroke="white"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+            />
+          </svg>
+        )}
+      </span>
+      {label}
+    </button>
+  );
+}
+
+// ── Category row with expandable sub-categories ───────────────
+function CategoryRow({
+  cat,
+  filters,
+  onToggle,
+}: {
+  cat: CategoryOption;
+  filters: Filters;
+  onToggle: (value: string) => void;
+}) {
+  const hasSubs = cat.subCategories.length > 0;
+  const parentActive = filters.categories.includes(cat.value);
+  // Expanded if the parent is active OR any sub is active
+  const anySubActive = cat.subCategories.some((s) =>
+    filters.categories.includes(s.value),
+  );
+  const [open, setOpen] = useState(parentActive || anySubActive);
+
+  return (
+    <div>
+      <div className="flex items-center gap-1">
+        <div className="flex-1">
+          <CheckRow
+            label={cat.label}
+            active={parentActive}
+            onClick={() => onToggle(cat.value)}
+          />
+        </div>
+        {hasSubs && (
+          <button
+            onClick={() => setOpen((o) => !o)}
+            className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-100 hover:text-gray-700 transition-colors flex-shrink-0"
+          >
+            <motion.div
+              animate={{ rotate: open ? 90 : 0 }}
+              transition={{ duration: 0.18 }}
+            >
+              <ChevronRight size={13} />
+            </motion.div>
+          </button>
+        )}
+      </div>
+
+      <AnimatePresence initial={false}>
+        {hasSubs && open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden ml-2 border-l-2 border-gray-100 pl-1 mt-0.5 mb-1"
+          >
+            {cat.subCategories.map((sub) => (
+              <CheckRow
+                key={sub.value}
+                label={sub.label}
+                active={filters.categories.includes(sub.value)}
+                onClick={() => onToggle(sub.value)}
+                indent
+              />
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 export default function FilterSidebar({
   filters,
   onChange,
   totalResults,
 }: Props) {
-  const [categories, setCategories] = useState<
-    { value: string; label: string }[]
-  >([]);
+  const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [brands, setBrands] = useState<{ value: string; label: string }[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -99,11 +220,21 @@ export default function FilterSidebar({
     fetchFilters();
   }, []);
 
-  const toggle = (key: "categories" | "brands", value: string) => {
+  const toggle = (key: "brands", value: string) => {
     const arr = filters[key];
     onChange({
       ...filters,
       [key]: arr.includes(value)
+        ? arr.filter((v) => v !== value)
+        : [...arr, value],
+    });
+  };
+
+  const toggleCategory = (value: string) => {
+    const arr = filters.categories;
+    onChange({
+      ...filters,
+      categories: arr.includes(value)
         ? arr.filter((v) => v !== value)
         : [...arr, value],
     });
@@ -194,45 +325,17 @@ export default function FilterSidebar({
         </label>
       </div>
 
-      {/* Category */}
+      {/* Category — with expandable sub-categories */}
       <Section title="Category">
-        <div className="flex flex-col gap-1">
-          {categories.map((cat) => {
-            const active = filters.categories.includes(cat.value);
-            return (
-              <button
-                key={cat.value}
-                onClick={() => toggle("categories", cat.value)}
-                className={`flex items-center justify-between px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-150 text-left ${
-                  active
-                    ? "bg-[#004b9c]/8 text-[#004b9c] font-semibold"
-                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-800"
-                }`}
-              >
-                <span className="flex items-center gap-2.5">
-                  <span
-                    className={`w-3.5 h-3.5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all ${
-                      active
-                        ? "bg-[#004b9c] border-[#004b9c]"
-                        : "border-gray-300"
-                    }`}
-                  >
-                    {active && (
-                      <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
-                        <polyline
-                          points="1 4 3 6 7 2"
-                          stroke="white"
-                          strokeWidth="1.5"
-                          strokeLinecap="round"
-                        />
-                      </svg>
-                    )}
-                  </span>
-                  {cat.label}
-                </span>
-              </button>
-            );
-          })}
+        <div className="flex flex-col gap-0.5">
+          {categories.map((cat) => (
+            <CategoryRow
+              key={cat.value}
+              cat={cat}
+              filters={filters}
+              onToggle={toggleCategory}
+            />
+          ))}
         </div>
       </Section>
 

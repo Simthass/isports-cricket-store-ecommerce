@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "12");
     const search = searchParams.get("search") || "";
-    const category = searchParams.get("category");
+    const category = searchParams.get("category"); // can be "bats" or "bats__english-willow"
     const brand = searchParams.get("brand");
     const minPrice = searchParams.get("minPrice");
     const maxPrice = searchParams.get("maxPrice");
@@ -22,7 +22,6 @@ export async function GET(req: NextRequest) {
 
     const skip = (page - 1) * limit;
 
-    // Build filter
     const filter: any = {};
 
     if (search) {
@@ -33,8 +32,18 @@ export async function GET(req: NextRequest) {
     }
 
     if (category) {
-      const categoryDoc = await Category.findOne({ slug: category });
-      if (categoryDoc) filter.categoryId = categoryDoc._id;
+      // Support subcategory format: "categorySlug__subCategorySlug"
+      if (category.includes("__")) {
+        const [catSlug, subSlug] = category.split("__");
+        const categoryDoc = await Category.findOne({ slug: catSlug });
+        if (categoryDoc) {
+          filter.categoryId = categoryDoc._id;
+          filter.subCategorySlug = subSlug;
+        }
+      } else {
+        const categoryDoc = await Category.findOne({ slug: category });
+        if (categoryDoc) filter.categoryId = categoryDoc._id;
+      }
     }
 
     if (brand) {
@@ -59,7 +68,7 @@ export async function GET(req: NextRequest) {
 
     const [products, total] = await Promise.all([
       Product.find(filter)
-        .populate("categoryId", "name slug")
+        .populate("categoryId", "name slug subCategories")
         .populate("brandId", "name slug logo")
         .sort(sortOption)
         .skip(skip)

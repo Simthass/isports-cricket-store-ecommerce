@@ -1,3 +1,4 @@
+// src/app/admin/categories/page.tsx
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
@@ -14,25 +15,30 @@ import {
   CheckCircle2,
   AlertCircle,
   FolderOpen,
-  ChevronRight,
   Hash,
   Sparkles,
   LayoutGrid,
   List,
   Filter,
-  TrendingUp,
-  Globe,
-  Zap,
+  ChevronDown,
+  ChevronRight,
+  Layers,
 } from "lucide-react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 
 // ── Types ─────────────────────────────────────────────────────
+interface ISubCategory {
+  name: string;
+  slug: string;
+}
+
 interface ICategory {
   _id: string;
   name: string;
   slug: string;
   image?: string;
+  subCategories: ISubCategory[];
   createdAt: string;
 }
 
@@ -41,6 +47,7 @@ type ModalMode = "add" | "edit" | null;
 interface FormState {
   name: string;
   image: string;
+  subCategories: string[]; // names only, slugs generated on save
 }
 
 interface ToastState {
@@ -48,7 +55,7 @@ interface ToastState {
   message: string;
 }
 
-// ── Stats Card Component ──────────────────────────────────────
+// ── Stats Card ────────────────────────────────────────────────
 function StatsCard({
   title,
   value,
@@ -92,13 +99,12 @@ function StatsCard({
   );
 }
 
-// ── Toast Component ───────────────────────────────────────────
+// ── Toast ─────────────────────────────────────────────────────
 function Toast({ toast, onClose }: { toast: ToastState; onClose: () => void }) {
   useEffect(() => {
     const t = setTimeout(onClose, 3500);
     return () => clearTimeout(t);
   }, [onClose]);
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 32, scale: 0.95 }}
@@ -128,7 +134,7 @@ function Toast({ toast, onClose }: { toast: ToastState; onClose: () => void }) {
   );
 }
 
-// ── Delete Confirm Dialog ─────────────────────────────────────
+// ── Delete Dialog ─────────────────────────────────────────────
 function DeleteDialog({
   category,
   onConfirm,
@@ -152,7 +158,7 @@ function DeleteDialog({
         initial={{ scale: 0.92, opacity: 0, y: 16 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.95, opacity: 0 }}
-        transition={{ duration: 0.22, ease: [0.25, 0.46, 0.45, 0.94] }}
+        transition={{ duration: 0.22 }}
         className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-md p-6"
       >
         <div className="flex items-start gap-4">
@@ -198,6 +204,92 @@ function DeleteDialog({
   );
 }
 
+// ── Sub-Category Tag Input ────────────────────────────────────
+function SubCategoryInput({
+  value,
+  onChange,
+}: {
+  value: string[];
+  onChange: (v: string[]) => void;
+}) {
+  const [input, setInput] = useState("");
+
+  function addTag() {
+    const trimmed = input.trim();
+    if (
+      !trimmed ||
+      value.some((v) => v.toLowerCase() === trimmed.toLowerCase())
+    ) {
+      setInput("");
+      return;
+    }
+    onChange([...value, trimmed]);
+    setInput("");
+  }
+
+  function removeTag(i: number) {
+    onChange(value.filter((_, idx) => idx !== i));
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Enter" || e.key === ",") {
+      e.preventDefault();
+      addTag();
+    }
+    if (e.key === "Backspace" && !input && value.length > 0) {
+      onChange(value.slice(0, -1));
+    }
+  }
+
+  return (
+    <div className="space-y-2">
+      {/* Tags display */}
+      {value.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {value.map((tag, i) => (
+            <span
+              key={i}
+              className="flex items-center gap-1 px-2.5 py-1 bg-[#e8f0fb] text-[#004b9c] text-[12px] font-semibold rounded-lg"
+            >
+              {tag}
+              <button
+                type="button"
+                onClick={() => removeTag(i)}
+                className="text-[#004b9c]/60 hover:text-[#004b9c] transition-colors ml-0.5"
+              >
+                <X size={10} />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+      {/* Input */}
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="e.g. English Willow, Kashmir Willow…"
+          className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-[13px] text-gray-900 placeholder-gray-400 bg-gray-50 focus:bg-white focus:border-[#004b9c] focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+        />
+        <button
+          type="button"
+          onClick={addTag}
+          disabled={!input.trim()}
+          className="px-3 py-2.5 rounded-xl bg-[#004b9c] text-white disabled:opacity-40 hover:bg-[#003a7a] transition-colors flex items-center gap-1 text-[12px] font-bold"
+        >
+          <Plus size={13} /> Add
+        </button>
+      </div>
+      <p className="text-[10px] text-gray-400 flex items-center gap-1">
+        <Sparkles size={9} />
+        Press Enter or comma to add · Backspace to remove last
+      </p>
+    </div>
+  );
+}
+
 // ── Category Modal (Add / Edit) ───────────────────────────────
 function CategoryModal({
   mode,
@@ -213,8 +305,11 @@ function CategoryModal({
   const [form, setForm] = useState<FormState>({
     name: initial?.name ?? "",
     image: initial?.image ?? "",
+    subCategories: initial?.subCategories?.map((s) => s.name) ?? [],
   });
-  const [errors, setErrors] = useState<Partial<FormState>>({});
+  const [errors, setErrors] = useState<
+    Partial<Record<keyof FormState, string>>
+  >({});
   const [loading, setLoading] = useState(false);
   const nameRef = useRef<HTMLInputElement>(null);
 
@@ -223,7 +318,7 @@ function CategoryModal({
   }, []);
 
   function validate(): boolean {
-    const e: Partial<FormState> = {};
+    const e: Partial<Record<keyof FormState, string>> = {};
     if (!form.name.trim() || form.name.trim().length < 2)
       e.name = "Name must be at least 2 characters";
     if (form.image && !/^https?:\/\/.+/.test(form.image.trim()))
@@ -246,6 +341,7 @@ function CategoryModal({
         body: JSON.stringify({
           name: form.name.trim(),
           image: form.image.trim(),
+          subCategories: form.subCategories.map((name) => ({ name })),
         }),
       });
       const json = await res.json();
@@ -287,10 +383,10 @@ function CategoryModal({
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.95, opacity: 0 }}
         transition={{ duration: 0.24, ease: [0.25, 0.46, 0.45, 0.94] }}
-        className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-md overflow-hidden"
+        className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-lg overflow-hidden max-h-[90vh] flex flex-col"
       >
-        {/* Header with gradient */}
-        <div className="relative overflow-hidden bg-gradient-to-r from-[#004b9c] to-[#0062cc] px-6 py-5">
+        {/* Header */}
+        <div className="relative overflow-hidden bg-gradient-to-r from-[#004b9c] to-[#0062cc] px-6 py-5 flex-shrink-0">
           <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16" />
           <div className="relative z-10 flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -317,8 +413,11 @@ function CategoryModal({
           </div>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+        {/* Form – scrollable body */}
+        <form
+          onSubmit={handleSubmit}
+          className="p-6 space-y-5 overflow-y-auto flex-1"
+        >
           {/* Name */}
           <div>
             <label className="block text-[12px] font-bold text-gray-700 mb-1.5">
@@ -362,7 +461,7 @@ function CategoryModal({
           {/* Image URL */}
           <div>
             <label className="block text-[12px] font-bold text-gray-700 mb-1.5">
-              Image URL
+              Image URL{" "}
               <span className="text-gray-400 font-normal ml-1">(optional)</span>
             </label>
             <div className="flex gap-3">
@@ -382,7 +481,6 @@ function CategoryModal({
                     : "border-gray-200 focus:border-[#004b9c] focus:ring-2 focus:ring-blue-100",
                 )}
               />
-              {/* Image preview */}
               <div className="w-14 h-14 rounded-xl border-2 border-gray-100 overflow-hidden flex-shrink-0 bg-gradient-to-br from-gray-50 to-white shadow-sm">
                 {imageValid ? (
                   <Image
@@ -414,12 +512,29 @@ function CategoryModal({
             )}
           </div>
 
+          {/* Sub-categories */}
+          <div>
+            <label className="block text-[12px] font-bold text-gray-700 mb-1.5">
+              Sub-categories{" "}
+              <span className="text-gray-400 font-normal ml-1">(optional)</span>
+              {form.subCategories.length > 0 && (
+                <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded-md bg-[#e8f0fb] text-[#004b9c] text-[10px] font-bold">
+                  {form.subCategories.length}
+                </span>
+              )}
+            </label>
+            <SubCategoryInput
+              value={form.subCategories}
+              onChange={(v) => setForm((f) => ({ ...f, subCategories: v }))}
+            />
+          </div>
+
           {/* Info note */}
           <div className="p-3 bg-amber-50 rounded-xl border border-amber-100">
             <p className="text-[10px] text-amber-700 flex items-center gap-1.5">
               <Sparkles size={11} />
-              Category image will appear on category pages and product
-              filtering.
+              Sub-categories help customers narrow down products within a
+              category.
             </p>
           </div>
 
@@ -463,7 +578,7 @@ function CategoryModal({
   );
 }
 
-// ── Category Card (Modern UI with Top Actions) ─────────────────
+// ── Category Card ─────────────────────────────────────────────
 function CategoryCard({
   category,
   index,
@@ -475,7 +590,7 @@ function CategoryCard({
   onEdit: (cat: ICategory) => void;
   onDelete: (cat: ICategory) => void;
 }) {
-  const [isHovered, setIsHovered] = useState(false);
+  const [subOpen, setSubOpen] = useState(false);
   const initials = category.name.slice(0, 2).toUpperCase();
 
   const accentColors = [
@@ -491,6 +606,7 @@ function CategoryCard({
     category.name.split("").reduce((a, c) => a + c.charCodeAt(0), 0) %
     accentColors.length;
   const gradient = accentColors[colorIndex];
+  const hasSubs = category.subCategories?.length > 0;
 
   return (
     <motion.div
@@ -502,14 +618,12 @@ function CategoryCard({
         duration: 0.3,
         ease: [0.25, 0.46, 0.45, 0.94],
       }}
-      onHoverStart={() => setIsHovered(true)}
-      onHoverEnd={() => setIsHovered(false)}
       className="group relative bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300"
     >
       {/* Gradient top bar */}
       <div className={`h-1 bg-gradient-to-r ${gradient}`} />
 
-      {/* Action Buttons - Top Right Corner */}
+      {/* Action Buttons */}
       <div className="absolute top-3 right-3 z-20 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
         <button
           onClick={() => onEdit(category)}
@@ -557,6 +671,49 @@ function CategoryCard({
             {category.slug}
           </p>
         </div>
+
+        {/* Sub-categories toggle */}
+        {hasSubs && (
+          <div className="mt-3">
+            <button
+              onClick={() => setSubOpen((o) => !o)}
+              className="flex items-center gap-1.5 text-[11px] font-semibold text-[#004b9c] hover:text-[#003a7a] transition-colors"
+            >
+              <Layers size={11} />
+              {category.subCategories.length} sub-categor
+              {category.subCategories.length === 1 ? "y" : "ies"}
+              <motion.div
+                animate={{ rotate: subOpen ? 180 : 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                <ChevronDown size={11} />
+              </motion.div>
+            </button>
+            <AnimatePresence initial={false}>
+              {subOpen && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden"
+                >
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {category.subCategories.map((sc) => (
+                      <span
+                        key={sc.slug}
+                        className="text-[10px] px-2 py-0.5 bg-gray-100 text-gray-600 rounded-md font-medium"
+                      >
+                        {sc.name}
+                      </span>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
+
         <p className="text-[10px] text-gray-400 mt-2.5">
           Added{" "}
           {new Date(category.createdAt).toLocaleDateString("en-AE", {
@@ -617,7 +774,8 @@ export default function AdminCategoriesPage() {
         ? categories.filter(
             (c) =>
               c.name.toLowerCase().includes(q) ||
-              c.slug.toLowerCase().includes(q),
+              c.slug.toLowerCase().includes(q) ||
+              c.subCategories?.some((s) => s.name.toLowerCase().includes(q)),
           )
         : categories,
     );
@@ -662,12 +820,16 @@ export default function AdminCategoriesPage() {
     total: categories.length,
     withImage: categories.filter((c) => c.image).length,
     noImage: categories.filter((c) => !c.image).length,
+    totalSubs: categories.reduce(
+      (acc, c) => acc + (c.subCategories?.length ?? 0),
+      0,
+    ),
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
       <div className="space-y-6 max-w-[1600px] mx-auto p-6">
-        {/* Header with Gradient */}
+        {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -675,7 +837,6 @@ export default function AdminCategoriesPage() {
         >
           <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-32 -mt-32" />
           <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full -ml-24 -mb-24" />
-
           <div className="relative z-10 flex items-center justify-between flex-wrap gap-4">
             <div>
               <div className="flex items-center gap-2 mb-2">
@@ -688,7 +849,7 @@ export default function AdminCategoriesPage() {
                 Category Management
               </h1>
               <p className="text-blue-100 text-[13px] mt-1">
-                Organize your products into categories for easy browsing
+                Organize products into categories and sub-categories
               </p>
             </div>
             <button
@@ -710,7 +871,12 @@ export default function AdminCategoriesPage() {
             value={stats.total}
             icon={<Tag size={18} className="text-white" />}
             color="from-blue-500 to-cyan-500"
-            trend={stats.total > 0 ? "+12% this month" : undefined}
+          />
+          <StatsCard
+            title="Sub-categories"
+            value={stats.totalSubs}
+            icon={<Layers size={18} className="text-white" />}
+            color="from-purple-500 to-pink-500"
           />
           <StatsCard
             title="With Images"
@@ -724,12 +890,6 @@ export default function AdminCategoriesPage() {
             icon={<FolderOpen size={18} className="text-white" />}
             color="from-orange-500 to-amber-500"
           />
-          <StatsCard
-            title="Active Categories"
-            value={stats.total}
-            icon={<Sparkles size={18} className="text-white" />}
-            color="from-purple-500 to-pink-500"
-          />
         </div>
 
         {/* Filters Bar */}
@@ -739,7 +899,6 @@ export default function AdminCategoriesPage() {
           className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm"
         >
           <div className="flex flex-col sm:flex-row gap-3">
-            {/* Search */}
             <div className="relative flex-1">
               <Search
                 size={14}
@@ -749,7 +908,7 @@ export default function AdminCategoriesPage() {
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search categories by name or slug..."
+                placeholder="Search categories, sub-categories or slug…"
                 className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 text-[13px] focus:border-[#004b9c] focus:ring-2 focus:ring-blue-100 outline-none transition-all"
               />
               {search && (
@@ -761,8 +920,6 @@ export default function AdminCategoriesPage() {
                 </button>
               )}
             </div>
-
-            {/* View Toggle */}
             <div className="flex items-center gap-1 bg-gray-100 rounded-xl p-1">
               <button
                 onClick={() => setViewMode("grid")}
@@ -850,8 +1007,6 @@ export default function AdminCategoriesPage() {
                 ))}
               </AnimatePresence>
             </div>
-
-            {/* Result count */}
             <div className="flex justify-between items-center text-[12px] text-gray-400 pt-2">
               <p>
                 Showing {filtered.length} of {categories.length} categories
@@ -886,7 +1041,6 @@ export default function AdminCategoriesPage() {
           )}
         </AnimatePresence>
 
-        {/* Toast */}
         <AnimatePresence>
           {toast && <Toast toast={toast} onClose={() => setToast(null)} />}
         </AnimatePresence>

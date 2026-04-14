@@ -1,31 +1,31 @@
 // src/app/admin/products/_components/ProductForm.tsx
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Upload,
   X,
-  Loader2,
-  CheckCircle2,
-  AlertCircle,
-  Plus,
   GripVertical,
+  Plus,
+  Minus,
+  ChevronDown,
+  Loader2,
   Save,
-  ArrowLeft,
   Tag,
-  DollarSign,
   Package,
-  Hash,
+  DollarSign,
+  ImageIcon,
   FileText,
   Palette,
-  Ruler,
-  ChevronDown,
-  ImageIcon,
+  Layers,
+  ArrowLeft,
   Award,
+  Hash,
   ToggleLeft,
   ToggleRight,
-  Layers,
+  AlertCircle,
+  CheckCircle2,
   Info,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -36,7 +36,9 @@ import QrCodePanel from "./QrCodePanel";
 interface ICategory {
   _id: string;
   name: string;
+  subCategories?: { name: string; slug: string }[];
 }
+
 interface IBrand {
   _id: string;
   name: string;
@@ -62,6 +64,7 @@ interface FormData {
   price: string;
   originalPrice: string;
   categoryId: string;
+  subCategorySlug: string;
   brandId: string;
   stockQty: string;
   inStock: boolean;
@@ -260,7 +263,6 @@ function ImageGrid({
             alt=""
             className="w-full h-full object-cover pointer-events-none"
           />
-
           {img.uploading && (
             <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
               <Loader2 size={18} className="text-white animate-spin" />
@@ -407,7 +409,6 @@ function ImageUploadZone({
           onChange={(e) => e.target.files && handleFiles(e.target.files)}
         />
       </div>
-
       {images.length > 0 && (
         <>
           <p className="text-[11px] text-gray-400 flex items-center gap-1.5">
@@ -431,7 +432,6 @@ export default function ProductForm({
 }) {
   const router = useRouter();
 
-  // Track existing hero products to disable taken orders
   const [existingHeroProducts, setExistingHeroProducts] = useState<
     Array<{ _id: string; heroOrder: number }>
   >([]);
@@ -442,6 +442,7 @@ export default function ProductForm({
     price: "",
     originalPrice: "",
     categoryId: "",
+    subCategorySlug: "",
     brandId: "",
     stockQty: "0",
     inStock: true,
@@ -459,12 +460,13 @@ export default function ProductForm({
     colors: [],
     colorInput: "",
   });
+
   const [images, setImages] = useState<UploadedImage[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [categories, setCategories] = useState<ICategory[]>([]);
   const [brands, setBrands] = useState<IBrand[]>([]);
   const [savedSlug, setSavedSlug] = useState<string | null>(
-    mode === "edit" ? (productId ?? null) : null, // productId is the slug in edit mode
+    mode === "edit" ? (productId ?? null) : null,
   );
   const [saving, setSaving] = useState(false);
   const [pageLoading, setPageLoading] = useState(mode === "edit");
@@ -473,14 +475,13 @@ export default function ProductForm({
     message: string;
   } | null>(null);
 
-  // Load existing hero products to know which orders are taken
+  // Load existing hero products
   useEffect(() => {
     const fetchExistingHeroProducts = async () => {
       try {
         const res = await fetch("/api/home/hero");
         const json = await res.json();
         if (json.success && json.data.length > 0) {
-          // Exclude current product if editing
           const heroes = json.data
             .filter((p: any) => p._id !== productId)
             .map((p: any) => ({ _id: p._id, heroOrder: p.heroOrder }));
@@ -521,6 +522,7 @@ export default function ProductForm({
           price: String(p.price ?? ""),
           originalPrice: String(p.originalPrice ?? ""),
           categoryId: p.categoryId?._id ?? p.categoryId ?? "",
+          subCategorySlug: p.subCategorySlug ?? "",
           brandId: p.brandId?._id ?? p.brandId ?? "",
           stockQty: String(p.stockQty ?? 0),
           inStock: p.inStock ?? true,
@@ -572,30 +574,23 @@ export default function ProductForm({
     [errors],
   );
 
-  // Get available hero orders (1-3) excluding taken ones
   const getAvailableHeroOrders = () => {
     const takenOrders = existingHeroProducts
       .filter((p) => p.heroOrder > 0)
       .map((p) => p.heroOrder);
-
     const available = [];
     for (let i = 1; i <= 3; i++) {
-      if (!takenOrders.includes(i) || form.heroOrder === i) {
-        available.push(i);
-      }
+      if (!takenOrders.includes(i) || form.heroOrder === i) available.push(i);
     }
     return available;
   };
 
-  // Handle hero product toggle
   const handleHeroToggle = (checked: boolean) => {
     setF("isHeroProduct", checked);
     if (checked) {
       setF("isTrending", false);
       setF("isFeatured", false);
       setF("isNewArrival", false);
-
-      // Auto-select first available order
       const availableOrders = getAvailableHeroOrders();
       if (
         availableOrders.length > 0 &&
@@ -606,10 +601,7 @@ export default function ProductForm({
     }
   };
 
-  // Handle hero order change
-  const handleHeroOrderChange = (order: number) => {
-    setF("heroOrder", order);
-  };
+  const handleHeroOrderChange = (order: number) => setF("heroOrder", order);
 
   // Sizes
   function addSize() {
@@ -680,15 +672,11 @@ export default function ProductForm({
     if (validImgs.length === 0) e.images = "At least one image is required";
     if (images.some((i) => i.uploading))
       e.images = "Please wait for uploads to finish";
-
-    // Hero order validation
     if (form.isHeroProduct) {
       const availableOrders = getAvailableHeroOrders();
-      if (!availableOrders.includes(form.heroOrder)) {
-        e.heroOrder = "This hero position is already taken by another product";
-      }
+      if (!availableOrders.includes(form.heroOrder))
+        e.heroOrder = "This hero position is already taken";
     }
-
     setErrors(e);
     return Object.keys(e).length === 0;
   }
@@ -716,8 +704,8 @@ export default function ProductForm({
         : [];
 
     const basePrice =
-      form.enableSizePrice && sizeOptsPayload.length > 0
-        ? sizeOptsPayload[0].price
+      form.enableSizePrice && form.sizeOptions.length > 0
+        ? Number(form.sizeOptions[0].price)
         : Number(form.price);
 
     const payload = {
@@ -727,6 +715,7 @@ export default function ProductForm({
       originalPrice: form.originalPrice ? Number(form.originalPrice) : null,
       images: images.filter((i) => !i.uploading && !i.error).map((i) => i.url),
       categoryId: form.categoryId,
+      subCategorySlug: form.subCategorySlug,
       brandId: form.brandId,
       stockQty: Number(form.stockQty) || 0,
       inStock: form.inStock,
@@ -762,19 +751,12 @@ export default function ProductForm({
         setSaving(false);
         return;
       }
-
-      // Capture the slug for QR code display
       const returnedSlug = json.data?.slug ?? null;
-      if (mode === "new" && returnedSlug) {
-        setSavedSlug(returnedSlug);
-      }
-
+      if (mode === "new" && returnedSlug) setSavedSlug(returnedSlug);
       setToast({
         type: "success",
         message: mode === "new" ? "Product created!" : "Product updated!",
       });
-
-      // Wait 4 seconds before redirecting to allow QR panel to be seen
       setTimeout(() => router.push("/admin/products"), 4000);
     } catch {
       setToast({ type: "error", message: "Network error. Please try again." });
@@ -791,6 +773,10 @@ export default function ProductForm({
       : null;
 
   const availableHeroOrders = getAvailableHeroOrders();
+
+  // Derived: subcategories for the selected category
+  const selectedCategory = categories.find((c) => c._id === form.categoryId);
+  const availableSubs = selectedCategory?.subCategories ?? [];
 
   if (pageLoading) {
     return (
@@ -894,8 +880,7 @@ export default function ProductForm({
                 <ImageUploadZone images={images} onChange={setImages} />
                 {errors.images && (
                   <p className="text-[11px] text-red-500 mt-2 flex items-center gap-1">
-                    <AlertCircle size={10} />
-                    {errors.images}
+                    <AlertCircle size={10} /> {errors.images}
                   </p>
                 )}
               </Section>
@@ -957,43 +942,11 @@ export default function ProductForm({
                       </Field>
                     </div>
                   )}
-                  {form.enableSizePrice && (
-                    <div>
-                      <Field
-                        label="Original Price (AED)"
-                        hint="Leave empty if no discount"
-                        error={errors.originalPrice}
-                      >
-                        <div className="relative w-48">
-                          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[11px] font-bold text-gray-400">
-                            AED
-                          </span>
-                          <InputEl
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            value={form.originalPrice}
-                            onChange={(e) =>
-                              setF("originalPrice", e.target.value)
-                            }
-                            placeholder="0.00"
-                            className="pl-12"
-                          />
-                        </div>
-                      </Field>
-                      <p className="text-[11px] text-gray-400 mt-2 flex items-center gap-1">
-                        <CheckCircle2 size={10} className="text-[#004b9c]" />
-                        Price per size is enabled — enter individual prices in
-                        the Sizes section below.
-                      </p>
-                    </div>
-                  )}
-                  {discountPct !== null && (
-                    <div className="p-3 rounded-xl bg-green-50 border border-green-100 flex items-center gap-2">
-                      <CheckCircle2 size={14} className="text-green-500" />
-                      <p className="text-[12px] font-semibold text-green-700">
-                        {discountPct}% discount applied
-                      </p>
+                  {discountPct && (
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-50 border border-green-100 rounded-lg">
+                      <span className="text-[12px] font-bold text-green-700">
+                        {discountPct}% OFF
+                      </span>
                     </div>
                   )}
                 </div>
@@ -1006,15 +959,20 @@ export default function ProductForm({
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.13 }}
             >
-              <Section title="Sizes" icon={Ruler}>
+              <Section title="Sizes" icon={Hash}>
                 <div className="space-y-3">
                   <Toggle
                     checked={form.enableSizes}
-                    onChange={(v) => setF("enableSizes", v)}
+                    onChange={(v) => {
+                      setF("enableSizes", v);
+                      if (!v) {
+                        setF("sizeOptions", []);
+                        setF("enableSizePrice", false);
+                      }
+                    }}
                     label="Enable size options"
-                    description="Customers can choose a size when ordering"
+                    description="Customers can choose a size"
                   />
-
                   <AnimatePresence>
                     {form.enableSizes && (
                       <motion.div
@@ -1028,18 +986,10 @@ export default function ProductForm({
                             checked={form.enableSizePrice}
                             onChange={(v) => setF("enableSizePrice", v)}
                             label="Different price per size"
-                            description="Each size has its own selling price"
-                            accent="#f59e0b"
+                            description="Each size can have its own price"
+                            accent="#81bf42"
                           />
-
-                          <div
-                            className={cn(
-                              "grid gap-2",
-                              form.enableSizePrice
-                                ? "grid-cols-[1fr_120px_auto]"
-                                : "grid-cols-[1fr_auto]",
-                            )}
-                          >
+                          <div className="flex gap-2">
                             <InputEl
                               value={form.sizeInput}
                               onChange={(e) =>
@@ -1049,10 +999,15 @@ export default function ProductForm({
                                 e.key === "Enter" &&
                                 (e.preventDefault(), addSize())
                               }
-                              placeholder="Size label (e.g. Short Handle)"
+                              placeholder={
+                                form.enableSizePrice
+                                  ? "Size label (e.g. Short Handle)"
+                                  : "Size (e.g. Small)"
+                              }
+                              className="flex-1"
                             />
                             {form.enableSizePrice && (
-                              <div className="relative">
+                              <div className="relative w-28">
                                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-gray-400">
                                   AED
                                 </span>
@@ -1068,7 +1023,7 @@ export default function ProductForm({
                                     e.key === "Enter" &&
                                     (e.preventDefault(), addSize())
                                   }
-                                  placeholder="Price"
+                                  placeholder="0.00"
                                   className="pl-10"
                                 />
                               </div>
@@ -1085,30 +1040,27 @@ export default function ProductForm({
                               <Plus size={13} /> Add
                             </button>
                           </div>
-
                           {errors.sizes && (
                             <p className="text-[11px] text-red-500 flex items-center gap-1">
-                              <AlertCircle size={10} />
-                              {errors.sizes}
+                              <AlertCircle size={10} /> {errors.sizes}
                             </p>
                           )}
-
                           {form.sizeOptions.length > 0 && (
                             <div className="space-y-2">
                               {form.sizeOptions.map((s) => (
                                 <div
                                   key={s.id}
-                                  className="flex items-center gap-2"
+                                  className="flex items-center gap-2 p-2.5 bg-gray-50 rounded-xl border border-gray-100"
                                 >
-                                  <span className="flex-1 inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-[#e8f0fb] border border-[#004b9c]/15 text-[12.5px] font-semibold text-[#004b9c]">
-                                    <Ruler size={12} /> {s.label}
+                                  <span className="flex-1 text-[13px] font-semibold text-gray-800">
+                                    {s.label}
                                   </span>
                                   {form.enableSizePrice && (
-                                    <div className="relative w-36 flex-shrink-0">
+                                    <div className="relative w-28">
                                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-gray-400">
                                         AED
                                       </span>
-                                      <InputEl
+                                      <input
                                         type="number"
                                         min="0"
                                         step="0.01"
@@ -1116,17 +1068,16 @@ export default function ProductForm({
                                         onChange={(e) =>
                                           updateSizePrice(s.id, e.target.value)
                                         }
-                                        placeholder="0.00"
-                                        className="pl-10 py-2 text-[12px]"
+                                        className="w-full pl-10 pr-3 py-2 rounded-lg border border-gray-200 text-[12px] focus:border-[#004b9c] focus:ring-1 focus:ring-[#004b9c]/10 outline-none bg-white"
                                       />
                                     </div>
                                   )}
                                   <button
                                     type="button"
                                     onClick={() => removeSize(s.id)}
-                                    className="w-8 h-8 rounded-lg flex items-center justify-center text-red-400 hover:bg-red-50 hover:text-red-600 transition-all flex-shrink-0"
+                                    className="w-7 h-7 rounded-lg bg-red-50 hover:bg-red-100 text-red-500 flex items-center justify-center transition-colors"
                                   >
-                                    <X size={13} />
+                                    <Minus size={12} />
                                   </button>
                                 </div>
                               ))}
@@ -1261,11 +1212,15 @@ export default function ProductForm({
             >
               <Section title="Category & Brand" icon={Tag}>
                 <div className="space-y-4">
+                  {/* Category */}
                   <Field label="Category" required error={errors.categoryId}>
                     <div className="relative">
                       <select
                         value={form.categoryId}
-                        onChange={(e) => setF("categoryId", e.target.value)}
+                        onChange={(e) => {
+                          setF("categoryId", e.target.value);
+                          setF("subCategorySlug", ""); // reset sub when cat changes
+                        }}
                         className={cn(
                           "w-full px-4 py-3 rounded-xl border text-[13.5px] text-gray-900 bg-gray-50 focus:bg-white focus:border-[#004b9c] focus:ring-2 focus:ring-[#004b9c]/10 outline-none appearance-none cursor-pointer transition-all",
                           errors.categoryId
@@ -1286,6 +1241,47 @@ export default function ProductForm({
                       />
                     </div>
                   </Field>
+
+                  {/* Sub-category — only shown when the selected category has subs */}
+                  <AnimatePresence>
+                    {availableSubs.length > 0 && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="overflow-hidden"
+                      >
+                        <Field
+                          label="Sub-category"
+                          hint="Optional — narrows down within the category"
+                        >
+                          <div className="relative">
+                            <select
+                              value={form.subCategorySlug}
+                              onChange={(e) =>
+                                setF("subCategorySlug", e.target.value)
+                              }
+                              className="w-full px-4 py-3 rounded-xl border border-gray-200 text-[13.5px] text-gray-900 bg-gray-50 focus:bg-white focus:border-[#004b9c] focus:ring-2 focus:ring-[#004b9c]/10 outline-none appearance-none cursor-pointer transition-all"
+                            >
+                              <option value="">— None —</option>
+                              {availableSubs.map((sc) => (
+                                <option key={sc.slug} value={sc.slug}>
+                                  {sc.name}
+                                </option>
+                              ))}
+                            </select>
+                            <ChevronDown
+                              size={14}
+                              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                            />
+                          </div>
+                        </Field>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* Brand */}
                   <Field label="Brand" required error={errors.brandId}>
                     <div className="relative">
                       <select
@@ -1396,7 +1392,6 @@ export default function ProductForm({
                     description="Product appears in homepage hero slider (max 3 products)"
                     accent="#f59e0b"
                   />
-
                   {form.isHeroProduct && (
                     <div className="ml-6 pl-4 border-l-2 border-[#f59e0b]/30">
                       <Field
@@ -1443,16 +1438,14 @@ export default function ProductForm({
                         </div>
                       </Field>
                       <p className="text-[10px] text-amber-600 mt-1 flex items-center gap-1">
-                        <Info size={10} />
-                        Position 1 appears first, position 3 appears last
+                        <Info size={10} /> Position 1 appears first, position 3
+                        appears last
                       </p>
                     </div>
                   )}
-
                   <p className="text-[10px] text-gray-400 mt-2 flex items-center gap-1">
-                    <Info size={10} />
-                    Products can only belong to one section at a time (Hero
-                    takes priority)
+                    <Info size={10} /> Products can only belong to one section
+                    at a time
                   </p>
                 </div>
               </Section>
@@ -1499,7 +1492,6 @@ export default function ProductForm({
               <QrCodePanel
                 productSlug={savedSlug}
                 onGenerated={(qrCode) => {
-                  // Optionally surface the generated QR data-URL if you need it in the form
                   console.log("QR generated for", savedSlug);
                 }}
               />

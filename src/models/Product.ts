@@ -29,12 +29,13 @@ export interface IProduct extends Document {
   enableSizePrice: boolean;
   colors: string[];
   categoryId: mongoose.Types.ObjectId;
+  subCategorySlug?: string; // slug from the parent category's subCategories array
   brandId: mongoose.Types.ObjectId;
   // ── QR Code fields ──────────────────────────────────────────
-  qrCode: string; // base64 data URL of the QR code image
-  qrCodeId: string; // unique short identifier used in the QR URL
-  qrScans: number; // lifetime scan counter
-  qrLastScanned?: Date; // last time the QR was scanned
+  qrCode: string;
+  qrCodeId: string;
+  qrScans: number;
+  qrLastScanned?: Date;
   // ────────────────────────────────────────────────────────────
   createdAt: Date;
   updatedAt: Date;
@@ -81,10 +82,11 @@ const ProductSchema = new Schema(
       ref: "Category",
       required: true,
     },
+    subCategorySlug: { type: String, default: "" }, // e.g. "english-willow"
     brandId: { type: Schema.Types.ObjectId, ref: "Brand", required: true },
     // ── QR Code ─────────────────────────────────────────────────
-    qrCode: { type: String, default: "" }, // base64 PNG
-    qrCodeId: { type: String, unique: true, sparse: true }, // e.g. "xk7b2m"
+    qrCode: { type: String, default: "" },
+    qrCodeId: { type: String, unique: true, sparse: true },
     qrScans: { type: Number, default: 0 },
     qrLastScanned: { type: Date },
     // ────────────────────────────────────────────────────────────
@@ -92,8 +94,8 @@ const ProductSchema = new Schema(
   { timestamps: true },
 );
 
-// Index for fast QR code ID lookups
 ProductSchema.index({ qrCodeId: 1 });
+ProductSchema.index({ categoryId: 1, subCategorySlug: 1 });
 
 const Product: Model<IProduct> =
   mongoose.models.Product || mongoose.model<IProduct>("Product", ProductSchema);
