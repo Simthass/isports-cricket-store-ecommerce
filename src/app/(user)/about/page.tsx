@@ -745,6 +745,7 @@ export default function AboutPage() {
                   badge: "Main Branch",
                   badgeColor: BLUE,
                   delay: 0,
+                  mapsLink: "https://maps.app.goo.gl/TFc1zBiB4wGjJmX9A", // Karama store maps link
                 },
                 {
                   city: "Sharjah",
@@ -756,6 +757,7 @@ export default function AboutPage() {
                   badge: "Same-Day Delivery",
                   badgeColor: GREEN,
                   delay: 0.1,
+                  mapsLink: "https://maps.app.goo.gl/Y8PAhyAZXXmPDRLYA", // Replace with actual Sharjah store maps link
                 },
               ].map((store, i) => (
                 <FadeUp key={i} delay={store.delay}>
@@ -812,7 +814,7 @@ export default function AboutPage() {
                       ))}
                       <div className="pt-1">
                         <Link
-                          href="/store-locator"
+                          href={store.mapsLink}
                           className="inline-flex items-center gap-2 text-[#004b9c] text-[13px] font-bold tracking-wide hover:gap-3 transition-all duration-200"
                         >
                           Get Directions{" "}
