@@ -44,6 +44,7 @@ const DEFAULT_FILTERS: Filters = {
 export default function ShopPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const productsContainerRef = useRef<HTMLDivElement>(null);
 
   // ── Read URL params to pre-populate filters ────────────────
   const initialFilters: Filters = {
@@ -64,6 +65,23 @@ export default function ShopPage() {
   const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 });
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<"login" | "register">("login");
+
+  // Scroll to top of products section
+  const scrollToProductsTop = useCallback(() => {
+    // Small delay to ensure DOM has updated with new products
+    setTimeout(() => {
+      if (productsContainerRef.current) {
+        const offset = 120; // Offset for sticky header
+        const elementPosition =
+          productsContainerRef.current.getBoundingClientRect().top;
+        const offsetPosition = elementPosition + window.scrollY - offset;
+        window.scrollTo({
+          top: offsetPosition,
+          behavior: "smooth",
+        });
+      }
+    }, 100);
+  }, []);
 
   const handleAuthRequired = () => {
     setAuthMode("login");
@@ -110,10 +128,23 @@ export default function ShopPage() {
     fetchProducts();
   }, [fetchProducts]);
 
+  // Scroll to top when products change (page change)
+  useEffect(() => {
+    if (!loading) {
+      scrollToProductsTop();
+    }
+  }, [pagination.page, loading, scrollToProductsTop]);
+
   // Reset to page 1 whenever filters/sort change (but not on first render)
   const handleFiltersChange = (newFilters: Filters) => {
     setPagination((p) => ({ ...p, page: 1 }));
     setFilters(newFilters);
+  };
+
+  // Handle page change
+  const handlePageChange = (newPage: number) => {
+    if (newPage === pagination.page) return;
+    setPagination((prev) => ({ ...prev, page: newPage }));
   };
 
   const activeFilterCount =
@@ -214,7 +245,7 @@ export default function ShopPage() {
               <div className="sticky top-[120px]">
                 <FilterSidebar
                   filters={filters}
-                  onChange={setFilters}
+                  onChange={handleFiltersChange}
                   totalResults={pagination.total}
                 />
               </div>
@@ -247,69 +278,71 @@ export default function ShopPage() {
                 </div>
               </div>
 
-              {/* Product Grid/List */}
-              {loading ? (
-                <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-5">
-                  {[...Array(8)].map((_, i) => (
-                    <div key={i} className="animate-pulse">
-                      <div className="bg-gray-100 rounded-2xl aspect-square mb-3" />
-                      <div className="h-4 bg-gray-100 rounded w-3/4 mb-2" />
-                      <div className="h-3 bg-gray-100 rounded w-1/2" />
-                    </div>
-                  ))}
-                </div>
-              ) : products.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-24 text-center">
-                  <div className="text-6xl mb-4">🏏</div>
-                  <h3 className="text-[18px] font-bold text-gray-700 mb-2">
-                    No products found
-                  </h3>
-                  <p className="text-gray-400 text-[14px] mb-6">
-                    Try adjusting your filters
-                  </p>
-                  <button
-                    onClick={() => setFilters(DEFAULT_FILTERS)}
-                    className="px-6 py-3 bg-[#004b9c] text-white text-[13px] font-bold rounded-xl hover:bg-[#003d82] transition-colors"
+              {/* Products Container - with ref for scrolling */}
+              <div ref={productsContainerRef}>
+                {loading ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-5">
+                    {[...Array(8)].map((_, i) => (
+                      <div key={i} className="animate-pulse">
+                        <div className="bg-gray-100 rounded-2xl aspect-square mb-3" />
+                        <div className="h-4 bg-gray-100 rounded w-3/4 mb-2" />
+                        <div className="h-3 bg-gray-100 rounded w-1/2" />
+                      </div>
+                    ))}
+                  </div>
+                ) : products.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-24 text-center">
+                    <div className="text-6xl mb-4">🏏</div>
+                    <h3 className="text-[18px] font-bold text-gray-700 mb-2">
+                      No products found
+                    </h3>
+                    <p className="text-gray-400 text-[14px] mb-6">
+                      Try adjusting your filters
+                    </p>
+                    <button
+                      onClick={() => handleFiltersChange(DEFAULT_FILTERS)}
+                      className="px-6 py-3 bg-[#004b9c] text-white text-[13px] font-bold rounded-xl hover:bg-[#003d82] transition-colors"
+                    >
+                      Clear Filters
+                    </button>
+                  </div>
+                ) : (
+                  <div
+                    className={
+                      view === "grid"
+                        ? "grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-5"
+                        : "flex flex-col gap-4"
+                    }
                   >
-                    Clear Filters
-                  </button>
-                </div>
-              ) : (
-                <div
-                  className={
-                    view === "grid"
-                      ? "grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-5"
-                      : "flex flex-col gap-4"
-                  }
-                >
-                  {products.map((product, i) => (
-                    <ProductCard
-                      key={product._id}
-                      product={{
-                        id: product._id,
-                        name: product.name,
-                        brand: product.brandId?.name ?? "iSPORTS",
-                        slug: product.slug,
-                        price: product.price,
-                        originalPrice: product.originalPrice,
-                        image:
-                          product.images?.[0] ?? "/placeholder-product.jpg",
-                        isNew: product.isNew,
-                        inStock: product.inStock,
-                        badge: product.isBestSeller
-                          ? "Best Seller"
-                          : product.isNew
-                            ? "New"
-                            : undefined,
-                        rating: product.rating,
-                        reviewCount: product.reviewCount,
-                      }}
-                      index={i}
-                      onAuthRequired={handleAuthRequired}
-                    />
-                  ))}
-                </div>
-              )}
+                    {products.map((product, i) => (
+                      <ProductCard
+                        key={product._id}
+                        product={{
+                          id: product._id,
+                          name: product.name,
+                          brand: product.brandId?.name ?? "iSPORTS",
+                          slug: product.slug,
+                          price: product.price,
+                          originalPrice: product.originalPrice,
+                          image:
+                            product.images?.[0] ?? "/placeholder-product.jpg",
+                          isNew: product.isNew,
+                          inStock: product.inStock,
+                          badge: product.isBestSeller
+                            ? "Best Seller"
+                            : product.isNew
+                              ? "New"
+                              : undefined,
+                          rating: product.rating,
+                          reviewCount: product.reviewCount,
+                        }}
+                        index={i}
+                        onAuthRequired={handleAuthRequired}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
 
               {/* Pagination */}
               {pagination.pages > 1 && (
@@ -319,24 +352,14 @@ export default function ShopPage() {
                   </p>
                   <div className="flex gap-2">
                     <button
-                      onClick={() =>
-                        setPagination({
-                          ...pagination,
-                          page: pagination.page - 1,
-                        })
-                      }
+                      onClick={() => handlePageChange(pagination.page - 1)}
                       disabled={pagination.page === 1}
                       className="px-4 py-2 rounded-xl border border-gray-200 text-[12px] font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
                     >
                       Previous
                     </button>
                     <button
-                      onClick={() =>
-                        setPagination({
-                          ...pagination,
-                          page: pagination.page + 1,
-                        })
-                      }
+                      onClick={() => handlePageChange(pagination.page + 1)}
                       disabled={pagination.page === pagination.pages}
                       className="px-4 py-2 rounded-xl border border-gray-200 text-[12px] font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
                     >
@@ -381,7 +404,7 @@ export default function ShopPage() {
                 <div className="p-5">
                   <FilterSidebar
                     filters={filters}
-                    onChange={setFilters}
+                    onChange={handleFiltersChange}
                     totalResults={pagination.total}
                   />
                 </div>
