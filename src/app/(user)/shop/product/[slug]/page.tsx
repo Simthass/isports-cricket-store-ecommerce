@@ -149,145 +149,172 @@ export default function ProductDetailPage() {
   const handleAddToCart = () => {
     if (!product) return;
 
-  // Get the size value safely
-  let sizeValue = "Standard";
-  if (selectedSize) {
-    sizeValue = typeof selectedSize === "object" ? selectedSize.label : selectedSize;
-  }
-
-  // Calculate final price
-  let finalPrice = product.price;
-  if (product.enableSizePrice && selectedSize && typeof selectedSize === "object") {
-    finalPrice = selectedSize.price;
-  }
-
-  // Add to cart using the context (works for guests too!)
-  addToCart({
-    productId: product._id,
-    name: product.name,
-    brand: product.brandId?.name || "",
-    price: finalPrice,
-    quantity: qty,
-    size: sizeValue,
-    image: product.images?.[0] || null,
-  });
-
-  setAddedToCart(true);
-  setTimeout(() => setAddedToCart(false), 2500);
-  showToast("success", "Added to Cart!", `${product.name} added to your cart`);
-};
-
-// Handle WhatsApp Order - Creates order in database then opens WhatsApp
-// Handle WhatsApp Order - Creates order in database for ALL users (guest or logged in)
-const handleWhatsAppOrder = async () => {
-  if (!product) return;
-
-  setWhatsappOrderLoading(true);
-
-  // Get size value
-  let sizeValue = "Standard";
-  if (selectedSize) {
-    sizeValue = typeof selectedSize === "object" ? selectedSize.label : selectedSize;
-  }
-
-  // Calculate final price
-  let finalPrice = product.price;
-  if (product.enableSizePrice && selectedSize && typeof selectedSize === "object") {
-    finalPrice = selectedSize.price;
-  }
-
-  // Prepare customer info (empty for guests, admin will fill later)
-  let customerName = "";
-  let customerPhone = "";
-  let customerEmail = "";
-  let isLoggedIn = false;
-
-  if (session?.user) {
-    isLoggedIn = true;
-    customerName = session.user.name || "";
-    customerPhone = (session.user as any)?.phone || "";
-    customerEmail = session.user.email || "";
-
-    // Fetch latest user data
-    try {
-      const res = await fetch("/api/users/settings");
-      if (res.ok) {
-        const data = await res.json();
-        if (data.user) {
-          customerName = data.user.name || customerName;
-          customerPhone = data.user.phone || customerPhone;
-          customerEmail = data.user.email || customerEmail;
-        }
-      }
-    } catch (e) {
-      console.error("Error fetching user data:", e);
+    // Get the size value safely
+    let sizeValue = "Standard";
+    if (selectedSize) {
+      sizeValue =
+        typeof selectedSize === "object" ? selectedSize.label : selectedSize;
     }
-  }
 
-  const orderItems = [{
-    productId: product._id,
-    name: product.name,
-    brand: product.brandId?.name || "",
-    price: finalPrice,
-    quantity: qty,
-    size: sizeValue,
-    image: product.images?.[0],
-  }];
+    // Calculate final price
+    let finalPrice = product.price;
+    if (
+      product.enableSizePrice &&
+      selectedSize &&
+      typeof selectedSize === "object"
+    ) {
+      finalPrice = selectedSize.price;
+    }
 
-  try {
-    // Create order in database (even for guests)
-    const response = await fetch("/api/whatsapp/orders", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        customerInfo: {
-          name: customerName || "Pending - Customer to provide",
-          phone: customerPhone || "Pending - Customer to provide",
-          email: customerEmail || "",
-        },
-        items: orderItems,
-        subtotal: finalPrice * qty,
-        total: finalPrice * qty,
-        customerNotes: `Product order from product page: ${product.name} (${sizeValue}) x${qty}. Customer is ${isLoggedIn ? "logged in" : "guest"}. ${
-          !customerName ? "Admin needs to collect customer name and phone from WhatsApp chat." : ""
-        }`,
-      }),
+    // Add to cart using the context (works for guests too!)
+    addToCart({
+      productId: product._id,
+      name: product.name,
+      brand: product.brandId?.name || "",
+      price: finalPrice,
+      quantity: qty,
+      size: sizeValue,
+      image: product.images?.[0] || null,
     });
 
-    const data = await response.json();
+    setAddedToCart(true);
+    setTimeout(() => setAddedToCart(false), 2500);
+    showToast(
+      "success",
+      "Added to Cart!",
+      `${product.name} added to your cart`,
+    );
+  };
 
-    if (response.ok) {
-      // Build WhatsApp message
-      const message = `🏏 *PRODUCT ORDER REQUEST*\n\n` +
-        `*Order #:* ${data.order.orderNumber}\n\n` +
-        `*Product:* ${product.name}\n` +
-        `*Size:* ${sizeValue}\n` +
-        `*Color:* ${selectedColor || "N/A"}\n` +
-        `*Quantity:* ${qty}\n` +
-        `*Price:* AED ${(finalPrice * qty).toLocaleString()}\n\n` +
-        `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
-        `📝 *Please reply with your details:*\n` +
-        `• Full Name:\n` +
-        `• Phone Number:\n` +
-        `• Delivery Address:\n` +
-        `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
-        `*Product Link:* ${window.location.href}\n\n` +
-        `⚠️ *Admin: Order #${data.order.orderNumber} is pending. Please update customer details and confirm.*`;
+  // Handle WhatsApp Order - Creates order in database then opens WhatsApp
+  // Handle WhatsApp Order - Creates order in database for ALL users (guest or logged in)
+  const handleWhatsAppOrder = async () => {
+    if (!product) return;
 
-      const whatsappUrl = `https://wa.me/971526514666?text=${encodeURIComponent(message)}`;
-      window.open(whatsappUrl, "_blank");
-      
-      showToast("success", "Order Created!", `Order #: ${data.order.orderNumber}. Admin will contact you shortly.`);
-    } else {
-      showToast("error", "Order Failed", data.error || "Failed to create order. Please try again.");
+    setWhatsappOrderLoading(true);
+
+    // Get size value
+    let sizeValue = "Standard";
+    if (selectedSize) {
+      sizeValue =
+        typeof selectedSize === "object" ? selectedSize.label : selectedSize;
     }
-  } catch (error) {
-    console.error("WhatsApp order error:", error);
-    showToast("error", "Something went wrong", "Please try again later.");
-  } finally {
-    setWhatsappOrderLoading(false);
-  }
-};
+
+    // Calculate final price
+    let finalPrice = product.price;
+    if (
+      product.enableSizePrice &&
+      selectedSize &&
+      typeof selectedSize === "object"
+    ) {
+      finalPrice = selectedSize.price;
+    }
+
+    // Prepare customer info (empty for guests, admin will fill later)
+    let customerName = "";
+    let customerPhone = "";
+    let customerEmail = "";
+    let isLoggedIn = false;
+
+    if (session?.user) {
+      isLoggedIn = true;
+      customerName = session.user.name || "";
+      customerPhone = (session.user as any)?.phone || "";
+      customerEmail = session.user.email || "";
+
+      // Fetch latest user data
+      try {
+        const res = await fetch("/api/users/settings");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.user) {
+            customerName = data.user.name || customerName;
+            customerPhone = data.user.phone || customerPhone;
+            customerEmail = data.user.email || customerEmail;
+          }
+        }
+      } catch (e) {
+        console.error("Error fetching user data:", e);
+      }
+    }
+
+    const orderItems = [
+      {
+        productId: product._id,
+        name: product.name,
+        brand: product.brandId?.name || "",
+        price: finalPrice,
+        quantity: qty,
+        size: sizeValue,
+        image: product.images?.[0],
+      },
+    ];
+
+    try {
+      // Create order in database (even for guests)
+      const response = await fetch("/api/whatsapp/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customerInfo: {
+            name: customerName || "Pending - Customer to provide",
+            phone: customerPhone || "Pending - Customer to provide",
+            email: customerEmail || "",
+          },
+          items: orderItems,
+          subtotal: finalPrice * qty,
+          total: finalPrice * qty,
+          customerNotes: `Product order from product page: ${product.name} (${sizeValue}) x${qty}. Customer is ${isLoggedIn ? "logged in" : "guest"}. ${
+            !customerName
+              ? "Admin needs to collect customer name and phone from WhatsApp chat."
+              : ""
+          }`,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Build WhatsApp message
+        const message =
+          `🏏 *PRODUCT ORDER REQUEST*\n\n` +
+          `*Order #:* ${data.order.orderNumber}\n\n` +
+          `*Product:* ${product.name}\n` +
+          `*Size:* ${sizeValue}\n` +
+          `*Color:* ${selectedColor || "N/A"}\n` +
+          `*Quantity:* ${qty}\n` +
+          `*Price:* AED ${(finalPrice * qty).toLocaleString()}\n\n` +
+          `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+          `📝 *Please reply with your details:*\n` +
+          `• Full Name:\n` +
+          `• Phone Number:\n` +
+          `• Delivery Address:\n` +
+          `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+          `*Product Link:* ${window.location.href}\n\n` +
+          `⚠️ *Admin: Order #${data.order.orderNumber} is pending. Please update customer details and confirm.*`;
+
+        const whatsappUrl = `https://wa.me/971526514666?text=${encodeURIComponent(message)}`;
+        window.open(whatsappUrl, "_blank");
+
+        showToast(
+          "success",
+          "Order Created!",
+          `Order #: ${data.order.orderNumber}. Admin will contact you shortly.`,
+        );
+      } else {
+        showToast(
+          "error",
+          "Order Failed",
+          data.error || "Failed to create order. Please try again.",
+        );
+      }
+    } catch (error) {
+      console.error("WhatsApp order error:", error);
+      showToast("error", "Something went wrong", "Please try again later.");
+    } finally {
+      setWhatsappOrderLoading(false);
+    }
+  };
 
   // ── Loading / error states ─────────────────────────────────────────────────
   if (loading)
@@ -379,10 +406,7 @@ const handleWhatsAppOrder = async () => {
             Home
           </Link>
           <ChevronRight size={12} />
-          <Link
-            href="/shop"
-            className="hover:text-[#004b9c] transition-colors"
-          >
+          <Link href="/shop" className="hover:text-[#004b9c] transition-colors">
             Shop
           </Link>
           <ChevronRight size={12} />
@@ -652,10 +676,7 @@ const handleWhatsAppOrder = async () => {
                         />
                         {c}
                         {isSelected && (
-                          <CheckCircle2
-                            size={12}
-                            className="text-[#004b9c]"
-                          />
+                          <CheckCircle2 size={12} className="text-[#004b9c]" />
                         )}
                       </button>
                     );
@@ -833,8 +854,7 @@ const handleWhatsAppOrder = async () => {
                             value: product.sizes.join(", "),
                           }
                         : null,
-                      product.sizeOptions?.length > 0 &&
-                      product.enableSizePrice
+                      product.sizeOptions?.length > 0 && product.enableSizePrice
                         ? {
                             label: "Sizes & Prices",
                             value: product.sizeOptions

@@ -30,6 +30,22 @@ interface HeroProduct {
   heroOrder?: number;
 }
 
+interface StaticSlide {
+  id: number;
+  eyebrow: string;
+  tag: string;
+  headline: string[];
+  sub: string;
+  cta: { label: string; href: string };
+  sec: {
+    label: string;
+    href: string;
+    onClick?: (e: React.MouseEvent<HTMLAnchorElement>) => void;
+  };
+  badge: { icon: React.ElementType; text: string };
+  stats: Array<{ value: string; label: string }>;
+}
+
 const BLUE = "#004b9c";
 const GREEN = "#81bf42";
 const BLUE_MID = "#003d82";
@@ -39,7 +55,7 @@ function savePct(price: number, original: number): number {
 }
 
 // Static slide content for left side
-const STATIC_SLIDES = [
+const STATIC_SLIDES: StaticSlide[] = [
   {
     id: 0,
     eyebrow: "New Season 2026",
@@ -61,8 +77,8 @@ const STATIC_SLIDES = [
     tag: "ENGLISH WILLOW · KASHMIR WILLOW",
     headline: ["Elite Batting", "Equipment"],
     sub: "From Gray-Nicolls to SS — Grade 1 English Willow blades engineered to elevate your game.",
-    cta: { label: "Explore Bats", href: "shop?category=cricket-bats" },
-    sec: { label: "Order via WhatsApp", href: "#whatsapp" },
+    cta: { label: "Explore Bats", href: "/shop?category=cricket-bats" },
+    sec: { label: "Order via WhatsApp", href: "https://wa.me/971526514666" },
     badge: { icon: Shield, text: "Authenticity Guaranteed" },
     stats: [
       { value: "200+", label: "Bat Models" },
@@ -76,11 +92,11 @@ const STATIC_SLIDES = [
     tag: "SHREY · MOONWALKR · DSC",
     headline: ["ICC-Certified", "Helmets"],
     sub: "Cutting-edge Stem Guard technology. Safety meets premium design for the modern UAE cricketer.",
-    cta: { label: "Shop Helmets", href: "shop?category=helmets" },
+    cta: { label: "Shop Helmets", href: "/shop?category=helmets" },
     sec: {
       label: "Find a Store",
       href: "/about#visit-our-stores",
-      onClick: (e) => {
+      onClick: (e: React.MouseEvent<HTMLAnchorElement>) => {
         e.preventDefault();
         if (window.location.pathname === "/about") {
           const storesSection = document.getElementById("visit-our-stores");
@@ -319,12 +335,22 @@ export default function HeroSection() {
                     className="group-hover:translate-x-1 transition-transform"
                   />
                 </Link>
-                <Link
-                  href={staticSlide.sec.href}
-                  className="px-5 py-2.5 rounded-xl bg-white border border-slate-200 text-[#004b9c] text-[11px] font-bold uppercase tracking-widest hover:bg-slate-50 transition-all"
-                >
-                  {staticSlide.sec.label}
-                </Link>
+                {staticSlide.sec.onClick ? (
+                  <a
+                    href={staticSlide.sec.href}
+                    onClick={staticSlide.sec.onClick}
+                    className="px-5 py-2.5 rounded-xl bg-white border border-slate-200 text-[#004b9c] text-[11px] font-bold uppercase tracking-widest hover:bg-slate-50 transition-all"
+                  >
+                    {staticSlide.sec.label}
+                  </a>
+                ) : (
+                  <Link
+                    href={staticSlide.sec.href}
+                    className="px-5 py-2.5 rounded-xl bg-white border border-slate-200 text-[#004b9c] text-[11px] font-bold uppercase tracking-widest hover:bg-slate-50 transition-all"
+                  >
+                    {staticSlide.sec.label}
+                  </Link>
+                )}
               </div>
 
               {/* Product Card - Dynamic from DB */}
@@ -512,12 +538,22 @@ export default function HeroSection() {
                       className="group-hover:translate-x-1 transition-transform"
                     />
                   </Link>
-                  <Link
-                    href={staticSlide.sec.href}
-                    className="px-8 py-4 rounded-2xl bg-white border-2 border-slate-100 text-[#004b9c] text-sm font-bold uppercase tracking-widest hover:bg-slate-50 hover:border-[#004b9c30] transition-all"
-                  >
-                    {staticSlide.sec.label}
-                  </Link>
+                  {staticSlide.sec.onClick ? (
+                    <a
+                      href={staticSlide.sec.href}
+                      onClick={staticSlide.sec.onClick}
+                      className="px-8 py-4 rounded-2xl bg-white border-2 border-slate-100 text-[#004b9c] text-sm font-bold uppercase tracking-widest hover:bg-slate-50 hover:border-[#004b9c30] transition-all"
+                    >
+                      {staticSlide.sec.label}
+                    </a>
+                  ) : (
+                    <Link
+                      href={staticSlide.sec.href}
+                      className="px-8 py-4 rounded-2xl bg-white border-2 border-slate-100 text-[#004b9c] text-sm font-bold uppercase tracking-widest hover:bg-slate-50 hover:border-[#004b9c30] transition-all"
+                    >
+                      {staticSlide.sec.label}
+                    </Link>
+                  )}
                 </div>
 
                 <div className="inline-flex bg-white rounded-3xl border border-slate-100 shadow-xl shadow-blue-900/5 p-2">

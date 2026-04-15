@@ -71,8 +71,8 @@ export async function proxy(req: NextRequest) {
         (now.getTime() - lastActive.getTime()) / (1000 * 60 * 60);
 
       if (hoursSinceActive > sessionTimeoutHours) {
-        // Clear session
-        user.currentSessionToken = null;
+        // Clear session - set to undefined instead of null
+        user.currentSessionToken = undefined;
         await user.save();
         return NextResponse.redirect(
           new URL("/admin/login?error=session_expired", req.url),

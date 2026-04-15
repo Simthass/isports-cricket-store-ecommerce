@@ -1,15 +1,30 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { stripe } from '@/lib/stripe';
-import { auth } from '@/lib/auth';
+import { NextRequest, NextResponse } from "next/server";
+import { stripe } from "@/lib/stripe";
+import { auth } from "@/lib/auth";
 
 export async function POST(req: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { amount, currency = 'aed', paymentMethodTypes = ['card'] } = await req.json();
+    // Check if stripe is configured
+    if (!stripe) {
+      console.error(
+        "Stripe is not configured. Please check STRIPE_SECRET_KEY environment variable.",
+      );
+      return NextResponse.json(
+        { error: "Payment service is not configured" },
+        { status: 500 },
+      );
+    }
+
+    const {
+      amount,
+      currency = "aed",
+      paymentMethodTypes = ["card"],
+    } = await req.json();
 
     const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.round(amount * 100),
@@ -17,7 +32,7 @@ export async function POST(req: NextRequest) {
       payment_method_types: paymentMethodTypes,
       metadata: {
         userId: session.user.id,
-        userEmail: session.user.email || '',
+        userEmail: session.user.email || "",
       },
     });
 
@@ -26,10 +41,10 @@ export async function POST(req: NextRequest) {
       paymentIntentId: paymentIntent.id,
     });
   } catch (error) {
-    console.error('Error creating payment intent:', error);
+    console.error("Error creating payment intent:", error);
     return NextResponse.json(
-      { error: 'Failed to create payment intent' },
-      { status: 500 }
+      { error: "Failed to create payment intent" },
+      { status: 500 },
     );
   }
 }

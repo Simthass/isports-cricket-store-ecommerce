@@ -6,8 +6,14 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, useInView, AnimatePresence } from "framer-motion";
 import {
-  ShoppingCart, Star, ArrowRight, Check,
-  Sparkles, Flame, Zap, Loader2,
+  ShoppingCart,
+  Star,
+  ArrowRight,
+  Check,
+  Sparkles,
+  Flame,
+  Zap,
+  Loader2,
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useCart } from "@/context/CartContext";
@@ -195,8 +201,8 @@ export default function ProductCard({
                       added
                         ? "bg-[#81bf42]"
                         : adding
-                        ? "bg-[#004b9c] opacity-80"
-                        : "bg-[#004b9c] hover:bg-[#003d7e]"
+                          ? "bg-[#004b9c] opacity-80"
+                          : "bg-[#004b9c] hover:bg-[#003d7e]"
                     }`}
                   >
                     {adding ? (

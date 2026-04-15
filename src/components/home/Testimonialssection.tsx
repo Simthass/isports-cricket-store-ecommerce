@@ -5,8 +5,22 @@ import Image from "next/image";
 import { motion, useInView } from "framer-motion";
 import { Star, ArrowUpRight, Quote } from "lucide-react";
 
+// ─── Types ─────────────────────────────────────────────────────
+interface Testimonial {
+  id: number;
+  name: string;
+  role: string;
+  avatar: string;
+  rating: number;
+  review: string;
+}
+
+interface TestimonialCardProps {
+  item: Testimonial;
+}
+
 // ─── Testimonials Data ────────────────────────────────────────────
-const TESTIMONIALS = [
+const TESTIMONIALS: Testimonial[] = [
   {
     id: 1,
     name: "Ajith Kumar",
@@ -67,7 +81,7 @@ const TESTIMONIALS = [
 const MARQUEE_ITEMS = [...TESTIMONIALS, ...TESTIMONIALS];
 
 // ─── Star Row ────────────────────────────────────────────────────
-function Stars({ count = 5 }) {
+function Stars({ count = 5 }: { count?: number }) {
   return (
     <div className="flex items-center gap-0.5">
       {Array.from({ length: 5 }).map((_, i) => (
@@ -83,7 +97,7 @@ function Stars({ count = 5 }) {
 }
 
 // ─── Single Testimonial Card ──────────────────────────────────────
-function TestimonialCard({ item }) {
+function TestimonialCard({ item }: TestimonialCardProps) {
   return (
     <div
       className="group relative flex-shrink-0 w-[340px] mx-3 bg-white rounded-2xl p-5 border border-[#004b9c]/08 shadow-[0_2px_16px_rgba(0,75,156,0.06)] hover:shadow-[0_12px_40px_rgba(0,75,156,0.12)] hover:-translate-y-1 hover:border-[#004b9c]/18 transition-all duration-300 ease-out cursor-default"
