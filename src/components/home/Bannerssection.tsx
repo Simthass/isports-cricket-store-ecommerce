@@ -6,9 +6,30 @@ import Image from "next/image";
 import { motion, useInView } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 
+// ─── Types ─────────────────────────────────────────────────────
+interface BannerType {
+  id: number;
+  eyebrow: string;
+  title: string[];
+  cta: { label: string; href: string };
+  image: string;
+  imageAlt: string;
+  imageSide: string;
+  overlayFrom: string;
+  overlayTo: string;
+  textColor: string;
+  eyebrowColor: string;
+  bgFallback: string;
+}
+
+interface BannerProps {
+  banner: BannerType;
+  index: number;
+}
+
 // ─── Banner Data ────────────────────────────────────────────────
 // Replace `image` with your actual image paths in /public/banners/
-const BANNERS = [
+const BANNERS: BannerType[] = [
   {
     id: 1,
     eyebrow: "Special Edition",
@@ -16,7 +37,7 @@ const BANNERS = [
     cta: { label: "Shop Now", href: "/shop?category=shoes" },
     image: "/banner1.jpg", // ← your image path
     imageAlt: "Cricket Shoes 2026 Collection",
-    imageSide: "left", // image on left, text on right
+    imageSide: "left",
     overlayFrom: "from-transparent",
     overlayTo: "to-[#004b9c]/80",
     textColor: "text-white",
@@ -40,7 +61,7 @@ const BANNERS = [
 ];
 
 // ─── Single Banner ───────────────────────────────────────────────
-function Banner({ banner, index }) {
+function Banner({ banner, index }: BannerProps) {
   const ref = useRef(null);
   const inView = useInView(ref, { once: true, margin: "-60px" });
 
