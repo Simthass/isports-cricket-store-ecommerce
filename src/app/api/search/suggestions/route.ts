@@ -1,9 +1,9 @@
-// src/app/api/search/suggestions/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import connectDB from "@/lib/mongodb";
 import Product from "@/models/Product";
 import Category from "@/models/Category";
 import Brand from "@/models/Brand";
+import mongoose from "mongoose";
 
 // ── Security helpers (same rules as main search) ──────────────
 function stripHtml(str: string): string {
@@ -78,14 +78,26 @@ export async function GET(req: NextRequest) {
     ]);
 
     const suggestions = {
-      products: products.map((p) => ({
-        _id: p._id,
-        name: p.name,
-        slug: p.slug,
-        price: p.price,
-        image: p.images?.[0] ?? null,
-        brand: (p.brandId as { name: string } | null)?.name ?? "",
-      })),
+      products: products.map((p) => {
+        // Safely extract brand name - handle both populated and unpopulated cases
+        let brandName = "";
+        if (p.brandId) {
+          if (typeof p.brandId === "object" && "name" in p.brandId) {
+            brandName = (p.brandId as { name: string }).name;
+          } else if (p.brandId instanceof mongoose.Types.ObjectId) {
+            brandName = "";
+          }
+        }
+
+        return {
+          _id: p._id,
+          name: p.name,
+          slug: p.slug,
+          price: p.price,
+          image: p.images?.[0] ?? null,
+          brand: brandName,
+        };
+      }),
       categories: categories.map((c) => ({ name: c.name, slug: c.slug })),
       brands: brands.map((b) => ({
         name: b.name,
