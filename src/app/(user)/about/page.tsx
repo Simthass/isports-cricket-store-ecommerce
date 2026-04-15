@@ -26,8 +26,28 @@ const GREEN = "#81bf42";
 const BLUE_LIGHT = "#e8f0fb";
 const GREEN_LIGHT = "#eef7e0";
 
+// ─── Types ───────────────────────────────────────────────────────
+interface FadeUpProps {
+  children: React.ReactNode;
+  delay?: number;
+  className?: string;
+}
+
+interface EyebrowProps {
+  text: string;
+}
+
+interface ValueCardProps {
+  icon: React.ElementType;
+  title: string;
+  desc: string;
+  accent: string;
+  accentLight: string;
+  delay?: number;
+}
+
 // ─── Reusable fade-up wrapper ────────────────────────────────────
-function FadeUp({ children, delay = 0, className = "" }) {
+function FadeUp({ children, delay = 0, className = "" }: FadeUpProps) {
   const ref = useRef(null);
   const inView = useInView(ref, { once: true, margin: "-50px" });
   return (
@@ -44,7 +64,7 @@ function FadeUp({ children, delay = 0, className = "" }) {
 }
 
 // ─── Section Eyebrow ────────────────────────────────────────────
-function Eyebrow({ text }) {
+function Eyebrow({ text }: EyebrowProps) {
   return (
     <div className="inline-flex items-center gap-2.5 mb-4">
       <div className="h-[3px] w-6 rounded-full bg-[#81bf42]" />
@@ -66,7 +86,7 @@ function ValueCard({
   accent,
   accentLight,
   delay = 0,
-}) {
+}: ValueCardProps) {
   const ref = useRef(null);
   const inView = useInView(ref, { once: true, margin: "-40px" });
   return (
@@ -206,7 +226,7 @@ export default function AboutPage() {
                 {/* Main tall image */}
                 <div className="relative rounded-t-3xl overflow-hidden h-[460px] shadow-[0_20px_60px_rgba(0,75,156,0.18)]">
                   <Image
-                    src="/about.jpg" // ← your image
+                    src="/about.jpg"
                     alt="iSPORTS Cricket Dubai"
                     fill
                     className="object-cover object-center"
@@ -291,7 +311,7 @@ export default function AboutPage() {
                   {/* Top-right */}
                   <div className="relative rounded-2xl overflow-hidden h-[182px] shadow-lg group">
                     <Image
-                      src="/helmet.jpg" // ← your image
+                      src="/helmet.jpg"
                       alt="Cricket Equipment"
                       fill
                       className="object-cover group-hover:scale-105 transition-transform duration-600"
@@ -302,7 +322,7 @@ export default function AboutPage() {
                   {/* Bottom-right */}
                   <div className="relative rounded-2xl overflow-hidden h-[182px] shadow-lg group">
                     <Image
-                      src="/shop inter.jpg" // ← your image
+                      src="/shop inter.jpg"
                       alt="Cricket Player UAE"
                       fill
                       className="object-cover group-hover:scale-105 transition-transform duration-600"
@@ -408,25 +428,21 @@ export default function AboutPage() {
                   val: "1,000+",
                   lbl: "Satisfied Customers",
                   color: "white",
-                  delay: 0,
                 },
                 {
                   val: "15+",
                   lbl: "Premium Brands",
                   color: GREEN,
-                  delay: 0.07,
                 },
                 {
                   val: "200+",
                   lbl: "Bat Models in Stock",
                   color: "white",
-                  delay: 0.14,
                 },
                 {
                   val: "3",
                   lbl: "Physical Stores UAE",
                   color: GREEN,
-                  delay: 0.21,
                 },
               ].map((s, i) => {
                 const ref = useRef(null);
@@ -437,7 +453,7 @@ export default function AboutPage() {
                     ref={ref}
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={inView ? { opacity: 1, scale: 1 } : {}}
-                    transition={{ duration: 0.38, delay: s.delay }}
+                    transition={{ duration: 0.38, delay: i * 0.07 }}
                     className="flex flex-col items-center text-center px-6 py-8 lg:py-10"
                     style={{ fontFamily: "'Poppins', sans-serif" }}
                   >
@@ -493,7 +509,6 @@ export default function AboutPage() {
                   desc: "Every product is sourced directly from official brand distributors. No counterfeits, no grey-market imports — your gear is always the real deal.",
                   accent: BLUE,
                   accentLight: BLUE_LIGHT,
-                  delay: 0,
                 },
                 {
                   icon: Truck,
@@ -501,7 +516,6 @@ export default function AboutPage() {
                   desc: "Same-day delivery in Sharjah and Ajman. 24-hour UAE-wide shipping via Aramex. We know timing matters — whether it's a match tomorrow or a tournament next week.",
                   accent: GREEN,
                   accentLight: GREEN_LIGHT,
-                  delay: 0.07,
                 },
                 {
                   icon: MessageCircle,
@@ -509,7 +523,6 @@ export default function AboutPage() {
                   desc: "Real humans answer your messages. Ask about bat weight, helmet sizing, or bulk kit orders — we're here with expert advice, not automated chatbots.",
                   accent: BLUE,
                   accentLight: BLUE_LIGHT,
-                  delay: 0.14,
                 },
                 {
                   icon: Award,
@@ -517,7 +530,6 @@ export default function AboutPage() {
                   desc: "Our 15 brands are chosen because they're proven in professional cricket — from Gray-Nicolls to MRF. Every product in our catalog earns its place.",
                   accent: GREEN,
                   accentLight: GREEN_LIGHT,
-                  delay: 0.21,
                 },
                 {
                   icon: Users,
@@ -525,7 +537,6 @@ export default function AboutPage() {
                   desc: "We serve school academies, professional clubs, and weekend players equally. Whether you're buying your first bat or equipping an entire squad, you get the same attention.",
                   accent: BLUE,
                   accentLight: BLUE_LIGHT,
-                  delay: 0.28,
                 },
                 {
                   icon: Globe,
@@ -533,10 +544,9 @@ export default function AboutPage() {
                   desc: "Based in Karama, Dubai — we understand UAE cricket culture, its leagues, and its players. We're not a global warehouse; we're your local cricket partner.",
                   accent: GREEN,
                   accentLight: GREEN_LIGHT,
-                  delay: 0.35,
                 },
               ].map((v, i) => (
-                <ValueCard key={i} {...v} />
+                <ValueCard key={i} {...v} delay={i * 0.07} />
               ))}
             </div>
           </div>
@@ -554,7 +564,7 @@ export default function AboutPage() {
               <FadeUp delay={0}>
                 <div className="relative rounded-3xl overflow-hidden h-[380px] shadow-2xl group">
                   <Image
-                    src="/Bats 2.jpg" // ← your image
+                    src="/Bats 2.jpg"
                     alt="Cricket Bat Collection UAE"
                     fill
                     className="object-cover group-hover:scale-105 transition-transform duration-700"
@@ -667,9 +677,9 @@ export default function AboutPage() {
                         icon: Star,
                         text: "Post-purchase loyalty discounts & rewards",
                       },
-                    ].map(({ icon: Icon, text }, i) => (
+                    ].map(({ icon: Icon, text }, idx) => (
                       <div
-                        key={i}
+                        key={idx}
                         className="flex items-center gap-3.5 py-3.5 px-4 rounded-xl bg-white border border-[#004b9c]/08 shadow-[0_2px_10px_rgba(0,75,156,0.05)]"
                       >
                         <div className="w-9 h-9 rounded-lg bg-[#eef7e0] flex items-center justify-center flex-shrink-0">
@@ -691,7 +701,7 @@ export default function AboutPage() {
               <FadeUp delay={0} className="order-1 lg:order-2">
                 <div className="relative rounded-3xl overflow-hidden h-[380px] shadow-2xl group">
                   <Image
-                    src="/whatsapp-order.png" // ← your image
+                    src="/whatsapp-order.png"
                     alt="WhatsApp Cricket Ordering"
                     fill
                     className="object-cover group-hover:scale-105 transition-transform duration-700"
@@ -747,8 +757,7 @@ export default function AboutPage() {
                   image: "/Map 1.jpg",
                   badge: "Main Branch",
                   badgeColor: BLUE,
-                  delay: 0,
-                  mapsLink: "https://maps.app.goo.gl/TFc1zBiB4wGjJmX9A", // Karama store maps link
+                  mapsLink: "https://maps.app.goo.gl/TFc1zBiB4wGjJmX9A",
                 },
                 {
                   city: "Sharjah",
@@ -756,14 +765,13 @@ export default function AboutPage() {
                   address: "Al Wahda Street, Sharjah, UAE",
                   phone: "+971 52 651 4666",
                   hours: "10:00 AM – 8:00 PM  ·  Mon – Sun",
-                  image: "/Map 2.jpg", // ← your image
+                  image: "/Map 2.jpg",
                   badge: "Same-Day Delivery",
                   badgeColor: GREEN,
-                  delay: 0.1,
-                  mapsLink: "https://maps.app.goo.gl/Y8PAhyAZXXmPDRLYA", // Replace with actual Sharjah store maps link
+                  mapsLink: "https://maps.app.goo.gl/Y8PAhyAZXXmPDRLYA",
                 },
               ].map((store, i) => (
-                <FadeUp key={i} delay={store.delay}>
+                <FadeUp key={i} delay={i * 0.1}>
                   <div className="group relative bg-white rounded-2xl overflow-hidden border border-[#004b9c]/08 shadow-[0_2px_16px_rgba(0,75,156,0.06)] hover:shadow-[0_16px_48px_rgba(0,75,156,0.12)] hover:-translate-y-1 transition-all duration-300">
                     {/* Image */}
                     <div className="relative h-52 overflow-hidden">
