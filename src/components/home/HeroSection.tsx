@@ -78,7 +78,7 @@ const STATIC_SLIDES: StaticSlide[] = [
     headline: ["Elite Batting", "Equipment"],
     sub: "From Gray-Nicolls to SS — Grade 1 English Willow blades engineered to elevate your game.",
     cta: { label: "Explore Bats", href: "/shop?category=cricket-bats" },
-    sec: { label: "Order via WhatsApp", href: "https://wa.me/971526514666" },
+    sec: { label: "Order via WhatsApp", href: "https://wa.me/" },
     badge: { icon: Shield, text: "Authenticity Guaranteed" },
     stats: [
       { value: "200+", label: "Bat Models" },

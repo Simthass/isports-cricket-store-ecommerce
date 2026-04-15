@@ -293,7 +293,7 @@ export default function ProductDetailPage() {
           `*Product Link:* ${window.location.href}\n\n` +
           `⚠️ *Admin: Order #${data.order.orderNumber} is pending. Please update customer details and confirm.*`;
 
-        const whatsappUrl = `https://wa.me/971526514666?text=${encodeURIComponent(message)}`;
+        const whatsappUrl = `https://wa.me/94764078448?text=${encodeURIComponent(message)}`;
         window.open(whatsappUrl, "_blank");
 
         showToast(

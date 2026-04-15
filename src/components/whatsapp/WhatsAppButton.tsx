@@ -132,7 +132,7 @@ export default function WhatsAppButton({
           `*Order #:* ${data.order.orderNumber}\n\n` +
           `Please confirm this order. Thank you!`;
 
-        const whatsappUrl = `https://wa.me/971526514666?text=${encodeURIComponent(message)}`;
+        const whatsappUrl = `https://wa.me/+94764078448?text=${encodeURIComponent(message)}`;
         window.open(whatsappUrl, "_blank");
 
         setTimeout(() => {
