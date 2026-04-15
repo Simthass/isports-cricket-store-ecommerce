@@ -16,8 +16,6 @@ import {
   Truck,
   CheckCircle2,
   MessageCircle,
-  MapPin,
-  Plus as PlusIcon,
   Loader2,
 } from "lucide-react";
 import { useCart } from "@/context/CartContext";
@@ -213,20 +211,36 @@ export default function CartPage() {
 
   // WhatsApp Order - Creates order in database first, then opens WhatsApp
   const handleWhatsAppOrder = async () => {
-    if (!info.firstName || !info.phone || !info.address) {
-      showToast(
-        "warning",
-        "Missing Information",
-        "Please fill in your contact and address details.",
-      );
+    if (items.length === 0) {
+      showToast("warning", "Empty Cart", "Your cart is empty.");
       return;
     }
 
-  // Prepare customer info
-  let customerName = "";
-  let customerPhone = "";
-  let customerEmail = "";
-  let isLoggedIn = false;
+    // Prepare customer info - try to get from session and DB
+    let customerName = "";
+    let customerPhone = "";
+    let customerEmail = "";
+    let isLoggedIn = false;
+
+    if (session?.user) {
+      isLoggedIn = true;
+      customerName = session.user.name || "";
+      customerEmail = session.user.email || "";
+
+      try {
+        const res = await fetch("/api/users/settings");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.user) {
+            customerName = data.user.name || customerName;
+            customerPhone = data.user.phone || customerPhone;
+            customerEmail = data.user.email || customerEmail;
+          }
+        }
+      } catch (e) {
+        console.error("Error fetching user data:", e);
+      }
+    }
 
     const orderItems = cartItems.map((item) => ({
       productId: item.productId,
@@ -244,14 +258,18 @@ export default function CartPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           customerInfo: {
-            name: `${info.firstName} ${info.lastName}`.trim(),
-            phone: info.phone,
-            email: info.email,
+            name: customerName || "Pending - Customer to provide",
+            phone: customerPhone || "Pending - Customer to provide",
+            email: customerEmail || "",
           },
           items: orderItems,
           subtotal: subtotal,
           total: total,
-          customerNotes: info.notes,
+          customerNotes: `Order from cart. Customer is ${isLoggedIn ? "logged in" : "guest"}. ${
+            !customerName
+              ? "Admin needs to collect customer details from WhatsApp chat."
+              : ""
+          }`,
         }),
       });
 
@@ -264,28 +282,32 @@ export default function CartPage() {
               `• ${i.name} (${i.size}) x${i.quantity} - AED ${i.price * i.quantity}`,
           )
           .join("\n");
+
         const message =
-          `🏏 *NEW ORDER REQUEST*\n\n` +
-          `*Customer:* ${info.firstName} ${info.lastName}\n` +
-          `*Phone:* ${info.phone}\n` +
-          `*Email:* ${info.email || "Not provided"}\n\n` +
-          `*Items:*\n${itemLines}\n\n` +
+          `🏏 *CART ORDER REQUEST*\n\n` +
+          `*Order #:* ${data.order.orderNumber}\n\n` +
+          `*ITEMS:*\n${itemLines}\n\n` +
           `*Subtotal:* AED ${subtotal.toLocaleString()}\n` +
           (couponApplied ? `*Discount:* -AED ${discount}\n` : "") +
           `*Shipping:* ${shippingCost === 0 ? "FREE" : `AED ${shippingCost}`}\n` +
           `─────────────────\n` +
-          `*TOTAL:* AED ${total.toLocaleString()}\n\n` +
-          `*Delivery:* ${delivery === "express" ? "Express Shipping" : "Standard Delivery"}\n` +
-          `*Order #:* ${data.order.orderNumber}\n\n` +
-          `Please confirm this order. Thank you!`;
+          `*TOTAL:* AED ${total.toLocaleString()}\n` +
+          `*Delivery:* ${delivery === "express" ? "Express Shipping" : "Standard Delivery"}\n\n` +
+          `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+          `📝 *Please reply with your details:*\n` +
+          `• Full Name:\n` +
+          `• Phone Number:\n` +
+          `• Delivery Address:\n` +
+          `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+          `⚠️ *Admin: Order #${data.order.orderNumber} is pending. Please update customer details and confirm.*`;
 
         const whatsappUrl = `https://wa.me/971526514666?text=${encodeURIComponent(message)}`;
         window.open(whatsappUrl, "_blank");
 
         showToast(
           "success",
-          "Order Request Sent!",
-          `Order #: ${data.order.orderNumber}. Admin will confirm shortly.`,
+          "Order Created!",
+          `Order #: ${data.order.orderNumber}. Admin will contact you shortly.`,
         );
       } else {
         showToast(
@@ -294,74 +316,11 @@ export default function CartPage() {
           data.error || "Failed to create order. Please try again.",
         );
       }
-    } catch (e) {
-      console.error("Error fetching user data:", e);
+    } catch (error) {
+      console.error("WhatsApp order error:", error);
+      showToast("error", "Something went wrong", "Please try again.");
     }
-  }
-
-  const orderItems = cartItems.map(item => ({
-    productId: item.productId,
-    name: item.name,
-    brand: item.brand,
-    price: item.price,
-    quantity: item.quantity,
-    size: item.size,
-    image: item.image,
-  }));
-
-  try {
-    const response = await fetch("/api/whatsapp/orders", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        customerInfo: {
-          name: customerName || "Pending - Customer to provide",
-          phone: customerPhone || "Pending - Customer to provide",
-          email: customerEmail || "",
-        },
-        items: orderItems,
-        subtotal: subtotal,
-        total: total,
-        customerNotes: `Order from cart. Customer is ${isLoggedIn ? "logged in" : "guest"}. ${
-          !customerName ? "Admin needs to collect customer details from WhatsApp chat." : ""
-        }`,
-      }),
-    });
-
-    const data = await response.json();
-
-    if (response.ok) {
-      const itemLines = orderItems.map(i => `• ${i.name} (${i.size}) x${i.quantity} - AED ${i.price * i.quantity}`).join("\n");
-      
-      const message = `🏏 *CART ORDER REQUEST*\n\n` +
-        `*Order #:* ${data.order.orderNumber}\n\n` +
-        `*ITEMS:*\n${itemLines}\n\n` +
-        `*Subtotal:* AED ${subtotal.toLocaleString()}\n` +
-        (couponApplied ? `*Discount:* -AED ${discount}\n` : "") +
-        `*Shipping:* ${shippingCost === 0 ? "FREE" : `AED ${shippingCost}`}\n` +
-        `─────────────────\n` +
-        `*TOTAL:* AED ${total.toLocaleString()}\n` +
-        `*Delivery:* ${delivery === "express" ? "Express Shipping" : "Standard Delivery"}\n\n` +
-        `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
-        `📝 *Please reply with your details:*\n` +
-        `• Full Name:\n` +
-        `• Phone Number:\n` +
-        `• Delivery Address:\n` +
-        `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
-        `⚠️ *Admin: Order #${data.order.orderNumber} is pending. Please update customer details and confirm.*`;
-
-      const whatsappUrl = `https://wa.me/971526514666?text=${encodeURIComponent(message)}`;
-      window.open(whatsappUrl, "_blank");
-      
-      showToast("success", "Order Created!", `Order #: ${data.order.orderNumber}. Admin will contact you shortly.`);
-    } else {
-      showToast("error", "Order Failed", data.error || "Failed to create order. Please try again.");
-    }
-  } catch (error) {
-    console.error("WhatsApp order error:", error);
-    showToast("error", "Something went wrong", "Please try again.");
-  }
-};
+  };
 
   // ── Place order (COD) ───────────────────────────────────────────────────────────────
   const handlePlaceOrder = async () => {
