@@ -51,7 +51,10 @@ export async function GET(req: NextRequest, context: RouteContext) {
       // 800 px → prints cleanly at 5×5 cm @ 150 dpi with branded logo badge
       const buffer = await generateQrCodeBuffer({ url: qrUrl, size: 800 });
 
-      return new NextResponse(buffer, {
+      // Convert buffer to Uint8Array for NextResponse compatibility
+      const uint8Array = new Uint8Array(buffer);
+
+      return new NextResponse(uint8Array, {
         status: 200,
         headers: {
           "Content-Type": "image/png",
