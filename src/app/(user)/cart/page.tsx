@@ -12,6 +12,7 @@ import {
 import { useCart } from "@/context/CartContext";
 import { useSession } from "next-auth/react";
 import { showToast } from "@/components/ui/Toast";
+import StripePaymentModal from "@/components/checkout/StripePaymentModal";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 interface CartItemDisplay {
@@ -59,6 +60,8 @@ export default function CartPage() {
   const [orderNumber, setOrderNumber] = useState("");
   const [orderDetails, setOrderDetails] = useState<any>(null);
   const [loadingUserData, setLoadingUserData] = useState(true);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<"cod" | "card">("cod");
+  const [showStripeModal, setShowStripeModal] = useState(false);
   const topRef = useRef<HTMLDivElement>(null);
 
   // Address form state
@@ -189,106 +192,170 @@ export default function CartPage() {
     setInfo(prev => ({ ...prev, [field]: value }));
   };
 
-  // WhatsApp Order - Creates order in database first, then opens WhatsApp
   // WhatsApp Order - Creates order in database for ALL users (guest or logged in)
-const handleWhatsAppOrder = async () => {
-  if (items.length === 0) {
-    showToast("warning", "Empty Cart", "Your cart is empty.");
-    return;
-  }
+  const handleWhatsAppOrder = async () => {
+    if (items.length === 0) {
+      showToast("warning", "Empty Cart", "Your cart is empty.");
+      return;
+    }
 
-  // Prepare customer info
-  let customerName = "";
-  let customerPhone = "";
-  let customerEmail = "";
-  let isLoggedIn = false;
+    // Prepare customer info
+    let customerName = "";
+    let customerPhone = "";
+    let customerEmail = "";
+    let isLoggedIn = false;
 
-  if (session?.user) {
-    isLoggedIn = true;
-    customerName = session.user.name || "";
-    customerPhone = (session.user as any)?.phone || "";
-    customerEmail = session.user.email || "";
+    if (session?.user) {
+      isLoggedIn = true;
+      customerName = session.user.name || "";
+      customerPhone = (session.user as any)?.phone || "";
+      customerEmail = session.user.email || "";
+
+      try {
+        const res = await fetch("/api/users/settings");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.user) {
+            customerName = data.user.name || customerName;
+            customerPhone = data.user.phone || customerPhone;
+            customerEmail = data.user.email || customerEmail;
+          }
+        }
+      } catch (e) {
+        console.error("Error fetching user data:", e);
+      }
+    }
+
+    const orderItems = cartItems.map(item => ({
+      productId: item.productId,
+      name: item.name,
+      brand: item.brand,
+      price: item.price,
+      quantity: item.quantity,
+      size: item.size,
+      image: item.image,
+    }));
 
     try {
-      const res = await fetch("/api/users/settings");
+      const response = await fetch("/api/whatsapp/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customerInfo: {
+            name: customerName || "Pending - Customer to provide",
+            phone: customerPhone || "Pending - Customer to provide",
+            email: customerEmail || "",
+          },
+          items: orderItems,
+          subtotal: subtotal,
+          total: total,
+          customerNotes: `Order from cart. Customer is ${isLoggedIn ? "logged in" : "guest"}. ${
+            !customerName ? "Admin needs to collect customer details from WhatsApp chat." : ""
+          }`,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        const itemLines = orderItems.map(i => `• ${i.name} (${i.size}) x${i.quantity} - AED ${i.price * i.quantity}`).join("\n");
+        
+        const message = `🏏 *CART ORDER REQUEST*\n\n` +
+          `*Order #:* ${data.order.orderNumber}\n\n` +
+          `*ITEMS:*\n${itemLines}\n\n` +
+          `*Subtotal:* AED ${subtotal.toLocaleString()}\n` +
+          (couponApplied ? `*Discount:* -AED ${discount}\n` : "") +
+          `*Shipping:* ${shippingCost === 0 ? "FREE" : `AED ${shippingCost}`}\n` +
+          `─────────────────\n` +
+          `*TOTAL:* AED ${total.toLocaleString()}\n` +
+          `*Delivery:* ${delivery === "express" ? "Express Shipping" : "Standard Delivery"}\n\n` +
+          `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+          `📝 *Please reply with your details:*\n` +
+          `• Full Name:\n` +
+          `• Phone Number:\n` +
+          `• Delivery Address:\n` +
+          `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+          `⚠️ *Admin: Order #${data.order.orderNumber} is pending. Please update customer details and confirm.*`;
+
+        const whatsappUrl = `https://wa.me/971526514666?text=${encodeURIComponent(message)}`;
+        window.open(whatsappUrl, "_blank");
+        
+        showToast("success", "Order Created!", `Order #: ${data.order.orderNumber}. Admin will contact you shortly.`);
+      } else {
+        showToast("error", "Order Failed", data.error || "Failed to create order. Please try again.");
+      }
+    } catch (error) {
+      console.error("WhatsApp order error:", error);
+      showToast("error", "Something went wrong", "Please try again.");
+    }
+  };
+
+  // ── Handle Card Payment with Stripe ──────────────────────────────────────────
+  const handleCardPayment = () => {
+    if (!info.firstName || !info.phone || !info.email || !info.address || !info.city) {
+      showToast("warning", "Missing Information", "Please fill in all required fields.");
+      return;
+    }
+    setShowStripeModal(true);
+  };
+
+  // ── Handle successful Stripe payment ─────────────────────────────────────────
+  const handleStripeSuccess = async (paymentIntentId: string) => {
+    setPlacing(true);
+    try {
+      const orderData = {
+        customerInfo: info,
+        items: cartItems.map(item => ({
+          productId: item.productId,
+          name: item.name,
+          brand: item.brand,
+          price: item.price,
+          quantity: item.quantity,
+          size: item.size,
+          image: item.image,
+        })),
+        deliveryMethod: delivery,
+        paymentMethod: "stripe",
+        paymentIntentId: paymentIntentId,
+        subtotal: subtotal,
+        discount: discount,
+        shippingCost: shippingCost,
+        total: total,
+        couponApplied: couponApplied,
+        status: "PAID",
+      };
+
+      const res = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(orderData),
+      });
+
       if (res.ok) {
         const data = await res.json();
-        if (data.user) {
-          customerName = data.user.name || customerName;
-          customerPhone = data.user.phone || customerPhone;
-          customerEmail = data.user.email || customerEmail;
-        }
+        setOrderNumber(data.orderNumber);
+        setOrderDetails(orderData);
+        await clearCart();
+        setStep("confirmed");
+        showToast("success", "Payment Successful!", `Order #: ${data.orderNumber}`);
+        setShowStripeModal(false);
+      } else {
+        throw new Error("Failed to place order");
       }
-    } catch (e) {
-      console.error("Error fetching user data:", e);
+    } catch (error) {
+      console.error("Order placement error:", error);
+      showToast("error", "Order Failed", "Something went wrong. Please try again.");
+    } finally {
+      setPlacing(false);
     }
-  }
+  };
 
-  const orderItems = cartItems.map(item => ({
-    productId: item.productId,
-    name: item.name,
-    brand: item.brand,
-    price: item.price,
-    quantity: item.quantity,
-    size: item.size,
-    image: item.image,
-  }));
+  // ── Handle Stripe error ──────────────────────────────────────────────────────
+  const handleStripeError = (error: string) => {
+    showToast("error", "Payment Failed", error);
+  };
 
-  try {
-    const response = await fetch("/api/whatsapp/orders", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        customerInfo: {
-          name: customerName || "Pending - Customer to provide",
-          phone: customerPhone || "Pending - Customer to provide",
-          email: customerEmail || "",
-        },
-        items: orderItems,
-        subtotal: subtotal,
-        total: total,
-        customerNotes: `Order from cart. Customer is ${isLoggedIn ? "logged in" : "guest"}. ${
-          !customerName ? "Admin needs to collect customer details from WhatsApp chat." : ""
-        }`,
-      }),
-    });
-
-    const data = await response.json();
-
-    if (response.ok) {
-      const itemLines = orderItems.map(i => `• ${i.name} (${i.size}) x${i.quantity} - AED ${i.price * i.quantity}`).join("\n");
-      
-      const message = `🏏 *CART ORDER REQUEST*\n\n` +
-        `*Order #:* ${data.order.orderNumber}\n\n` +
-        `*ITEMS:*\n${itemLines}\n\n` +
-        `*Subtotal:* AED ${subtotal.toLocaleString()}\n` +
-        (couponApplied ? `*Discount:* -AED ${discount}\n` : "") +
-        `*Shipping:* ${shippingCost === 0 ? "FREE" : `AED ${shippingCost}`}\n` +
-        `─────────────────\n` +
-        `*TOTAL:* AED ${total.toLocaleString()}\n` +
-        `*Delivery:* ${delivery === "express" ? "Express Shipping" : "Standard Delivery"}\n\n` +
-        `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
-        `📝 *Please reply with your details:*\n` +
-        `• Full Name:\n` +
-        `• Phone Number:\n` +
-        `• Delivery Address:\n` +
-        `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
-        `⚠️ *Admin: Order #${data.order.orderNumber} is pending. Please update customer details and confirm.*`;
-
-      const whatsappUrl = `https://wa.me/971526514666?text=${encodeURIComponent(message)}`;
-      window.open(whatsappUrl, "_blank");
-      
-      showToast("success", "Order Created!", `Order #: ${data.order.orderNumber}. Admin will contact you shortly.`);
-    } else {
-      showToast("error", "Order Failed", data.error || "Failed to create order. Please try again.");
-    }
-  } catch (error) {
-    console.error("WhatsApp order error:", error);
-    showToast("error", "Something went wrong", "Please try again.");
-  }
-};
-
-  // ── Place order (COD) ───────────────────────────────────────────────────────────────
+  // ── Place order (COD) ────────────────────────────────────────────────────────
   const handlePlaceOrder = async () => {
     if (!info.firstName || !info.phone || !info.email || !info.address || !info.city) {
       showToast("warning", "Missing Information", "Please fill in all required fields.");
@@ -802,45 +869,124 @@ const handleWhatsAppOrder = async () => {
                     </div>
                   </div>
 
-                  {/* 4. Payment - COD Only */}
+                  {/* 4. Payment - COD & Card Options */}
                   <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
                     <SectionHeader number={4} title="Payment" />
                     
-                    <div className="bg-green-50 border border-green-200 rounded-xl p-4">
-                      <div className="flex items-start gap-3">
-                        <CheckCircle2 size={20} className="text-green-600 mt-0.5" />
-                        <div>
-                          <p className="font-semibold text-green-800">Cash on Delivery</p>
-                          <p className="text-sm text-green-700 mt-1">
-                            Pay when your order arrives. No additional fees.
-                          </p>
+                    <div className="flex flex-col gap-3">
+                      {/* COD Option */}
+                      <label
+                        className={`flex items-center justify-between gap-4 border-2 rounded-xl px-5 py-4 cursor-pointer transition-all duration-150 ${
+                          selectedPaymentMethod === "cod"
+                            ? "border-[#004b9c] bg-blue-50/50"
+                            : "border-gray-100 hover:border-gray-200"
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div
+                            className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
+                              selectedPaymentMethod === "cod" ? "border-[#004b9c]" : "border-gray-300"
+                            }`}
+                          >
+                            {selectedPaymentMethod === "cod" && (
+                              <div className="w-2.5 h-2.5 rounded-full bg-[#004b9c]" />
+                            )}
+                          </div>
+                          <div>
+                            <p className="text-[14px] font-bold text-gray-800">Cash on Delivery</p>
+                            <p className="text-[12px] text-gray-400">Pay when your order arrives</p>
+                          </div>
                         </div>
-                      </div>
+                        <span className="text-[12px] text-gray-500">No extra fees</span>
+                        <input
+                          type="radio"
+                          name="payment"
+                          value="cod"
+                          checked={selectedPaymentMethod === "cod"}
+                          onChange={() => setSelectedPaymentMethod("cod")}
+                          className="sr-only"
+                        />
+                      </label>
+
+                      {/* Card Payment Option */}
+                      <label
+                        className={`flex items-center justify-between gap-4 border-2 rounded-xl px-5 py-4 cursor-pointer transition-all duration-150 ${
+                          selectedPaymentMethod === "card"
+                            ? "border-[#004b9c] bg-blue-50/50"
+                            : "border-gray-100 hover:border-gray-200"
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div
+                            className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
+                              selectedPaymentMethod === "card" ? "border-[#004b9c]" : "border-gray-300"
+                            }`}
+                          >
+                            {selectedPaymentMethod === "card" && (
+                              <div className="w-2.5 h-2.5 rounded-full bg-[#004b9c]" />
+                            )}
+                          </div>
+                          <div>
+                            <p className="text-[14px] font-bold text-gray-800">Credit / Debit Card</p>
+                            <p className="text-[12px] text-gray-400">Pay securely with Stripe</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <CreditCard size={16} className="text-gray-400" />
+                          <span className="text-[12px] text-gray-500">+ Google/Apple Pay</span>
+                        </div>
+                        <input
+                          type="radio"
+                          name="payment"
+                          value="card"
+                          checked={selectedPaymentMethod === "card"}
+                          onChange={() => setSelectedPaymentMethod("card")}
+                          className="sr-only"
+                        />
+                      </label>
                     </div>
 
-                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mt-4">
-                      <p className="text-sm text-amber-800">
-                        ⚠️ Please have exact change ready as our delivery partners may not carry change.
-                      </p>
-                    </div>
+                    {/* Show card payment button if card selected */}
+                    {selectedPaymentMethod === "card" && (
+                      <button
+                        onClick={handleCardPayment}
+                        disabled={placing}
+                        className="mt-6 w-full py-3.5 rounded-xl bg-[#004b9c] hover:bg-[#003d82] text-white text-[13px] font-black tracking-wider uppercase transition-all duration-200 flex items-center justify-center gap-2"
+                      >
+                        {placing ? (
+                          <>
+                            <Loader2 size={18} className="animate-spin" />
+                            PROCESSING...
+                          </>
+                        ) : (
+                          <>
+                            <CreditCard size={18} />
+                            PAY AED {total.toLocaleString()}
+                          </>
+                        )}
+                      </button>
+                    )}
 
-                    <button
-                      onClick={handlePlaceOrder}
-                      disabled={placing}
-                      className="mt-6 w-full py-3.5 rounded-xl bg-[#81bf42] hover:bg-[#6ea835] text-white text-[13px] font-black tracking-wider uppercase transition-all duration-200 flex items-center justify-center gap-2"
-                    >
-                      {placing ? (
-                        <>
-                          <Loader2 size={18} className="animate-spin" />
-                          PLACING ORDER...
-                        </>
-                      ) : (
-                        <>
-                          <CreditCard size={18} />
-                          PLACE ORDER (CASH ON DELIVERY)
-                        </>
-                      )}
-                    </button>
+                    {/* Show COD button if COD selected */}
+                    {selectedPaymentMethod === "cod" && (
+                      <button
+                        onClick={handlePlaceOrder}
+                        disabled={placing}
+                        className="mt-6 w-full py-3.5 rounded-xl bg-[#81bf42] hover:bg-[#6ea835] text-white text-[13px] font-black tracking-wider uppercase transition-all duration-200 flex items-center justify-center gap-2"
+                      >
+                        {placing ? (
+                          <>
+                            <Loader2 size={18} className="animate-spin" />
+                            PLACING ORDER...
+                          </>
+                        ) : (
+                          <>
+                            <CreditCard size={18} />
+                            PLACE ORDER (CASH ON DELIVERY)
+                          </>
+                        )}
+                      </button>
+                    )}
                   </div>
                 </motion.div>
               )}
@@ -928,34 +1074,34 @@ const handleWhatsAppOrder = async () => {
                 </div>
 
                 {step === "cart" ? (
-  <>
-    {/* ORDER VIA WHATSAPP BUTTON */}
-    <button
-      onClick={handleWhatsAppOrder}
-      className="mt-6 flex items-center justify-center gap-3 w-full py-3.5 rounded-2xl bg-[#25D366] hover:bg-[#1ebe5d] text-white text-[13px] font-black tracking-wider uppercase transition-all duration-200 shadow-[0_4px_20px_rgba(37,211,102,0.35)] hover:shadow-[0_6px_28px_rgba(37,211,102,0.45)] active:scale-[0.98]"
-    >
-      <MessageCircle size={18} />
-      ORDER VIA WHATSAPP
-    </button>
-    
-    {/* PROCEED TO CHECKOUT BUTTON */}
-    <button
-      onClick={() => {
-        if (!session?.user) {
-          router.push("/login?redirect=" + encodeURIComponent(window.location.pathname));
-          return;
-        }
-        setStep("checkout");
-      }}
-      className="mt-3 flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-[#004b9c] hover:bg-[#003d82] text-white text-[13px] font-black tracking-wider uppercase shadow-[0_4px_20px_rgba(0,75,156,0.3)] hover:shadow-[0_6px_28px_rgba(0,75,156,0.4)] active:scale-[0.98] transition-all duration-200"
-    >
-      PROCEED TO CHECKOUT <ArrowRight size={15} />
-    </button>
-    
-    <Link href="/shop" className="mt-3 flex items-center justify-center gap-1 text-[12px] text-gray-400 hover:text-[#004b9c] transition-colors py-1">
-      ← Continue Shopping
-    </Link>
-  </>
+                  <>
+                    {/* ORDER VIA WHATSAPP BUTTON */}
+                    <button
+                      onClick={handleWhatsAppOrder}
+                      className="mt-6 flex items-center justify-center gap-3 w-full py-3.5 rounded-2xl bg-[#25D366] hover:bg-[#1ebe5d] text-white text-[13px] font-black tracking-wider uppercase transition-all duration-200 shadow-[0_4px_20px_rgba(37,211,102,0.35)] hover:shadow-[0_6px_28px_rgba(37,211,102,0.45)] active:scale-[0.98]"
+                    >
+                      <MessageCircle size={18} />
+                      ORDER VIA WHATSAPP
+                    </button>
+                    
+                    {/* PROCEED TO CHECKOUT BUTTON */}
+                    <button
+                      onClick={() => {
+                        if (!session?.user) {
+                          router.push("/login?redirect=" + encodeURIComponent(window.location.pathname));
+                          return;
+                        }
+                        setStep("checkout");
+                      }}
+                      className="mt-3 flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-[#004b9c] hover:bg-[#003d82] text-white text-[13px] font-black tracking-wider uppercase shadow-[0_4px_20px_rgba(0,75,156,0.3)] hover:shadow-[0_6px_28px_rgba(0,75,156,0.4)] active:scale-[0.98] transition-all duration-200"
+                    >
+                      PROCEED TO CHECKOUT <ArrowRight size={15} />
+                    </button>
+                    
+                    <Link href="/shop" className="mt-3 flex items-center justify-center gap-1 text-[12px] text-gray-400 hover:text-[#004b9c] transition-colors py-1">
+                      ← Continue Shopping
+                    </Link>
+                  </>
                 ) : (
                   <Link href="/cart" className="mt-3 flex items-center justify-center gap-1 text-[12px] text-gray-400 hover:text-[#004b9c] transition-colors py-1 w-full">
                     ← Back to Cart
@@ -979,6 +1125,15 @@ const handleWhatsAppOrder = async () => {
           </div>
         )}
       </div>
+
+      {/* Stripe Payment Modal */}
+      <StripePaymentModal
+        isOpen={showStripeModal}
+        onClose={() => setShowStripeModal(false)}
+        amount={total}
+        onSuccess={handleStripeSuccess}
+        onError={handleStripeError}
+      />
     </div>
   );
 }
