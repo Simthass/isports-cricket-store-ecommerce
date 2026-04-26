@@ -1,5 +1,6 @@
 import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
+import GoogleProvider from "next-auth/providers/google";
 import bcrypt from "bcryptjs";
 import connectDB from "./dbConnect";
 import User from "@/models/User";
@@ -12,6 +13,10 @@ function generateSessionToken() {
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+    }),
     CredentialsProvider({
       name: "credentials",
       credentials: {
@@ -46,7 +51,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const sessionToken = generateSessionToken();
 
         // ✅ SINGLE DEVICE MODE - ONLY FOR ADMIN USERS
-        // Customers can log in from multiple devices freely
         if (user.role === "ADMIN") {
           const SiteSettings = await import("@/models/SiteSettings").then(
             (m) => m.default,
@@ -80,11 +84,58 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async signIn({ user, account, profile }) {
+      if (account?.provider === "google") {
+        await connectDB();
+
+        // Check if user exists
+        let existingUser = await User.findOne({ email: user.email });
+
+        if (!existingUser) {
+          // Create new user for Google sign-in
+          const nameParts = user.name?.split(" ") || [];
+          const firstName = nameParts[0] || "";
+          const lastName = nameParts.slice(1).join(" ") || "";
+
+          existingUser = await User.create({
+            name: user.name,
+            firstName: firstName,
+            lastName: lastName,
+            email: user.email,
+            image: user.image,
+            emailVerified: new Date(),
+            role: "CUSTOMER",
+            password: await bcrypt.hash(randomBytes(32).toString("hex"), 10),
+          });
+        } else {
+          // Update image if changed
+          if (user.image && existingUser.image !== user.image) {
+            existingUser.image = user.image;
+            await existingUser.save();
+          }
+        }
+
+        // Update session token
+        const sessionToken = generateSessionToken();
+        existingUser.currentSessionToken = sessionToken;
+        existingUser.lastActiveAt = new Date();
+        await existingUser.save();
+
+        // Attach session token to user object
+        (user as any).sessionToken = sessionToken;
+        (user as any).id = existingUser._id.toString();
+        (user as any).role = existingUser.role;
+      }
+      return true;
+    },
+    async jwt({ token, user, account }) {
       if (user) {
         token.id = user.id;
-        token.role = user.role;
+        token.role = (user as any).role;
         token.sessionToken = (user as any).sessionToken;
+      }
+      if (account) {
+        token.provider = account.provider;
       }
       return token;
     },
@@ -99,7 +150,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   },
   session: {
     strategy: "jwt",
-    maxAge: 60 * 60, // Default 1 hour (will be overridden by settings)
+    maxAge: 60 * 60, // Default 1 hour
   },
   secret: process.env.NEXTAUTH_SECRET,
   pages: {
