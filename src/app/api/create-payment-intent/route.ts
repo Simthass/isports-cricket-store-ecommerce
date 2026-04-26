@@ -1,38 +1,37 @@
 import { NextRequest, NextResponse } from "next/server";
-import { stripe } from "@/lib/stripe";
 import { auth } from "@/lib/auth";
+import { stripe } from "@/lib/stripe-server";
 
 export async function POST(req: NextRequest) {
   try {
     const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    // Optional: Require login for payment (uncomment if you want to force login)
+    // if (!session?.user?.id) {
+    //   return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // }
+
+    const body = await req.json();
+    const { amount, currency = "aed", metadata = {} } = body;
+
+    // Validate amount
+    if (!amount || amount <= 0) {
+      return NextResponse.json({ error: "Invalid amount" }, { status: 400 });
     }
 
-    // Check if stripe is configured
-    if (!stripe) {
-      console.error(
-        "Stripe is not configured. Please check STRIPE_SECRET_KEY environment variable.",
-      );
-      return NextResponse.json(
-        { error: "Payment service is not configured" },
-        { status: 500 },
-      );
-    }
-
-    const {
-      amount,
-      currency = "aed",
-      paymentMethodTypes = ["card"],
-    } = await req.json();
-
+    // Create PaymentIntent with automatic payment methods for Google Pay & Apple Pay
+    // ✅ Using automatic_payment_methods ONLY (removed payment_method_types)
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(amount * 100),
+      amount: Math.round(amount * 100), // Convert to cents/fils (AED uses 100 fils = 1 AED)
       currency: currency.toLowerCase(),
-      payment_method_types: paymentMethodTypes,
+      automatic_payment_methods: {
+        enabled: true,
+        allow_redirects: "never",
+      },
       metadata: {
-        userId: session.user.id,
-        userEmail: session.user.email || "",
+        userId: session?.user?.id || "guest",
+        userEmail: session?.user?.email || "",
+        ...metadata,
       },
     });
 
@@ -41,10 +40,9 @@ export async function POST(req: NextRequest) {
       paymentIntentId: paymentIntent.id,
     });
   } catch (error) {
-    console.error("Error creating payment intent:", error);
-    return NextResponse.json(
-      { error: "Failed to create payment intent" },
-      { status: 500 },
-    );
+    console.error("Create payment intent error:", error);
+    const errorMessage =
+      error instanceof Error ? error.message : "Internal server error";
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }

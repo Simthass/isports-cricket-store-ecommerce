@@ -33,9 +33,11 @@ export interface IOrder extends Document {
   emirate?: string;
   paymentMethod: string;
   paymentIntentId?: string;
+  stripePaymentIntentId?: string; // ✅ Stripe payment intent ID
+  stripePaymentStatus?: string; // ✅ Stripe payment status (pending, succeeded, failed)
   orderSource: string;
   waMessageId?: string;
-  whatsappOrderId?: mongoose.Types.ObjectId; // ✅ ADD THIS FIELD
+  whatsappOrderId?: mongoose.Types.ObjectId;
   status: OrderStatus;
   totalAmount: number;
   subtotal?: number;
@@ -75,9 +77,11 @@ const OrderSchema = new Schema<IOrder>(
     emirate: { type: String, default: "" },
     paymentMethod: { type: String, required: true },
     paymentIntentId: { type: String },
+    stripePaymentIntentId: { type: String }, // ✅ Stripe payment intent ID
+    stripePaymentStatus: { type: String, default: "pending" }, // ✅ Stripe payment status
     orderSource: { type: String, default: "web" },
     waMessageId: { type: String },
-    whatsappOrderId: { type: Schema.Types.ObjectId, ref: "WhatsAppOrder" }, // ✅ ADD THIS
+    whatsappOrderId: { type: Schema.Types.ObjectId, ref: "WhatsAppOrder" },
     status: {
       type: String,
       enum: [

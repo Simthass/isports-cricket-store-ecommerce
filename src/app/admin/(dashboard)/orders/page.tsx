@@ -672,17 +672,17 @@ export default function AdminOrdersPage() {
                                         e.target.value as OrderStatus,
                                       )
                                     }
-                                    className={`text-[11px] font-bold px-3 py-1.5 rounded-full border cursor-pointer appearance-none pr-7 focus:outline-none ${cfg.bg} ${cfg.color} ${cfg.border}`}
+                                    className={`text-[11px] font-bold px-3 py-1.5 rounded-full border cursor-pointer appearance-none pr-7 focus:outline-none ${cfg?.bg || "bg-gray-50"} ${cfg?.color || "text-gray-700"} ${cfg?.border || "border-gray-200"}`}
                                   >
                                     {ALL_STATUSES.map((s) => (
                                       <option key={s} value={s}>
-                                        {STATUS_CONFIG[s].label}
+                                        {STATUS_CONFIG[s]?.label || s}
                                       </option>
                                     ))}
                                   </select>
                                   <ChevronDown
                                     size={10}
-                                    className={`absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none ${cfg.color}`}
+                                    className={`absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none ${cfg?.color || "text-gray-700"}`}
                                   />
                                 </div>
                               )}

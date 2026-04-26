@@ -8,7 +8,7 @@ import {
   EmbeddedCheckoutProvider,
   EmbeddedCheckout,
 } from '@stripe/react-stripe-js';
-import { stripePromise } from '@/lib/stripe';
+import { stripePromise } from '@/lib/stripe-client'; // ✅ Changed from @/lib/stripe
 import { Loader2, CreditCard, Smartphone } from 'lucide-react';
 
 interface PaymentFormProps {
@@ -37,7 +37,6 @@ export function StripePaymentForm({ amount, onSuccess, onError, onCancel }: Paym
     try {
       const { error: submitError } = await elements.submit();
       if (submitError) {
-        // Fix: Handle potentially undefined message
         const errorMessage = submitError.message || 'Payment submission failed';
         onError(errorMessage);
         setIsLoading(false);
@@ -53,7 +52,6 @@ export function StripePaymentForm({ amount, onSuccess, onError, onCancel }: Paym
       });
 
       if (error) {
-        // Fix: Handle potentially undefined message
         const errorMessage = error.message || 'Payment failed';
         onError(errorMessage);
       } else if (paymentIntent && paymentIntent.status === 'succeeded') {
@@ -68,7 +66,6 @@ export function StripePaymentForm({ amount, onSuccess, onError, onCancel }: Paym
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Payment Method Tabs */}
       <div className="flex gap-2 border-b border-gray-200">
         <button
           type="button"
@@ -96,7 +93,6 @@ export function StripePaymentForm({ amount, onSuccess, onError, onCancel }: Paym
         </button>
       </div>
 
-      {/* Payment Element - Stripe handles card, Apple Pay, Google Pay automatically */}
       <div className="bg-white rounded-xl border border-gray-200 p-4">
         <PaymentElement
           options={{
@@ -139,7 +135,6 @@ export function StripePaymentForm({ amount, onSuccess, onError, onCancel }: Paym
   );
 }
 
-// Embedded Checkout for Apple Pay/Google Pay (alternative simpler flow)
 export function StripeEmbeddedCheckout({ amount, onSuccess }: { amount: number; onSuccess: () => void }) {
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
