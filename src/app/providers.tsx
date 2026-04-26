@@ -6,9 +6,7 @@ import { CartProvider } from "@/context/CartContext";
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <SessionProvider>
-      <CartProvider>
-        {children}
-      </CartProvider>
+      <CartProvider>{children}</CartProvider>
     </SessionProvider>
   );
 }

@@ -61,7 +61,7 @@ const OrderItemSchema = new Schema<IOrderItem>(
     size: { type: String, default: "Standard" },
     image: { type: String },
   },
-  { _id: false }
+  { _id: false },
 );
 
 const OrderSchema = new Schema<IOrder>(
@@ -84,7 +84,15 @@ const OrderSchema = new Schema<IOrder>(
     whatsappOrderId: { type: Schema.Types.ObjectId, ref: "WhatsAppOrder" },
     status: {
       type: String,
-      enum: ["PENDING", "CONFIRMED", "PROCESSING", "SHIPPED", "DELIVERED", "CANCELLED", "PAID"],
+      enum: [
+        "PENDING",
+        "CONFIRMED",
+        "PROCESSING",
+        "SHIPPED",
+        "DELIVERED",
+        "CANCELLED",
+        "PAID",
+      ],
       default: "PENDING",
     },
     totalAmount: { type: Number, required: true },
@@ -96,7 +104,7 @@ const OrderSchema = new Schema<IOrder>(
     notes: { type: String },
     items: { type: [OrderItemSchema], default: [] },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 const Order: Model<IOrder> =

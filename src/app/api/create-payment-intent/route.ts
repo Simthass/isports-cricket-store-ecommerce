@@ -5,18 +5,14 @@ import { stripe } from "@/lib/stripe-server";
 export async function POST(req: NextRequest) {
   try {
     const session = await auth();
-    
+
     // Optional: Require login for payment (uncomment if you want to force login)
     // if (!session?.user?.id) {
     //   return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     // }
 
     const body = await req.json();
-    const { 
-      amount, 
-      currency = "aed", 
-      metadata = {},
-    } = body;
+    const { amount, currency = "aed", metadata = {} } = body;
 
     // Validate amount
     if (!amount || amount <= 0) {
@@ -45,10 +41,8 @@ export async function POST(req: NextRequest) {
     });
   } catch (error) {
     console.error("Create payment intent error:", error);
-    const errorMessage = error instanceof Error ? error.message : "Internal server error";
-    return NextResponse.json(
-      { error: errorMessage },
-      { status: 500 }
-    );
+    const errorMessage =
+      error instanceof Error ? error.message : "Internal server error";
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }

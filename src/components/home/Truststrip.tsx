@@ -2,10 +2,32 @@
 
 import React, { useRef } from "react";
 import { motion, useInView } from "framer-motion";
-import { Truck, ShieldCheck, RefreshCcw, Headphones } from "lucide-react";
+import {
+  Truck,
+  ShieldCheck,
+  RefreshCcw,
+  Headphones,
+  LucideIcon,
+} from "lucide-react";
+
+// ─── Types ─────────────────────────────────────────────────────
+interface TrustItemType {
+  id: number;
+  icon: LucideIcon;
+  title: string;
+  desc: string;
+  accent: string;
+  accentLight: string;
+}
+
+interface TrustItemProps {
+  item: TrustItemType;
+  index: number;
+  isLast: boolean;
+}
 
 // ─── Trust Items ─────────────────────────────────────────────────
-const TRUST_ITEMS = [
+const TRUST_ITEMS: TrustItemType[] = [
   {
     id: 1,
     icon: Truck,
@@ -41,7 +63,7 @@ const TRUST_ITEMS = [
 ];
 
 // ─── Single Trust Item ────────────────────────────────────────────
-function TrustItem({ item, index, isLast }) {
+function TrustItem({ item, index, isLast }: TrustItemProps) {
   const ref = useRef(null);
   const inView = useInView(ref, { once: true, margin: "-40px" });
   const Icon = item.icon;

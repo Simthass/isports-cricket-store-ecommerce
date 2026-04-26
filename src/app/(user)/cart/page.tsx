@@ -79,7 +79,9 @@ export default function CartPage() {
   const [orderNumber, setOrderNumber] = useState("");
   const [orderDetails, setOrderDetails] = useState<any>(null);
   const [loadingUserData, setLoadingUserData] = useState(true);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<"cod" | "card">("cod");
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<
+    "cod" | "card"
+  >("cod");
   const [showStripeModal, setShowStripeModal] = useState(false);
   const topRef = useRef<HTMLDivElement>(null);
 
@@ -252,7 +254,7 @@ export default function CartPage() {
       }
     }
 
-    const orderItems = cartItems.map(item => ({
+    const orderItems = cartItems.map((item) => ({
       productId: item.productId,
       name: item.name,
       brand: item.brand,
@@ -268,14 +270,16 @@ export default function CartPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           customerInfo: {
-            name: isLoggedIn ? customerName : `${info.firstName} ${info.lastName}`.trim(),
+            name: isLoggedIn
+              ? customerName
+              : `${info.firstName} ${info.lastName}`.trim(),
             phone: isLoggedIn ? customerPhone : info.phone,
             email: isLoggedIn ? customerEmail : info.email,
           },
           items: orderItems,
           subtotal: subtotal,
           total: total,
-          customerNotes: isLoggedIn 
+          customerNotes: isLoggedIn
             ? `Order from logged in user. ${!customerName ? "Admin needs to collect customer details from WhatsApp chat." : ""}`
             : info.notes,
         }),
@@ -284,11 +288,17 @@ export default function CartPage() {
       const data = await response.json();
 
       if (response.ok) {
-        const itemLines = orderItems.map(i => `• ${i.name} (${i.size}) x${i.quantity} - AED ${i.price * i.quantity}`).join("\n");
-        
-        const message = `🏏 *${isLoggedIn ? 'CART ORDER REQUEST' : 'NEW ORDER REQUEST'}*\n\n` +
+        const itemLines = orderItems
+          .map(
+            (i) =>
+              `• ${i.name} (${i.size}) x${i.quantity} - AED ${i.price * i.quantity}`,
+          )
+          .join("\n");
+
+        const message =
+          `🏏 *${isLoggedIn ? "CART ORDER REQUEST" : "NEW ORDER REQUEST"}*\n\n` +
           `*Order #:* ${data.order.orderNumber}\n\n` +
-          `*${isLoggedIn ? 'Customer Info (from account):*' : 'Customer:*'}\n` +
+          `*${isLoggedIn ? "Customer Info (from account):*" : "Customer:*"}\n` +
           `• Name: ${customerName || `${info.firstName} ${info.lastName}`.trim()}\n` +
           `• Phone: ${customerPhone || info.phone}\n` +
           `• Email: ${customerEmail || info.email || "Not provided"}\n\n` +
@@ -299,15 +309,23 @@ export default function CartPage() {
           `─────────────────\n` +
           `*TOTAL:* AED ${total.toLocaleString()}\n` +
           `*Delivery:* ${delivery === "express" ? "Express Shipping" : "Standard Delivery"}\n\n` +
-          `${!isLoggedIn ? `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n📝 *Please reply with your details if needed*\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` : ''}` +
+          `${!isLoggedIn ? `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n📝 *Please reply with your details if needed*\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` : ""}` +
           `⚠️ *Admin: Order #${data.order.orderNumber} is pending. Please confirm.*`;
 
         const whatsappUrl = `https://wa.me/971526514666?text=${encodeURIComponent(message)}`;
         window.open(whatsappUrl, "_blank");
-        
-        showToast("success", "Order Created!", `Order #: ${data.order.orderNumber}. Admin will contact you shortly.`);
+
+        showToast(
+          "success",
+          "Order Created!",
+          `Order #: ${data.order.orderNumber}. Admin will contact you shortly.`,
+        );
       } else {
-        showToast("error", "Order Failed", data.error || "Failed to create order. Please try again.");
+        showToast(
+          "error",
+          "Order Failed",
+          data.error || "Failed to create order. Please try again.",
+        );
       }
     } catch (error) {
       console.error("WhatsApp order error:", error);
@@ -317,8 +335,18 @@ export default function CartPage() {
 
   // ── Handle Card Payment with Stripe ──────────────────────────────────────────
   const handleCardPayment = () => {
-    if (!info.firstName || !info.phone || !info.email || !info.address || !info.city) {
-      showToast("warning", "Missing Information", "Please fill in all required fields.");
+    if (
+      !info.firstName ||
+      !info.phone ||
+      !info.email ||
+      !info.address ||
+      !info.city
+    ) {
+      showToast(
+        "warning",
+        "Missing Information",
+        "Please fill in all required fields.",
+      );
       return;
     }
     setShowStripeModal(true);
@@ -330,7 +358,7 @@ export default function CartPage() {
     try {
       const orderData = {
         customerInfo: info,
-        items: cartItems.map(item => ({
+        items: cartItems.map((item) => ({
           productId: item.productId,
           name: item.name,
           brand: item.brand,
@@ -362,14 +390,22 @@ export default function CartPage() {
         setOrderDetails(orderData);
         await clearCart();
         setStep("confirmed");
-        showToast("success", "Payment Successful!", `Order #: ${data.orderNumber}`);
+        showToast(
+          "success",
+          "Payment Successful!",
+          `Order #: ${data.orderNumber}`,
+        );
         setShowStripeModal(false);
       } else {
         throw new Error("Failed to place order");
       }
     } catch (error) {
       console.error("Order placement error:", error);
-      showToast("error", "Order Failed", "Something went wrong. Please try again.");
+      showToast(
+        "error",
+        "Order Failed",
+        "Something went wrong. Please try again.",
+      );
     } finally {
       setPlacing(false);
     }
@@ -971,7 +1007,7 @@ export default function CartPage() {
                   {/* 4. Payment - COD & Card Options */}
                   <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
                     <SectionHeader number={4} title="Payment" />
-                    
+
                     <div className="flex flex-col gap-3">
                       {/* COD Option */}
                       <label
@@ -984,7 +1020,9 @@ export default function CartPage() {
                         <div className="flex items-center gap-3">
                           <div
                             className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
-                              selectedPaymentMethod === "cod" ? "border-[#004b9c]" : "border-gray-300"
+                              selectedPaymentMethod === "cod"
+                                ? "border-[#004b9c]"
+                                : "border-gray-300"
                             }`}
                           >
                             {selectedPaymentMethod === "cod" && (
@@ -992,11 +1030,17 @@ export default function CartPage() {
                             )}
                           </div>
                           <div>
-                            <p className="text-[14px] font-bold text-gray-800">Cash on Delivery</p>
-                            <p className="text-[12px] text-gray-400">Pay when your order arrives</p>
+                            <p className="text-[14px] font-bold text-gray-800">
+                              Cash on Delivery
+                            </p>
+                            <p className="text-[12px] text-gray-400">
+                              Pay when your order arrives
+                            </p>
                           </div>
                         </div>
-                        <span className="text-[12px] text-gray-500">No extra fees</span>
+                        <span className="text-[12px] text-gray-500">
+                          No extra fees
+                        </span>
                         <input
                           type="radio"
                           name="payment"
@@ -1018,7 +1062,9 @@ export default function CartPage() {
                         <div className="flex items-center gap-3">
                           <div
                             className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
-                              selectedPaymentMethod === "card" ? "border-[#004b9c]" : "border-gray-300"
+                              selectedPaymentMethod === "card"
+                                ? "border-[#004b9c]"
+                                : "border-gray-300"
                             }`}
                           >
                             {selectedPaymentMethod === "card" && (
@@ -1026,13 +1072,19 @@ export default function CartPage() {
                             )}
                           </div>
                           <div>
-                            <p className="text-[14px] font-bold text-gray-800">Credit / Debit Card</p>
-                            <p className="text-[12px] text-gray-400">Pay securely with Stripe</p>
+                            <p className="text-[14px] font-bold text-gray-800">
+                              Credit / Debit Card
+                            </p>
+                            <p className="text-[12px] text-gray-400">
+                              Pay securely with Stripe
+                            </p>
                           </div>
                         </div>
                         <div className="flex items-center gap-1">
                           <CreditCard size={16} className="text-gray-400" />
-                          <span className="text-[12px] text-gray-500">+ Google/Apple Pay</span>
+                          <span className="text-[12px] text-gray-500">
+                            + Google/Apple Pay
+                          </span>
                         </div>
                         <input
                           type="radio"
@@ -1201,11 +1253,14 @@ export default function CartPage() {
                       <MessageCircle size={18} />
                       ORDER VIA WHATSAPP
                     </button>
-                    
+
                     <button
                       onClick={() => {
                         if (!session?.user) {
-                          router.push("/login?redirect=" + encodeURIComponent(window.location.pathname));
+                          router.push(
+                            "/login?redirect=" +
+                              encodeURIComponent(window.location.pathname),
+                          );
                           return;
                         }
                         setStep("checkout");
@@ -1214,8 +1269,11 @@ export default function CartPage() {
                     >
                       PROCEED TO CHECKOUT <ArrowRight size={15} />
                     </button>
-                    
-                    <Link href="/shop" className="mt-3 flex items-center justify-center gap-1 text-[12px] text-gray-400 hover:text-[#004b9c] transition-colors py-1">
+
+                    <Link
+                      href="/shop"
+                      className="mt-3 flex items-center justify-center gap-1 text-[12px] text-gray-400 hover:text-[#004b9c] transition-colors py-1"
+                    >
                       ← Continue Shopping
                     </Link>
                   </>

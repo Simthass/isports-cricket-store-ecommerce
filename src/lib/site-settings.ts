@@ -87,7 +87,7 @@ export async function getSiteSettings() {
       phone: "+971 52 6514 666",
       email: "info@isportscricket.com",
       address: "Sharjah, UAE",
-      whatsappNumber: "+971526514666",
+      whatsappNumber: "+94764078448",
       facebook: "",
       instagram: "",
       twitter: "",

@@ -11,7 +11,7 @@ export const authOptions: NextAuthConfig = {
       name: "credentials",
       credentials: {
         email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" }
+        password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
         try {
@@ -19,7 +19,7 @@ export const authOptions: NextAuthConfig = {
             return null;
           }
 
-          // ← Cast to string — NextAuth v5 types these as unknown
+          // Cast to string — NextAuth v5 types these as unknown
           const email = credentials.email as string;
           const password = credentials.password as string;
 
@@ -32,26 +32,27 @@ export const authOptions: NextAuthConfig = {
           }
 
           const isCorrectPassword = await bcrypt.compare(
-            password,        // ← now a string, bcrypt is happy
-            user.password as string
+            password,
+            user.password as string,
           );
 
           if (!isCorrectPassword) {
             return null;
           }
 
+          // Return the user object that matches NextAuth's User type
           return {
             id: user._id.toString(),
             email: user.email,
             name: user.name,
-            role: user.role as "ADMIN" | "CUSTOMER",  // ← cast fixes error 1
-          };
+            role: user.role as "ADMIN" | "CUSTOMER",
+          } as any;
         } catch (error) {
           console.error("Authorization error:", error);
           return null;
         }
-      }
-    })
+      },
+    }),
   ],
   callbacks: {
     async jwt({ token, user }) {
@@ -67,7 +68,7 @@ export const authOptions: NextAuthConfig = {
         session.user.role = token.role as "ADMIN" | "CUSTOMER";
       }
       return session;
-    }
+    },
   },
   session: {
     strategy: "jwt",

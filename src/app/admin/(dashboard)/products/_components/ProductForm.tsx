@@ -299,12 +299,15 @@ function ImageGrid({
 }
 
 // ── Image Upload Zone ─────────────────────────────────────────
+// ── Image Upload Zone ─────────────────────────────────────────
 function ImageUploadZone({
   images,
   onChange,
 }: {
   images: UploadedImage[];
-  onChange: (imgs: UploadedImage[]) => void;
+  onChange: (
+    value: UploadedImage[] | ((prev: UploadedImage[]) => UploadedImage[]),
+  ) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
@@ -345,7 +348,7 @@ function ImageUploadZone({
       for (let i = 0; i < toProcess.length; i++) {
         try {
           const url = await uploadFile(toProcess[i]);
-          onChange((prev) =>
+          onChange((prev: UploadedImage[]) =>
             prev.map((img) =>
               img.id === placeholders[i].id
                 ? { ...img, url, uploading: false }
@@ -353,7 +356,7 @@ function ImageUploadZone({
             ),
           );
         } catch {
-          onChange((prev) =>
+          onChange((prev: UploadedImage[]) =>
             prev.map((img) =>
               img.id === placeholders[i].id
                 ? { ...img, uploading: false, error: "Upload failed" }

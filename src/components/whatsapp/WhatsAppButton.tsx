@@ -18,7 +18,11 @@ interface WhatsAppButtonProps {
   className?: string;
 }
 
-export default function WhatsAppButton({ variant = "product", product, className = "" }: WhatsAppButtonProps) {
+export default function WhatsAppButton({
+  variant = "product",
+  product,
+  className = "",
+}: WhatsAppButtonProps) {
   const { cartItems } = useCart();
   const { data: session } = useSession();
   const router = useRouter();
@@ -35,18 +39,20 @@ export default function WhatsAppButton({ variant = "product", product, className
     let subtotal = 0;
 
     if (variant === "product" && product) {
-      items = [{
-        productId: product.id,
-        name: product.name,
-        brand: "iSPORTS",
-        price: product.price,
-        quantity: 1,
-        size: product.size || "Standard",
-        image: product.image,
-      }];
+      items = [
+        {
+          productId: product.id,
+          name: product.name,
+          brand: "iSPORTS",
+          price: product.price,
+          quantity: 1,
+          size: product.size || "Standard",
+          image: product.image,
+        },
+      ];
       subtotal = product.price;
     } else {
-      items = cartItems.map(item => ({
+      items = cartItems.map((item) => ({
         productId: item.productId,
         name: item.name,
         brand: item.brand,
@@ -55,7 +61,10 @@ export default function WhatsAppButton({ variant = "product", product, className
         size: item.size,
         image: item.image,
       }));
-      subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+      subtotal = cartItems.reduce(
+        (sum, item) => sum + item.price * item.quantity,
+        0,
+      );
     }
 
     // If user is logged in, use their info
@@ -75,7 +84,8 @@ export default function WhatsAppButton({ variant = "product", product, className
     } else {
       // For guests, prompt for info
       customerName = prompt("Please enter your name:") || "";
-      customerPhone = prompt("Please enter your WhatsApp number (with country code):") || "";
+      customerPhone =
+        prompt("Please enter your WhatsApp number (with country code):") || "";
       if (!customerName || !customerPhone) {
         setLoading(false);
         alert("Name and phone number are required to place order.");
@@ -106,8 +116,14 @@ export default function WhatsAppButton({ variant = "product", product, className
         setCreated(true);
 
         // Build WhatsApp message
-        const itemLines = items.map(i => `• ${i.name} (${i.size}) x${i.quantity} - AED ${i.price * i.quantity}`).join("\n");
-        const message = `🏏 *NEW ORDER REQUEST*\n\n` +
+        const itemLines = items
+          .map(
+            (i) =>
+              `• ${i.name} (${i.size}) x${i.quantity} - AED ${i.price * i.quantity}`,
+          )
+          .join("\n");
+        const message =
+          `🏏 *NEW ORDER REQUEST*\n\n` +
           `*Customer:* ${customerName}\n` +
           `*Phone:* ${customerPhone}\n` +
           `*Email:* ${customerEmail || "Not provided"}\n\n` +
@@ -116,7 +132,7 @@ export default function WhatsAppButton({ variant = "product", product, className
           `*Order #:* ${data.order.orderNumber}\n\n` +
           `Please confirm this order. Thank you!`;
 
-        const whatsappUrl = `https://wa.me/971526514666?text=${encodeURIComponent(message)}`;
+        const whatsappUrl = `https://wa.me/+94764078448?text=${encodeURIComponent(message)}`;
         window.open(whatsappUrl, "_blank");
 
         setTimeout(() => {

@@ -446,7 +446,7 @@ export default function Header() {
   };
 
   // Get WhatsApp number from settings or default
-  const whatsappNumber = settings.whatsappNumber || "+971526514666";
+  const whatsappNumber = settings.whatsappNumber || "+94764078448";
   const emailAddress = settings.email || "info@isportscricket.com";
 
   return (

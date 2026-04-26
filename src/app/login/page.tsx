@@ -481,7 +481,7 @@ export default function LoginPage() {
             </button>
 
             <a
-              href="https://wa.me/971526514666?text=Hi! I need help logging into my iSPORTS account."
+              href="https://wa.me/?text=Hi! I need help logging into my iSPORTS account."
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center justify-center gap-2.5 w-full py-3.5 rounded-xl text-[13px] font-black tracking-wider uppercase transition-all duration-200 border-2 border-green-200 text-green-600 hover:bg-green-500 hover:text-white hover:border-green-500 active:scale-[0.97]"
