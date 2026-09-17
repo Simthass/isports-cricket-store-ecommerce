@@ -381,7 +381,7 @@ const Footer = () => {
       >
         <p>
           © Copyright iSportsCricket All Rights Reserved 2026. Developed By{" "}
-          <strong className="font-semibold">Brand Systems Studio</strong>
+          <strong className="font-semibold">TwoStack</strong>
         </p>
       </div>
     </footer>
